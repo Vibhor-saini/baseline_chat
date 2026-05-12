@@ -5,15 +5,14 @@ namespace App\Livewire\Admin\Users;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
+use App\Models\Conversation;
+use App\Models\Message;
 
 class Create extends Component
 {
     public string $name = '';
-
     public string $email = '';
-
     public string $password = '';
-
     public bool $is_admin = false;
 
     protected function rules()
@@ -29,26 +28,33 @@ class Create extends Component
         ];
     }
 
-    public function save()
-    {
-        $this->validate();
+public function save()
+{
+    $this->validate();
 
-        User::create([
+    $user = User::create([
+        'name' => $this->name,
+        'email' => $this->email,
+        'password' => Hash::make($this->password),
+        'is_admin' => $this->is_admin,
+    ]);
 
-            'name' => $this->name,
+    $conversation = Conversation::create([
+        'user_one_id' => auth()->id(),
+        'user_two_id' => $user->id,
+        'last_message_at' => now(),
+    ]);
 
-            'email' => $this->email,
+    Message::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => auth()->id(),
+        'body' => 'Welcome to Baseline Chat 👋',
+    ]);
 
-            'password' => Hash::make($this->password),
+    session()->flash('success', 'User created successfully.');
 
-            'is_admin' => $this->is_admin,
-
-        ]);
-
-        session()->flash('success', 'User created successfully.');
-
-        return redirect()->route('users.index');
-    }
+    return redirect()->route('users.index');
+}
 
     public function render()
     {

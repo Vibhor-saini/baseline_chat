@@ -432,36 +432,6 @@
                 <div class="mobile-brand-dot">B</div>
                 Baseline Chat
             </div>
-            @auth
-            <div class="topbar-profile">
-                <div class="topbar-avatar">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                    <span class="presence"></span>
-                </div>
-                <span class="topbar-name">{{ auth()->user()->name }}</span>
-            </div>
-            @endauth
-        </div>
-
-        {{-- Desktop top bar --}}
-        <div class="topbar">
-            <span class="topbar-title">
-                @if(request()->routeIs('dashboard'))      Dashboard
-                @elseif(request()->routeIs('users.*'))    Users
-                @elseif(request()->routeIs('chat.*'))     Chat
-                @else                                      Baseline Chat
-                @endif
-            </span>
-
-            @auth
-            <div class="topbar-profile">
-                <div class="topbar-avatar">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                    <span class="presence"></span>
-                </div>
-                <span class="topbar-name">{{ auth()->user()->name }}</span>
-            </div>
-            @endauth
         </div>
 
         {{-- Page slot --}}
