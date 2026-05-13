@@ -9,7 +9,7 @@ use App\Livewire\Admin\Users\Edit as UsersEdit;
 use App\Livewire\Chat\Index as ChatIndex;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('Auth/login');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {

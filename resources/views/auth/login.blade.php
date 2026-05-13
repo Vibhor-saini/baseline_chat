@@ -404,7 +404,7 @@
                                 name="email"
                                 value="{{ old('email') }}"
                                 placeholder="you@company.com"
-                                required
+
                                 autofocus
                                 autocomplete="username"
                             >
@@ -428,7 +428,7 @@
                                 type="password"
                                 name="password"
                                 placeholder="Your password"
-                                required
+                                
                                 autocomplete="current-password"
                             >
                         </div>

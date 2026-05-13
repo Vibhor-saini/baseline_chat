@@ -394,6 +394,8 @@
                     Chat
                 </a>
 
+                
+
             @endauth
 
         </nav>

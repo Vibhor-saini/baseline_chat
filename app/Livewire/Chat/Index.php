@@ -7,6 +7,7 @@ use App\Models\Message;
 use Livewire\Component;
 use App\Models\User;
 use App\Models\Conversation;
+use App\Events\ConversationUpdated;
 
 class Index extends Component
 {
@@ -15,25 +16,29 @@ class Index extends Component
     public ?Conversation $selectedConversation = null;
 
     public $messages = [];
-
     public string $body = '';
-
     public string $search = '';
-
+    public string $requestMessage = '';
     public $searchResults = [];
-
     public $selectedConversationId = null;
-
+    public $pendingRequests = [];
+    // public $openedRequestId = null;
+    public $selectedRequest = null;
+    public $showRequests = null;
     public function mount()
     {
         $this->loadConversations();
+        $this->loadPendingRequests();
     }
 
     public function loadConversations()
     {
         $this->conversations = Conversation::query()
-            ->where('user_one_id', auth()->id())
-            ->orWhere('user_two_id', auth()->id())
+            ->where('status', 'accepted')
+            ->where(function ($query) {
+                $query->where('user_one_id', auth()->id())
+                    ->orWhere('user_two_id', auth()->id());
+            })
             ->latest('last_message_at')
             ->with(['userOne', 'userTwo'])
             ->get();
@@ -134,47 +139,186 @@ class Index extends Component
     }
 
 
+    // public function startConversation($userId)
+    // {
+    //     $authId = auth()->id();
+
+    //     $conversation = Conversation::query()
+
+    //         ->where(function ($query) use ($authId, $userId) {
+
+    //             $query->where('user_one_id', $authId)
+    //                 ->where('user_two_id', $userId);
+    //         })
+
+    //         ->orWhere(function ($query) use ($authId, $userId) {
+
+    //             $query->where('user_one_id', $userId)
+    //                 ->where('user_two_id', $authId);
+    //         })
+
+    //         ->first();
+
+    //     if (!$conversation) {
+
+    //         $status = 'pending';
+    //         if ($authId === 1 || $userId === 1) {
+    //             $status = 'accepted';
+    //         }
+
+    //         $conversation = Conversation::create([
+    //             'user_one_id' => $authId,
+    //             'user_two_id' => $userId,
+    //             'status' => $status,
+    //         ]);
+    //     }
+
+    //     $this->conversations = auth()->user()
+    //         ->conversations()
+    //         ->latest()
+    //         ->get();
+
+    //     $this->search = '';
+    //     $this->searchResults = [];
+
+    //     if ($conversation->status === 'accepted') {
+
+    //         $this->selectConversation($conversation->id);
+    //     }
+    // }
+
     public function startConversation($userId)
-{
-    $authId = auth()->id();
+    {
+        $authId = auth()->id();
 
-    $conversation = Conversation::query()
-
-        ->where(function ($query) use ($authId, $userId) {
-
-            $query->where('user_one_id', $authId)
-                  ->where('user_two_id', $userId);
-
-        })
-
-        ->orWhere(function ($query) use ($authId, $userId) {
-
-            $query->where('user_one_id', $userId)
-                  ->where('user_two_id', $authId);
-
-        })
-
-        ->first();
-
-    if (!$conversation) {
-
-        $conversation = Conversation::create([
-            'user_one_id' => $authId,
-            'user_two_id' => $userId,
+        logger('START CONVERSATION', [
+            'auth_id' => $authId,
+            'target_user_id' => $userId,
         ]);
 
+        $conversation = Conversation::query()
+
+            ->where(function ($query) use ($authId, $userId) {
+
+                $query->where('user_one_id', $authId)
+                    ->where('user_two_id', $userId);
+            })
+
+            ->orWhere(function ($query) use ($authId, $userId) {
+
+                $query->where('user_one_id', $userId)
+                    ->where('user_two_id', $authId);
+            })
+
+            ->first();
+
+        logger('FOUND CONVERSATION', [
+            'conversation' => $conversation,
+        ]);
+
+        if (!$conversation) {
+
+            $status = 'pending';
+
+            if ($authId === 1 || $userId === 1) {
+                $status = 'accepted';
+            }
+
+            logger('CREATING NEW CONVERSATION', [
+                'status' => $status,
+            ]);
+
+            $conversation = Conversation::create([
+                'user_one_id' => $authId,
+                'user_two_id' => $userId,
+                'status' => $status,
+            ]);
+
+            $user = User::findOrFail($userId);
+
+            Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id' => $authId,
+                'body' => 'Hi ' . $user->name,
+            ]);
+
+            $this->loadPendingRequests();
+            $this->loadConversations();
+            $conversation->refresh();
+        }
+
+        logger('FINAL CONVERSATION STATUS', [
+            'status' => $conversation->status,
+        ]);
+
+
+
+        $this->search = '';
+        $this->searchResults = [];
+
+        if ($conversation->status === 'accepted') {
+
+            logger('OPENING CHAT WINDOW');
+
+            $this->selectConversation($conversation->id);
+        } else {
+
+            logger('PENDING REQUEST CREATED');
+        }
+    }
+    public function loadPendingRequests()
+    {
+        $this->pendingRequests = Conversation::query()
+            ->where('status', 'pending')
+            ->where('user_two_id', auth()->id())
+            ->with(['userOne', 'userTwo'])
+            ->latest()
+            ->get();
     }
 
-    $this->conversations = auth()->user()
-        ->conversations()
-        ->latest()
-        ->get();
+    // public function toggleRequest($requestId)
+    // {
+    //     if ($this->openedRequestId === $requestId) {
 
-    $this->selectConversation($conversation->id);
+    //         $this->openedRequestId = null;
 
-    $this->search = '';
+    //         return;
+    //     }
 
-    $this->searchResults = [];
+    //     $this->openedRequestId = $requestId;
+    // }
+
+    public function openRequest($requestId)
+{
+    $this->selectedRequest = Conversation::with(['userOne'])
+        ->findOrFail($requestId);
+
+    $this->selectedConversation = null;
+}
+    public function acceptRequest($conversationId)
+    {
+        $conversation = Conversation::findOrFail($conversationId);
+
+        $conversation->update([
+            'status' => 'accepted',
+        ]);
+
+        broadcast(new ConversationUpdated($conversation))->toOthers();
+        $this->loadPendingRequests();
+
+        $this->loadConversations();
+
+        $this->selectConversation($conversation->id);
+    }
+
+    public function toggleRequests()
+{
+    $this->showRequests = !$this->showRequests;
+
+    if (!$this->showRequests) {
+
+        $this->selectedRequest = null;
+    }
 }
 
     public function render()
