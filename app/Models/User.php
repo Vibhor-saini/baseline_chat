@@ -56,18 +56,36 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'sender_id');
     }
 
-public function conversations()
-{
-    return Conversation::query()
+    public function conversations()
+    {
+        return Conversation::query()
 
-        ->where('status', 'accepted')
+            ->where('status', 'accepted')
 
-        ->where(function ($query) {
+            ->where(function ($query) {
 
-            $query->where('user_one_id', $this->id)
+                $query->where('user_one_id', $this->id)
 
-                ->orWhere('user_two_id', $this->id);
+                    ->orWhere('user_two_id', $this->id);
+            });
+    }
 
-        });
-}
+    public function hasConversationWith($userId)
+    {
+        return \App\Models\Conversation::query()
+
+            ->where(function ($query) use ($userId) {
+
+                $query->where('user_one_id', $this->id)
+                    ->where('user_two_id', $userId);
+            })
+
+            ->orWhere(function ($query) use ($userId) {
+
+                $query->where('user_one_id', $userId)
+                    ->where('user_two_id', $this->id);
+            })
+
+            ->exists();
+    }
 }

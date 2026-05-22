@@ -82,26 +82,55 @@
                                     {{ $user->email }}
                                 </div>
                             </div>
+                            <div class="global-search-action">
 
-                            <div class="search-user-action">
+                                @php
 
-                                <div class="request-default-message">
+                                $alreadyConnected =
+                                auth()->user()->hasConversationWith($user->id);
 
-                                    Hi {{ $user->name }}
+                                $isAdminConversation =
+                                auth()->user()->is_admin
+                                || $user->is_admin;
 
-                                </div>
+                                @endphp
+
+                                @if($alreadyConnected)
+
+                                <button
+                                    type="button"
+                                    wire:click="openExistingConversation({{ $user->id }})"
+                                    class="search-action-btn">
+
+                                    Open Chat
+
+                                </button>
+
+                                @elseif($isAdminConversation)
 
                                 <button
                                     type="button"
                                     wire:click="startConversation({{ $user->id }})"
-                                    class="search-message-btn">
+                                    class="search-action-btn">
+
+                                    Start Chat
+
+                                </button>
+
+                                @else
+
+                                <button
+                                    type="button"
+                                    wire:click="startConversation({{ $user->id }})"
+                                    class="search-action-btn">
 
                                     Send Request
 
                                 </button>
 
-                            </div>
+                                @endif
 
+                            </div>
                         </div>
                         @endforeach
                     </div>
@@ -329,6 +358,7 @@
             </div>
             @endif
 
+
             <div class="conversations-list" role="list">
                 @forelse($conversations as $conversation)
                 <div
@@ -508,7 +538,7 @@
                     </button>
                 </form>
             </div>
-            @elseif($selectedRequest)
+            @elseif($activeScreen === 'request-preview' && $selectedRequest)
 
             <div class="request-preview-screen">
 
@@ -548,6 +578,104 @@
 
                 </div>
 
+            </div>
+
+            @elseif($activeScreen === 'sent-requests')
+
+            <div class="pending-page">
+
+                <div class="pending-page-header">
+
+                    <div class="pending-page-icon">
+
+                        <svg width="26"
+                            height="26"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2">
+
+                            <path d="M22 2L11 13" />
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+
+                        </svg>
+
+                    </div>
+
+                    <div>
+
+                        <h2 class="pending-page-title">
+                            Pending Requests
+                        </h2>
+
+                        <p class="pending-page-subtitle">
+                            People waiting to accept your request
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="pending-grid">
+
+                    @forelse($sentRequests as $request)
+
+                    <div class="pending-card">
+
+                        <div class="pending-card-left">
+
+                            <div class="pending-avatar">
+                                {{ strtoupper(substr($request->userTwo->name, 0, 1)) }}
+                            </div>
+
+                            <div class="pending-user-meta">
+
+                                <div class="pending-user-name">
+                                    {{ $request->userTwo->name }}
+                                </div>
+
+                                <div class="pending-user-email">
+                                    {{ $request->userTwo->email }}
+                                </div>
+
+                                <div class="pending-user-time">
+
+                                    <svg width="14"
+                                        height="14"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2">
+
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+
+                                    </svg>
+
+                                    Sent {{ $request->created_at->diffForHumans() }}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="pending-status">
+                            <span class="pending-status-badge">
+                                Awaiting Response
+                            </span>
+                        </div>
+                    </div>
+                    @empty
+
+                    <div class="pending-empty">
+                        <h3>No pending requests</h3>
+                        <p>
+                            When you send requests, they'll appear here.
+                        </p>
+                    </div>
+                    @endforelse
+                </div>
             </div>
 
             @else
