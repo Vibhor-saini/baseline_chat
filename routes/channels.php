@@ -1,17 +1,32 @@
 <?php
 
-// use App\Models\Conversation;
-// use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Broadcast;
 
-// Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
+/*
+|--------------------------------------------------------------------------
+| PRIVATE USER CHANNEL
+| Each user can only subscribe to their own channel.
+| Used for: PendingRequestUpdated, ConversationUpdated
+|--------------------------------------------------------------------------
+*/
 
-//     $conversation = Conversation::find($conversationId);
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
 
-//     if (!$conversation) {
-//         return false;
-//     }
+/*
+|--------------------------------------------------------------------------
+| PUBLIC CONVERSATION CHANNEL
+| Used for: MessageSent
+| No auth check — participants are validated at the DB level.
+|--------------------------------------------------------------------------
+*/
 
-//     return
-//         $conversation->user_one_id === $user->id ||
-//         $conversation->user_two_id === $user->id;
-// });
+Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
+    return \App\Models\Conversation::where('id', $conversationId)
+        ->where(function ($q) use ($user) {
+            $q->where('user_one_id', $user->id)
+              ->orWhere('user_two_id', $user->id);
+        })
+        ->exists();
+});

@@ -2,35 +2,38 @@
 
 namespace App\Livewire\Chat;
 
-use App\Models\Conversation;
 use Livewire\Component;
+use App\Models\Conversation;
 
 class PendingCount extends Component
 {
-    public $count = 0;
+    public int $count = 0;
+
+    /*
+    |--------------------------------------------------------------------------
+    | LISTENERS
+    | refreshPendingCount is called from JS via component.call(...)
+    | OR via Livewire's event system.
+    |--------------------------------------------------------------------------
+    */
 
     protected $listeners = [
-        'echo:pending-requests,pending.request.updated' => 'loadCount',
+        'refreshPendingCount' => 'refreshCount',
     ];
 
-    public function mount()
+    public function mount(): void
     {
-        $this->loadCount();
+        $this->refreshCount();
     }
 
-    public function loadCount()
+    /**
+     * Count sent requests (pending, user is sender) waiting for a response.
+     */
+    public function refreshCount(): void
     {
         $this->count = Conversation::query()
-
             ->where('status', 'pending')
-
-            ->where(function ($query) {
-
-                $query->where('user_one_id', auth()->id())
-
-                    ->orWhere('user_two_id', auth()->id());
-            })
-
+            ->where('user_one_id', auth()->id())
             ->count();
     }
 

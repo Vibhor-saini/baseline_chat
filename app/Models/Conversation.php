@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Conversation extends Model
 {
     protected $fillable = [
-
         'user_one_id',
         'user_two_id',
         'last_message_at',
@@ -17,6 +16,12 @@ class Conversation extends Model
     protected $casts = [
         'last_message_at' => 'datetime',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
 
     public function userOne()
     {
@@ -33,12 +38,19 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
-    public function otherUser()
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Return the other participant in the conversation (not the auth user).
+     */
+    public function otherUser(): User
     {
         return $this->user_one_id === auth()->id()
-
             ? $this->userTwo
-
             : $this->userOne;
     }
 }

@@ -2,8 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Conversation;
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -13,22 +12,31 @@ class PendingRequestUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $conversation;
+    public int $userId;
 
-    public function __construct(Conversation $conversation)
+    public function __construct(int $userId)
     {
-        $this->conversation = $conversation;
+        $this->userId = $userId;
     }
 
     public function broadcastOn(): array
     {
         return [
-            new Channel('pending-requests')
+            new PrivateChannel('user.' . $this->userId),
         ];
     }
 
     public function broadcastAs(): string
     {
         return 'pending.request.updated';
+    }
+
+    /**
+     * Only broadcast the user ID — the frontend fetches fresh state via Livewire.
+     * Keeping the payload minimal avoids stale serialized data.
+     */
+    public function broadcastWith(): array
+    {
+        return ['userId' => $this->userId];
     }
 }

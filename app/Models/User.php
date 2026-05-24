@@ -70,22 +70,21 @@ class User extends Authenticatable
             });
     }
 
-    public function hasConversationWith($userId)
-    {
-        return \App\Models\Conversation::query()
-
-            ->where(function ($query) use ($userId) {
-
-                $query->where('user_one_id', $this->id)
-                    ->where('user_two_id', $userId);
-            })
-
-            ->orWhere(function ($query) use ($userId) {
-
-                $query->where('user_one_id', $userId)
-                    ->where('user_two_id', $this->id);
-            })
-
-            ->exists();
-    }
+/**
+ * Check whether the user already has any conversation
+ * (accepted OR pending) with the given user.
+ */
+public function hasConversationWith(int $userId): bool
+{
+    return Conversation::query()
+        ->where(function ($q) use ($userId) {
+            $q->where('user_one_id', $this->id)
+              ->where('user_two_id', $userId);
+        })
+        ->orWhere(function ($q) use ($userId) {
+            $q->where('user_one_id', $userId)
+              ->where('user_two_id', $this->id);
+        })
+        ->exists();
+}
 }

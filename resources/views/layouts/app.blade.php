@@ -12,26 +12,31 @@
     @livewireStyles
     <style>
         :root {
-            --nav-bg:      #1a1a24;
-            --nav-width:   68px;
-            --content-bg:  #1e1e28;
-            --surface:     #252532;
-            --surface-2:   #2d2d3d;
-            --border:      #35354a;
-            --accent:      #6264a7;
-            --accent-h:    #7b7dd6;
-            --accent-dim:  rgba(98,100,167,.18);
-            --text-1:      #f0f0f5;
-            --text-2:      #9090b0;
-            --text-3:      #5a5a78;
-            --online:      #57c75a;
-            --danger:      #e05b5b;
-            --radius:      10px;
+            --nav-bg: #1a1a24;
+            --nav-width: 68px;
+            --content-bg: #1e1e28;
+            --surface: #252532;
+            --surface-2: #2d2d3d;
+            --border: #35354a;
+            --accent: #6264a7;
+            --accent-h: #7b7dd6;
+            --accent-dim: rgba(98, 100, 167, .18);
+            --text-1: #f0f0f5;
+            --text-2: #9090b0;
+            --text-3: #5a5a78;
+            --online: #57c75a;
+            --danger: #e05b5b;
+            --radius: 10px;
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
 
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -73,7 +78,7 @@
             color: #fff;
             margin-bottom: 20px;
             flex-shrink: 0;
-            box-shadow: 0 0 0 3px rgba(98,100,167,.25);
+            box-shadow: 0 0 0 3px rgba(98, 100, 167, .25);
         }
 
         .nav-items {
@@ -108,10 +113,12 @@
             background: none;
         }
 
-        .nav-link svg { flex-shrink: 0; }
+        .nav-link svg {
+            flex-shrink: 0;
+        }
 
         .nav-link:hover {
-            background: rgba(255,255,255,.06);
+            background: rgba(255, 255, 255, .06);
             color: var(--text-1);
         }
 
@@ -132,13 +139,18 @@
             border-radius: 0 3px 3px 0;
         }
 
-        .nav-link.danger { color: var(--text-3); }
+        .nav-link.danger {
+            color: var(--text-3);
+        }
+
         .nav-link.danger:hover {
-            background: rgba(224,91,91,.12);
+            background: rgba(224, 91, 91, .12);
             color: var(--danger);
         }
 
-        .nav-spacer { flex: 1; }
+        .nav-spacer {
+            flex: 1;
+        }
 
         .nav-profile {
             position: relative;
@@ -158,7 +170,9 @@
             margin-top: 8px;
         }
 
-        .nav-profile:hover { border-color: var(--accent-h); }
+        .nav-profile:hover {
+            border-color: var(--accent-h);
+        }
 
         .nav-profile .presence {
             position: absolute;
@@ -210,7 +224,9 @@
             transition: border-color .15s;
         }
 
-        .topbar-profile:hover { border-color: var(--accent); }
+        .topbar-profile:hover {
+            border-color: var(--accent);
+        }
 
         .topbar-avatar {
             width: 28px;
@@ -249,15 +265,32 @@
             overflow-x: hidden;
         }
 
-        .page-area.no-pad { overflow: hidden; padding: 0; }
-        .page-area:not(.no-pad) { padding: 28px; }
+        .page-area.no-pad {
+            overflow: hidden;
+            padding: 0;
+        }
 
-        .page-area::-webkit-scrollbar { width: 5px; }
-        .page-area::-webkit-scrollbar-track { background: transparent; }
-        .page-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .page-area:not(.no-pad) {
+            padding: 28px;
+        }
+
+        .page-area::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .page-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .page-area::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
 
         /* ── Pending nav badge ────────────────────── */
-        .nav-request-link { margin-top: 8px; }
+        .nav-request-link {
+            margin-top: 8px;
+        }
 
         .nav-request-icon-wrap {
             position: relative;
@@ -347,9 +380,17 @@
             cursor: pointer;
         }
 
-        .mob-nav-btn.active { color: var(--accent-h); }
-        .mob-nav-btn:hover  { color: var(--text-1); }
-        .mob-nav-btn.danger:hover { color: var(--danger); }
+        .mob-nav-btn.active {
+            color: var(--accent-h);
+        }
+
+        .mob-nav-btn:hover {
+            color: var(--text-1);
+        }
+
+        .mob-nav-btn.danger:hover {
+            color: var(--danger);
+        }
 
         /* ── Pending page ─────────────────────────── */
         .pending-page {
@@ -370,7 +411,7 @@
             width: 58px;
             height: 58px;
             border-radius: 18px;
-            background: rgba(98,100,167,.15);
+            background: rgba(98, 100, 167, .15);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -390,7 +431,10 @@
             font-size: .95rem;
         }
 
-        .pending-grid { display: grid; gap: 18px; }
+        .pending-grid {
+            display: grid;
+            gap: 18px;
+        }
 
         .pending-card {
             background: #252532;
@@ -428,8 +472,17 @@
             font-weight: 700;
         }
 
-        .pending-user-name  { font-size: 1.1rem; font-weight: 700; color: #fff; }
-        .pending-user-email { margin-top: 4px; color: #9090b0; font-size: .92rem; }
+        .pending-user-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .pending-user-email {
+            margin-top: 4px;
+            color: #9090b0;
+            font-size: .92rem;
+        }
 
         .pending-user-time {
             margin-top: 10px;
@@ -441,13 +494,13 @@
         }
 
         .pending-status-badge {
-            background: rgba(255,166,0,.12);
+            background: rgba(255, 166, 0, .12);
             color: #ffb347;
             padding: 10px 16px;
             border-radius: 999px;
             font-size: .85rem;
             font-weight: 600;
-            border: 1px solid rgba(255,166,0,.2);
+            border: 1px solid rgba(255, 166, 0, .2);
         }
 
         .pending-empty {
@@ -464,29 +517,107 @@
 
         /* ── Responsive ───────────────────────────── */
         @media (max-width: 768px) {
-            .nav-rail    { display: none; }
-            .topbar      { display: none; }
-            .mobile-topbar    { display: flex; }
-            .mobile-bottomnav { display: flex; }
-            .page-area:not(.no-pad) { padding: 16px; }
+            .nav-rail {
+                display: none;
+            }
 
-            .pending-page { padding: 18px; }
-            .pending-page-title { font-size: 1.4rem; }
+            .topbar {
+                display: none;
+            }
+
+            .mobile-topbar {
+                display: flex;
+            }
+
+            .mobile-bottomnav {
+                display: flex;
+            }
+
+            .page-area:not(.no-pad) {
+                padding: 16px;
+            }
+
+            .pending-page {
+                padding: 18px;
+            }
+
+            .pending-page-title {
+                font-size: 1.4rem;
+            }
 
             .pending-card {
                 flex-direction: column;
                 align-items: flex-start;
             }
 
-            .pending-card-left { width: 100%; }
+            .pending-card-left {
+                width: 100%;
+            }
 
-            .pending-status { width: 100%; }
+            .pending-status {
+                width: 100%;
+            }
 
             .pending-status-badge {
                 width: 100%;
                 display: flex;
                 justify-content: center;
             }
+        }
+
+        /* ── Sent Requests sidebar banner ─────────── */
+        .sent-requests-banner {
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sent-requests-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            background: rgba(98, 100, 167, .08);
+            border: 1px solid rgba(98, 100, 167, .2);
+            color: var(--text-2);
+            font-size: .82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .sent-requests-btn:hover,
+        .sent-requests-btn-active {
+            background: rgba(98, 100, 167, .18);
+            color: var(--accent-h);
+            border-color: var(--accent);
+        }
+
+        .sent-req-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sent-req-badge {
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-size: .7rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Active request item in sidebar ──────── */
+        .request-toggle-active {
+            background: var(--accent-dim) !important;
+            color: var(--accent-h) !important;
         }
     </style>
 </head>
@@ -507,10 +638,10 @@
                     class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                     title="Dashboard">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <rect x="3"  y="3"  width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="3"  width="7" height="7" rx="1.5"/>
-                        <rect x="3"  y="14" width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
                     </svg>
                     Dashboard
                 </a>
@@ -519,10 +650,10 @@
                     class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
                     title="Users">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                     Users
                 </a>
@@ -532,7 +663,7 @@
                     class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}"
                     title="Chat">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     Chat
                 </a>
@@ -543,8 +674,8 @@
                     title="Pending Requests">
                     <div class="nav-request-icon-wrap">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M22 2L11 13"/>
-                            <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+                            <path d="M22 2L11 13" />
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
                         </svg>
                         <livewire:chat.pending-count />
                     </div>
@@ -561,9 +692,9 @@
                 @csrf
                 <button type="submit" class="nav-link danger" style="width:100%" title="Logout">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
                     Logout
                 </button>
@@ -600,10 +731,10 @@
                 <a href="{{ route('dashboard') }}"
                     class="mob-nav-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <rect x="3"  y="3"  width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="3"  width="7" height="7" rx="1.5"/>
-                        <rect x="3"  y="14" width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
                     </svg>
                     Dash
                 </a>
@@ -611,8 +742,8 @@
                 <a href="{{ route('users.index') }}"
                     class="mob-nav-btn {{ request()->routeIs('users.*') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
                     </svg>
                     Users
                 </a>
@@ -621,7 +752,7 @@
                 <a href="{{ route('chat.index') }}"
                     class="mob-nav-btn {{ request()->routeIs('chat.*') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     Chat
                 </a>
@@ -630,9 +761,9 @@
                     @csrf
                     <button type="submit" class="mob-nav-btn danger">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
                         </svg>
                         Logout
                     </button>
