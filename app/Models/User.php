@@ -2,89 +2,89 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\Conversation;
-
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'is_admin',
     ];
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password'          => 'hashed',
+        'is_admin'          => 'boolean',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
+
+    public function conversationsAsUserOne()
+    {
+        return $this->hasMany(Conversation::class, 'user_one_id');
+    }
+
+    public function conversationsAsUserTwo()
+    {
+        return $this->hasMany(Conversation::class, 'user_two_id');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * Get the attributes that should be cast.
+     * Return the Conversation record (any status) between this user and $otherUserId,
+     * or null if none exists.
      *
-     * @return array<string, string>
+     * Used in the search dropdown to determine what action button to show:
+     *   - accepted  → "Open Chat"
+     *   - pending + I sent it  → "Request Sent" (disabled)
+     *   - pending + I received → "Accept"
+     *   - null → "Send Request" / "Start Chat"
+     *
+     * @param  int  $otherUserId
+     * @return Conversation|null
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_admin' => 'boolean',
-            'last_seen' => 'datetime',
-        ];
-    }
-
-    public function sentMessages()
-    {
-        return $this->hasMany(Message::class, 'sender_id');
-    }
-
-    public function conversations()
+    public function getConversationWith(int $otherUserId): ?Conversation
     {
         return Conversation::query()
-
-            ->where('status', 'accepted')
-
-            ->where(function ($query) {
-
-                $query->where('user_one_id', $this->id)
-
-                    ->orWhere('user_two_id', $this->id);
-            });
+            ->where(function ($q) use ($otherUserId) {
+                $q->where('user_one_id', $this->id)
+                  ->where('user_two_id', $otherUserId);
+            })
+            ->orWhere(function ($q) use ($otherUserId) {
+                $q->where('user_one_id', $otherUserId)
+                  ->where('user_two_id', $this->id);
+            })
+            ->first();
     }
 
-/**
- * Check whether the user already has any conversation
- * (accepted OR pending) with the given user.
- */
-public function hasConversationWith(int $userId): bool
-{
-    return Conversation::query()
-        ->where(function ($q) use ($userId) {
-            $q->where('user_one_id', $this->id)
-              ->where('user_two_id', $userId);
-        })
-        ->orWhere(function ($q) use ($userId) {
-            $q->where('user_one_id', $userId)
-              ->where('user_two_id', $this->id);
-        })
-        ->exists();
-}
+    /**
+     * Quick boolean check: does any conversation (any status) exist
+     * between this user and $otherUserId?
+     *
+     * @param  int  $otherUserId
+     * @return bool
+     */
+    public function hasConversationWith(int $otherUserId): bool
+    {
+        return $this->getConversationWith($otherUserId) !== null;
+    }
 }

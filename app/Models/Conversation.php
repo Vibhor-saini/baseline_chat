@@ -53,4 +53,35 @@ class Conversation extends Model
             ? $this->userTwo
             : $this->userOne;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SCOPES
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Scope: conversations that involve a given user.
+     */
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_one_id', $userId)
+                     ->orWhere('user_two_id', $userId);
+    }
+
+    /**
+     * Scope: only accepted conversations.
+     */
+    public function scopeAccepted($query)
+    {
+        return $query->where('status', 'accepted');
+    }
+
+    /**
+     * Scope: only pending conversations.
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
 }

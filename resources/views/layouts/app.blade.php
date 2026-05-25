@@ -29,14 +29,9 @@
             --radius: 10px;
         }
 
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
-        html,
-        body {
+        html, body {
             height: 100%;
             margin: 0;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -45,14 +40,14 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ── App shell ────────────────────────────── */
+        /* ── App shell ──────────────────────────── */
         .app-shell {
             display: flex;
             height: 100vh;
             overflow: hidden;
         }
 
-        /* ── Left nav rail ────────────────────────── */
+        /* ── Left nav rail ──────────────────────── */
         .nav-rail {
             width: var(--nav-width);
             background: var(--nav-bg);
@@ -78,7 +73,7 @@
             color: #fff;
             margin-bottom: 20px;
             flex-shrink: 0;
-            box-shadow: 0 0 0 3px rgba(98, 100, 167, .25);
+            box-shadow: 0 0 0 3px rgba(98,100,167,.25);
         }
 
         .nav-items {
@@ -113,12 +108,10 @@
             background: none;
         }
 
-        .nav-link svg {
-            flex-shrink: 0;
-        }
+        .nav-link svg { flex-shrink: 0; }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, .06);
+            background: rgba(255,255,255,.06);
             color: var(--text-1);
         }
 
@@ -139,18 +132,14 @@
             border-radius: 0 3px 3px 0;
         }
 
-        .nav-link.danger {
-            color: var(--text-3);
-        }
+        .nav-link.danger { color: var(--text-3); }
 
         .nav-link.danger:hover {
-            background: rgba(224, 91, 91, .12);
+            background: rgba(224,91,91,.12);
             color: var(--danger);
         }
 
-        .nav-spacer {
-            flex: 1;
-        }
+        .nav-spacer { flex: 1; }
 
         .nav-profile {
             position: relative;
@@ -170,9 +159,7 @@
             margin-top: 8px;
         }
 
-        .nav-profile:hover {
-            border-color: var(--accent-h);
-        }
+        .nav-profile:hover { border-color: var(--accent-h); }
 
         .nav-profile .presence {
             position: absolute;
@@ -185,7 +172,7 @@
             border: 2px solid var(--nav-bg);
         }
 
-        /* ── Main content ─────────────────────────── */
+        /* ── Main content ───────────────────────── */
         .main-content {
             flex: 1;
             display: flex;
@@ -212,53 +199,6 @@
             flex: 1;
         }
 
-        .topbar-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 5px 10px 5px 5px;
-            border-radius: 24px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: border-color .15s;
-        }
-
-        .topbar-profile:hover {
-            border-color: var(--accent);
-        }
-
-        .topbar-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: .72rem;
-            color: #fff;
-            position: relative;
-        }
-
-        .topbar-avatar .presence {
-            position: absolute;
-            bottom: -1px;
-            right: -1px;
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: var(--online);
-            border: 2px solid var(--surface);
-        }
-
-        .topbar-name {
-            font-size: .8125rem;
-            font-weight: 600;
-            color: var(--text-1);
-        }
-
         .page-area {
             flex: 1;
             overflow-y: auto;
@@ -270,27 +210,17 @@
             padding: 0;
         }
 
-        .page-area:not(.no-pad) {
-            padding: 28px;
-        }
+        .page-area:not(.no-pad) { padding: 28px; }
 
-        .page-area::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .page-area::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
+        .page-area::-webkit-scrollbar { width: 5px; }
+        .page-area::-webkit-scrollbar-track { background: transparent; }
         .page-area::-webkit-scrollbar-thumb {
             background: var(--border);
             border-radius: 4px;
         }
 
-        /* ── Pending nav badge ────────────────────── */
-        .nav-request-link {
-            margin-top: 8px;
-        }
+        /* ── Pending nav badge ──────────────────── */
+        .nav-request-link { margin-top: 8px; }
 
         .nav-request-icon-wrap {
             position: relative;
@@ -318,7 +248,7 @@
             box-shadow: 0 0 0 2px var(--nav-bg);
         }
 
-        /* ── Mobile top bar ───────────────────────── */
+        /* ── Mobile top bar ─────────────────────── */
         .mobile-topbar {
             display: none;
             height: 56px;
@@ -350,7 +280,7 @@
             font-size: .85rem;
         }
 
-        /* ── Mobile bottom nav ────────────────────── */
+        /* ── Mobile bottom nav ──────────────────── */
         .mobile-bottomnav {
             display: none;
             height: 60px;
@@ -380,19 +310,11 @@
             cursor: pointer;
         }
 
-        .mob-nav-btn.active {
-            color: var(--accent-h);
-        }
+        .mob-nav-btn.active { color: var(--accent-h); }
+        .mob-nav-btn:hover { color: var(--text-1); }
+        .mob-nav-btn.danger:hover { color: var(--danger); }
 
-        .mob-nav-btn:hover {
-            color: var(--text-1);
-        }
-
-        .mob-nav-btn.danger:hover {
-            color: var(--danger);
-        }
-
-        /* ── Pending page ─────────────────────────── */
+        /* ── Pending page ───────────────────────── */
         .pending-page {
             padding: 32px;
             width: 100%;
@@ -411,7 +333,7 @@
             width: 58px;
             height: 58px;
             border-radius: 18px;
-            background: rgba(98, 100, 167, .15);
+            background: rgba(98,100,167,.15);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -431,10 +353,7 @@
             font-size: .95rem;
         }
 
-        .pending-grid {
-            display: grid;
-            gap: 18px;
-        }
+        .pending-grid { display: grid; gap: 18px; }
 
         .pending-card {
             background: #252532;
@@ -472,17 +391,8 @@
             font-weight: 700;
         }
 
-        .pending-user-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .pending-user-email {
-            margin-top: 4px;
-            color: #9090b0;
-            font-size: .92rem;
-        }
+        .pending-user-name { font-size: 1.1rem; font-weight: 700; color: #fff; }
+        .pending-user-email { margin-top: 4px; color: #9090b0; font-size: .92rem; }
 
         .pending-user-time {
             margin-top: 10px;
@@ -494,13 +404,13 @@
         }
 
         .pending-status-badge {
-            background: rgba(255, 166, 0, .12);
+            background: rgba(255,166,0,.12);
             color: #ffb347;
             padding: 10px 16px;
             border-radius: 999px;
             font-size: .85rem;
             font-weight: 600;
-            border: 1px solid rgba(255, 166, 0, .2);
+            border: 1px solid rgba(255,166,0,.2);
         }
 
         .pending-empty {
@@ -515,57 +425,7 @@
             color: #9090b0;
         }
 
-        /* ── Responsive ───────────────────────────── */
-        @media (max-width: 768px) {
-            .nav-rail {
-                display: none;
-            }
-
-            .topbar {
-                display: none;
-            }
-
-            .mobile-topbar {
-                display: flex;
-            }
-
-            .mobile-bottomnav {
-                display: flex;
-            }
-
-            .page-area:not(.no-pad) {
-                padding: 16px;
-            }
-
-            .pending-page {
-                padding: 18px;
-            }
-
-            .pending-page-title {
-                font-size: 1.4rem;
-            }
-
-            .pending-card {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .pending-card-left {
-                width: 100%;
-            }
-
-            .pending-status {
-                width: 100%;
-            }
-
-            .pending-status-badge {
-                width: 100%;
-                display: flex;
-                justify-content: center;
-            }
-        }
-
-        /* ── Sent Requests sidebar banner ─────────── */
+        /* ── Sent Requests sidebar banner ───────── */
         .sent-requests-banner {
             padding: 6px 12px;
             border-bottom: 1px solid var(--border);
@@ -578,8 +438,8 @@
             justify-content: space-between;
             padding: 8px 12px;
             border-radius: var(--radius);
-            background: rgba(98, 100, 167, .08);
-            border: 1px solid rgba(98, 100, 167, .2);
+            background: rgba(98,100,167,.08);
+            border: 1px solid rgba(98,100,167,.2);
             color: var(--text-2);
             font-size: .82rem;
             font-weight: 500;
@@ -589,16 +449,12 @@
 
         .sent-requests-btn:hover,
         .sent-requests-btn-active {
-            background: rgba(98, 100, 167, .18);
+            background: rgba(98,100,167,.18);
             color: var(--accent-h);
             border-color: var(--accent);
         }
 
-        .sent-req-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .sent-req-left { display: flex; align-items: center; gap: 8px; }
 
         .sent-req-badge {
             min-width: 20px;
@@ -614,30 +470,92 @@
             justify-content: center;
         }
 
-        /* ── Active request item in sidebar ──────── */
+        /* ── Active request item in sidebar ─────── */
         .request-toggle-active {
             background: var(--accent-dim) !important;
             color: var(--accent-h) !important;
         }
+
+        /* ── Search action badges ───────────────── */
+        .search-action-btn--open { background: var(--accent-dim); color: var(--accent-h); }
+        .search-action-btn--accept { background: rgba(87,199,90,.15); color: #57c75a; border-color: rgba(87,199,90,.3); }
+
+        .search-status-badge {
+            font-size: .75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid;
+        }
+
+        .search-status-badge--pending {
+            background: rgba(255,179,71,.1);
+            color: #ffb347;
+            border-color: rgba(255,179,71,.3);
+        }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-3);
+            display: flex;
+            align-items: center;
+            padding: 2px;
+            border-radius: 4px;
+            transition: color .15s;
+        }
+
+        .search-clear-btn:hover { color: var(--text-1); }
+
+        /* ── Profile dropdown ───────────────────── */
+        .profile-dropdown { display: none; }
+        .profile-dropdown.profile-dropdown-open { display: block; }
+
+        /* ── Responsive ─────────────────────────── */
+        @media (max-width: 768px) {
+            .nav-rail { display: none; }
+            .topbar   { display: none; }
+            .mobile-topbar   { display: flex; }
+            .mobile-bottomnav { display: flex; }
+            .page-area:not(.no-pad) { padding: 16px; }
+            .pending-page { padding: 18px; }
+            .pending-page-title { font-size: 1.4rem; }
+            .pending-card { flex-direction: column; align-items: flex-start; }
+            .pending-card-left { width: 100%; }
+            .pending-status { width: 100%; }
+            .pending-status-badge { width: 100%; display: flex; justify-content: center; }
+        }
     </style>
 </head>
 
-<body>
+{{--
+    IMPORTANT: data-user-id is read by chat.js to subscribe to the private
+    user channel (user.{id}). Without this, realtime updates are silently
+    disabled for that session.
+--}}
+<body @auth data-user-id="{{ auth()->id() }}" @endauth>
     <div class="app-shell">
 
-        {{-- ═══════════════════ DESKTOP NAV RAIL ═══════════════════ --}}
+        {{-- ══════════════ DESKTOP NAV RAIL ══════════════ --}}
         <aside class="nav-rail">
 
-            <div class="nav-brand">B</div>
+            <div class="nav-brand" aria-label="Baseline Chat">B</div>
 
-            <nav class="nav-items">
+            <nav class="nav-items" aria-label="Main navigation">
                 @auth
 
                 @if(auth()->user()->is_admin)
                 <a href="{{ route('dashboard') }}"
-                    class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
-                    title="Dashboard">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                   title="Dashboard"
+                   aria-label="Dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <rect x="3" y="3" width="7" height="7" rx="1.5" />
                         <rect x="14" y="3" width="7" height="7" rx="1.5" />
                         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -647,9 +565,11 @@
                 </a>
 
                 <a href="{{ route('users.index') }}"
-                    class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
-                    title="Users">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                   title="Users"
+                   aria-label="Users">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -660,23 +580,28 @@
                 @endif
 
                 <a href="{{ route('chat.index') }}"
-                    class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}"
-                    title="Chat">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}"
+                   title="Chat"
+                   aria-label="Chat">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     Chat
                 </a>
 
-                {{-- Pending requests link with live badge --}}
-                <a href="{{ route('chat.index', ['screen' => 'pending']) }}"
-                    class="nav-link nav-request-link"
-                    title="Pending Requests">
+                {{-- Pending requests badge — live count via PendingCount component --}}
+                <a href="{{ route('chat.index') }}"
+                   class="nav-link nav-request-link"
+                   title="Pending Requests"
+                   aria-label="Pending Requests">
                     <div class="nav-request-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <path d="M22 2L11 13" />
                             <path d="M22 2L15 22L11 13L2 9L22 2Z" />
                         </svg>
+                        {{-- PendingCount renders only the badge span --}}
                         <livewire:chat.pending-count />
                     </div>
                     Pending
@@ -691,7 +616,8 @@
             <form method="POST" action="{{ route('logout') }}" style="width:100%;padding:0 8px;">
                 @csrf
                 <button type="submit" class="nav-link danger" style="width:100%" title="Logout">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                         <polyline points="16 17 21 12 16 7" />
                         <line x1="21" y1="12" x2="9" y2="12" />
@@ -700,15 +626,15 @@
                 </button>
             </form>
 
-            <div class="nav-profile" title="{{ auth()->user()->name }}">
+            <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}">
                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                <span class="presence"></span>
+                <span class="presence" aria-hidden="true"></span>
             </div>
             @endauth
 
         </aside>
 
-        {{-- ═══════════════════ CONTENT COLUMN ═══════════════════ --}}
+        {{-- ══════════════ CONTENT COLUMN ══════════════ --}}
         <div class="main-content">
 
             {{-- Mobile top bar --}}
@@ -725,12 +651,13 @@
             </div>
 
             {{-- Mobile bottom nav --}}
-            <nav class="mobile-bottomnav">
+            <nav class="mobile-bottomnav" aria-label="Mobile navigation">
                 @auth
                 @if(auth()->user()->is_admin)
                 <a href="{{ route('dashboard') }}"
-                    class="mob-nav-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="mob-nav-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <rect x="3" y="3" width="7" height="7" rx="1.5" />
                         <rect x="14" y="3" width="7" height="7" rx="1.5" />
                         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -740,8 +667,9 @@
                 </a>
 
                 <a href="{{ route('users.index') }}"
-                    class="mob-nav-btn {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="mob-nav-btn {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                     </svg>
@@ -750,8 +678,9 @@
                 @endif
 
                 <a href="{{ route('chat.index') }}"
-                    class="mob-nav-btn {{ request()->routeIs('chat.*') ? 'active' : '' }}">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                   class="mob-nav-btn {{ request()->routeIs('chat.*') ? 'active' : '' }}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     Chat
@@ -760,7 +689,8 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="mob-nav-btn danger">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                             <polyline points="16 17 21 12 16 7" />
                             <line x1="21" y1="12" x2="9" y2="12" />
@@ -776,5 +706,4 @@
 
     @livewireScripts
 </body>
-
 </html>

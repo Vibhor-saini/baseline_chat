@@ -16,34 +16,59 @@ class Index extends Component
     |--------------------------------------------------------------------------
     | PUBLIC STATE
     |--------------------------------------------------------------------------
+    | All UI state lives here. activeScreen is the single source of truth for
+    | which panel is visible. Never use URL params for screen state.
+    |--------------------------------------------------------------------------
     */
 
-    public $conversations    = [];
-    public $messages         = [];
-    public $searchResults    = [];
-    public $pendingRequests  = [];
-    public $sentRequests     = [];
+    /** @var \Illuminate\Support\Collection Accepted conversations shown in sidebar */
+    public $conversations = [];
 
+    /** @var array Messages for the currently open chat */
+    public $messages = [];
+
+    /** @var \Illuminate\Support\Collection Search results from global user search */
+    public $searchResults = [];
+
+    /** @var \Illuminate\Support\Collection Requests received by the current user */
+    public $pendingRequests = [];
+
+    /** @var \Illuminate\Support\Collection Requests sent by the current user */
+    public $sentRequests = [];
+
+    /** @var Conversation|null The currently open conversation */
     public ?Conversation $selectedConversation = null;
-    public $selectedConversationId             = null;
-    public $selectedRequest                    = null;
 
-    public string $body   = '';
+    /** @var int|null ID of the selected conversation (used for JS channel binding) */
+    public ?int $selectedConversationId = null;
+
+    /** @var Conversation|null The request being previewed (receiver side) */
+    public $selectedRequest = null;
+
+    /** @var string The message being typed */
+    public string $body = '';
+
+    /** @var string Search query for global user search */
     public string $search = '';
 
-    public bool $showRequests     = false;
-    public bool $showSentRequests = false;
+    /** @var bool Whether the incoming-requests accordion is expanded in the sidebar */
+    public bool $showRequests = false;
 
     /**
      * Single source of truth for which screen is visible.
-     * Possible values: 'empty' | 'chat' | 'request-preview' | 'sent-requests'
+     *
+     * Possible values:
+     *   'empty'           — default / welcome state
+     *   'chat'            — an accepted conversation is open
+     *   'request-preview' — receiver is viewing an incoming request
+     *   'sent-requests'   — sender is viewing their pending sent requests
      */
     public string $activeScreen = 'empty';
 
     /*
     |--------------------------------------------------------------------------
     | LIVEWIRE LISTENERS
-    | These are called from JS via component.call(...)
+    | Called from JavaScript via component.call(...)
     |--------------------------------------------------------------------------
     */
 
@@ -54,11 +79,11 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | MOUNT
+    | LIFECYCLE — MOUNT
     |--------------------------------------------------------------------------
     */
 
-    public function mount()
+    public function mount(): void
     {
         $this->loadConversations();
         $this->loadPendingRequests();
@@ -67,12 +92,13 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | LOADERS — Each loads only what it owns
+    | DATA LOADERS
+    | Each method loads only what it owns. Call only what changed.
     |--------------------------------------------------------------------------
     */
 
     /**
-     * Load accepted conversations for the sidebar.
+     * Load accepted conversations for the current user's sidebar.
      */
     public function loadConversations(): void
     {
@@ -88,7 +114,7 @@ class Index extends Component
     }
 
     /**
-     * Load requests received by the current user (they are user_two).
+     * Load pending requests sent TO the current user (they are user_two).
      */
     public function loadPendingRequests(): void
     {
@@ -101,7 +127,7 @@ class Index extends Component
     }
 
     /**
-     * Load requests sent by the current user (they are user_one).
+     * Load pending requests sent BY the current user (they are user_one).
      */
     public function loadSentRequests(): void
     {
@@ -115,34 +141,26 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | REALTIME REFRESH CALLBACKS
-    | Called from JS when a broadcast event fires on the private user channel.
+    | REALTIME REFRESH — called from JS after a broadcast event fires
     |--------------------------------------------------------------------------
     */
 
     /**
-     * Refresh pending + sent request lists only.
-     * Used when a request is sent or rejected.
+     * Refresh only the pending/sent-request lists.
+     * Triggered by PendingRequestUpdated (request sent, accepted, or rejected).
      */
     public function refreshPendingData(): void
     {
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // If user is on the sent-requests screen but has no sent requests
-        // anymore (e.g. all were accepted/rejected), return to empty state.
-        if (
-            $this->activeScreen === 'sent-requests'
-            && count($this->sentRequests) === 0
-        ) {
-            $this->showSentRequests = false;
-            $this->activeScreen     = 'empty';
-        }
+        // If the user is watching sent-requests but all requests are gone, reset.
+        $this->clearSentRequestsScreenIfEmpty();
     }
 
     /**
-     * Refresh conversations + pending data.
-     * Used when a request is accepted — conversation moves to sidebar.
+     * Refresh conversations AND request lists.
+     * Triggered by ConversationUpdated (request accepted → conversation appears).
      */
     public function refreshConversationData(): void
     {
@@ -150,16 +168,9 @@ class Index extends Component
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // If sent-requests screen is open but list is now empty, go to empty.
-        if (
-            $this->activeScreen === 'sent-requests'
-            && count($this->sentRequests) === 0
-        ) {
-            $this->showSentRequests = false;
-            $this->activeScreen     = 'empty';
-        }
+        $this->clearSentRequestsScreenIfEmpty();
 
-        // If a conversation was selected and it's now accepted, open it.
+        // If we were waiting for a specific conversation to be accepted, open it now.
         if ($this->selectedConversationId) {
             $conversation = Conversation::find($this->selectedConversationId);
 
@@ -169,27 +180,52 @@ class Index extends Component
         }
     }
 
+    /**
+     * Helper: if the sent-requests screen is active but the list is now empty,
+     * fall back to the empty state automatically.
+     */
+    private function clearSentRequestsScreenIfEmpty(): void
+    {
+        if (
+            $this->activeScreen === 'sent-requests'
+            && $this->sentRequests->isEmpty()
+        ) {
+            $this->activeScreen = 'empty';
+        }
+    }
+
     /*
     |--------------------------------------------------------------------------
-    | SEARCH
+    | SEARCH — real-time user search from the topbar
     |--------------------------------------------------------------------------
     */
 
     public function updatedSearch(): void
     {
-        if (strlen($this->search) < 2) {
+        if (mb_strlen(trim($this->search)) < 2) {
             $this->searchResults = [];
             return;
         }
 
+        $term = '%' . trim($this->search) . '%';
+
         $this->searchResults = User::query()
             ->where('id', '!=', auth()->id())
-            ->where(function ($q) {
-                $q->where('name',  'like', '%' . $this->search . '%')
-                  ->orWhere('email', 'like', '%' . $this->search . '%');
+            ->where(function ($q) use ($term) {
+                $q->where('name',  'like', $term)
+                  ->orWhere('email', 'like', $term);
             })
             ->limit(8)
             ->get();
+    }
+
+    /**
+     * Close the search dropdown without starting anything.
+     */
+    public function clearSearch(): void
+    {
+        $this->search        = '';
+        $this->searchResults = [];
     }
 
     /*
@@ -198,111 +234,68 @@ class Index extends Component
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Called when the user clicks "Send Request" or "Start Chat" from search.
+     *
+     * Logic:
+     *  - If a conversation already exists and is accepted → open it.
+     *  - If a conversation already exists and is pending  → show the pending screen.
+     *  - If no conversation exists:
+     *      * Admin-involved conversations are auto-accepted.
+     *      * Normal user → normal user sends a pending request.
+     */
     public function startConversation(int $userId): void
     {
         $authId = auth()->id();
 
-        // Check if a conversation already exists in either direction.
-        $conversation = Conversation::query()
-            ->where(function ($q) use ($authId, $userId) {
-                $q->where('user_one_id', $authId)
-                  ->where('user_two_id', $userId);
-            })
-            ->orWhere(function ($q) use ($authId, $userId) {
-                $q->where('user_one_id', $userId)
-                  ->where('user_two_id', $authId);
-            })
-            ->first();
+        $conversation = $this->findConversationBetween($authId, $userId);
 
-        // --- Create a new conversation / request ---
         if (! $conversation) {
-            $targetUser          = User::findOrFail($userId);
-            $isAdminConversation = auth()->user()->is_admin || $targetUser->is_admin;
-
-            $conversation = Conversation::create([
-                'user_one_id' => $authId,
-                'user_two_id' => $userId,
-                'status'      => $isAdminConversation ? 'accepted' : 'pending',
-            ]);
-
-            // Auto-send a greeting for non-admin (pending) requests.
-            if (! $isAdminConversation) {
-                Message::create([
-                    'conversation_id' => $conversation->id,
-                    'sender_id'       => $authId,
-                    'body'            => 'Hi ' . $targetUser->name,
-                ]);
-            }
-
-            // Broadcast to both participants so their UIs update instantly.
-            $this->broadcastPendingUpdate($authId, $userId);
-            $this->broadcastConversationUpdate($conversation, $authId, $userId);
+            $conversation = $this->createConversation($authId, $userId);
         }
 
-        // --- Reset search UI ---
-        $this->search        = '';
-        $this->searchResults = [];
-
-        // --- Refresh local state ---
+        $this->clearSearch();
         $this->loadConversations();
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // --- Navigate to correct screen ---
         if ($conversation->status === 'accepted') {
-            $this->activeScreen    = 'chat';
-            $this->showSentRequests = false;
-            $this->selectedRequest  = null;
-            $this->selectConversation($conversation->id);
+            $this->openChat($conversation->id);
         } else {
-            // Request was sent — show the sender their pending requests screen.
-            $this->selectedConversation = null;
-            $this->selectedRequest       = null;
-            $this->showSentRequests      = true;
-            $this->activeScreen          = 'sent-requests';
+            $this->openSentRequests();
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | OPEN EXISTING CONVERSATION (from search)
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Called when the user clicks "Open Chat" on an already-connected person
+     * from the search dropdown.
+     */
     public function openExistingConversation(int $userId): void
     {
-        $authId = auth()->id();
-
-        $conversation = Conversation::query()
-            ->where(function ($q) use ($authId, $userId) {
-                $q->where('user_one_id', $authId)
-                  ->where('user_two_id', $userId);
-            })
-            ->orWhere(function ($q) use ($authId, $userId) {
-                $q->where('user_one_id', $userId)
-                  ->where('user_two_id', $authId);
-            })
-            ->first();
+        $authId       = auth()->id();
+        $conversation = $this->findConversationBetween($authId, $userId);
 
         if ($conversation) {
-            $this->selectConversation($conversation->id);
+            $this->openChat($conversation->id);
         }
 
-        $this->search        = '';
-        $this->searchResults = [];
+        $this->clearSearch();
     }
 
     /*
     |--------------------------------------------------------------------------
-    | SELECT CONVERSATION (open chat window)
+    | CONVERSATION SELECTION
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Open a conversation by ID and switch the main panel to chat view.
+     */
     public function selectConversation(int $conversationId): void
     {
-        $this->selectedConversation    = Conversation::with(['userOne', 'userTwo'])
+        $this->selectedConversation   = Conversation::with(['userOne', 'userTwo'])
             ->findOrFail($conversationId);
-        $this->selectedConversationId  = $conversationId;
+        $this->selectedConversationId = $conversationId;
 
         $this->messages = Message::query()
             ->where('conversation_id', $conversationId)
@@ -314,30 +307,30 @@ class Index extends Component
             ->values();
 
         $this->selectedRequest  = null;
-        $this->showSentRequests = false;
+        $this->showRequests     = false;
         $this->activeScreen     = 'chat';
     }
 
     /*
     |--------------------------------------------------------------------------
-    | OPEN REQUEST PREVIEW (receiver views incoming request)
+    | REQUEST ACTIONS (RECEIVER SIDE)
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Open the preview panel for an incoming request.
+     */
     public function openRequest(int $requestId): void
     {
         $this->selectedRequest      = Conversation::with(['userOne'])->findOrFail($requestId);
         $this->selectedConversation = null;
-        $this->showSentRequests     = false;
         $this->activeScreen         = 'request-preview';
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACCEPT REQUEST
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Accept an incoming request.
+     * Transitions the conversation to accepted and opens the chat immediately.
+     */
     public function acceptRequest(int $conversationId): void
     {
         $conversation = Conversation::findOrFail($conversationId);
@@ -347,28 +340,23 @@ class Index extends Component
         $senderId   = $conversation->user_one_id;
         $receiverId = $conversation->user_two_id;
 
-        // Broadcast so both sides refresh their conversation lists instantly.
+        // Notify both sides so their UIs update instantly.
         $this->broadcastPendingUpdate($senderId, $receiverId);
         $this->broadcastConversationUpdate($conversation, $senderId, $receiverId);
 
-        // Refresh local state for the receiver (the one accepting).
+        // Refresh local state for the receiver who just accepted.
         $this->loadConversations();
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // Open the chat immediately for the accepter.
-        $this->selectedRequest  = null;
-        $this->showSentRequests = false;
-        $this->activeScreen     = 'chat';
-        $this->selectConversation($conversation->id);
+        // Open the accepted chat immediately for the receiver.
+        $this->selectedRequest = null;
+        $this->openChat($conversation->id);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | REJECT REQUEST
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Reject and delete an incoming request.
+     */
     public function rejectRequest(int $conversationId): void
     {
         $conversation = Conversation::findOrFail($conversationId);
@@ -378,25 +366,27 @@ class Index extends Component
 
         $conversation->delete();
 
-        // Broadcast so the sender's pending list updates instantly.
+        // Notify both sides.
         $this->broadcastPendingUpdate($senderId, $receiverId);
 
         // Refresh local state for the receiver.
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // Return receiver to empty screen.
-        $this->selectedRequest  = null;
-        $this->showSentRequests = false;
-        $this->activeScreen     = 'empty';
+        // Close the preview and return to empty state.
+        $this->selectedRequest = null;
+        $this->activeScreen    = 'empty';
     }
 
     /*
     |--------------------------------------------------------------------------
-    | SEND MESSAGE
+    | MESSAGING
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Send a message in the currently open conversation.
+     */
     public function sendMessage(): void
     {
         if (! $this->selectedConversation || trim($this->body) === '') {
@@ -414,27 +404,30 @@ class Index extends Component
         $this->messages[] = $message;
 
         $this->selectedConversation->update(['last_message_at' => now()]);
+        $this->loadConversations(); // Re-sort sidebar by last_message_at.
 
         broadcast(new MessageSent($message))->toOthers();
 
         $this->body = '';
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | APPEND REALTIME MESSAGE (called from JS on broadcast)
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Append a message received via broadcast.
+     * Called from JavaScript when a MessageSent event fires on the private channel.
+     */
     public function appendMessage(array $messageData): void
     {
         $message = Message::with('sender')->find($messageData['id']);
 
-        if (! $message) return;
+        if (! $message) {
+            return;
+        }
 
-        // Prevent duplicates.
+        // Prevent duplicates (e.g. if the event fires more than once).
         foreach ($this->messages as $existing) {
-            if ($existing->id === $message->id) return;
+            if ($existing->id === $message->id) {
+                return;
+            }
         }
 
         $this->messages[] = $message;
@@ -442,43 +435,110 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | TOGGLE REQUESTS SIDEBAR SECTION
+    | SIDEBAR TOGGLES
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Toggle the incoming-requests accordion in the sidebar.
+     */
     public function toggleRequests(): void
     {
         $this->showRequests = ! $this->showRequests;
 
         if (! $this->showRequests) {
-            $this->selectedRequest = null;
+            // If the request-preview screen was open, close it.
+            if ($this->activeScreen === 'request-preview') {
+                $this->selectedRequest = null;
+                $this->activeScreen    = 'empty';
+            }
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | OPEN SENT REQUESTS SCREEN
-    |--------------------------------------------------------------------------
-    */
-
+    /**
+     * Switch to the sent-requests screen.
+     * Refreshes the list immediately before rendering.
+     */
     public function openSentRequests(): void
     {
         $this->loadSentRequests();
 
-        $this->showSentRequests     = true;
         $this->selectedConversation = null;
-        $this->selectedRequest       = null;
-        $this->activeScreen          = 'sent-requests';
+        $this->selectedRequest      = null;
+        $this->activeScreen         = 'sent-requests';
     }
 
     /*
     |--------------------------------------------------------------------------
-    | BROADCAST HELPERS — DRY wrappers around repeated broadcast calls
+    | PRIVATE HELPERS
     |--------------------------------------------------------------------------
     */
 
     /**
-     * Notify both users that pending request data has changed.
+     * Find an existing conversation between two users regardless of direction.
+     */
+    private function findConversationBetween(int $userA, int $userB): ?Conversation
+    {
+        return Conversation::query()
+            ->where(function ($q) use ($userA, $userB) {
+                $q->where('user_one_id', $userA)
+                  ->where('user_two_id', $userB);
+            })
+            ->orWhere(function ($q) use ($userA, $userB) {
+                $q->where('user_one_id', $userB)
+                  ->where('user_two_id', $userA);
+            })
+            ->first();
+    }
+
+    /**
+     * Create a new conversation (pending or auto-accepted for admins).
+     * Auto-sends a greeting message for pending (non-admin) requests.
+     */
+    private function createConversation(int $authId, int $userId): Conversation
+    {
+        $targetUser          = User::findOrFail($userId);
+        $isAdminConversation = auth()->user()->is_admin || $targetUser->is_admin;
+
+        $conversation = Conversation::create([
+            'user_one_id' => $authId,
+            'user_two_id' => $userId,
+            'status'      => $isAdminConversation ? 'accepted' : 'pending',
+        ]);
+
+        // Automatically send a greeting message for non-admin (pending) requests.
+        if (! $isAdminConversation) {
+            Message::create([
+                'conversation_id' => $conversation->id,
+                'sender_id'       => $authId,
+                'body'            => 'Hi ' . $targetUser->name,
+            ]);
+        }
+
+        // Notify both participants instantly via WebSocket.
+        $this->broadcastPendingUpdate($authId, $userId);
+        $this->broadcastConversationUpdate($conversation, $authId, $userId);
+
+        return $conversation;
+    }
+
+    /**
+     * Switch to the chat screen for a given conversation ID.
+     */
+    private function openChat(int $conversationId): void
+    {
+        $this->activeScreen = 'chat';
+        $this->selectConversation($conversationId);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BROADCAST HELPERS — thin wrappers to keep callers DRY
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Notify a set of users that their pending-request list has changed.
      */
     private function broadcastPendingUpdate(int ...$userIds): void
     {
@@ -488,7 +548,7 @@ class Index extends Component
     }
 
     /**
-     * Notify both users that a conversation has been created or updated.
+     * Notify a set of users that a conversation was created or updated.
      */
     private function broadcastConversationUpdate(
         Conversation $conversation,

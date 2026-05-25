@@ -1,4 +1,13 @@
-<div class="teams-chat-root" data-conversation="{{ $selectedConversationId }}">
+{{--
+    resources/views/livewire/chat/index.blade.php
+    ─────────────────────────────────────────────
+    The data-conversation attribute on the root div lets chat.js know
+    which channel to subscribe to without any extra Livewire round-trips.
+--}}
+<div
+    class="teams-chat-root"
+    data-conversation="{{ $selectedConversationId }}"
+    wire:key="chat-root">
 
     {{-- ═══════════════════════════════════════════════════
          TOP BAR
@@ -18,17 +27,19 @@
                 </div>
             </div>
 
-            {{-- Center: Global Search --}}
+            {{-- Center: Global User Search --}}
             <div class="topbar-center">
                 <div class="global-search-wrap" id="globalSearchWrap">
-                    <svg class="search-icon global-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+
+                    <svg class="search-icon global-search-icon" width="15" height="15"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <circle cx="11" cy="11" r="8" />
                         <path d="m21 21-4.35-4.35" />
                     </svg>
 
                     <input
                         type="text"
-                        wire:model.live="search"
+                        wire:model.live.debounce.300ms="search"
                         placeholder="Search people..."
                         class="global-search-input"
                         id="globalSearchInput"
@@ -38,61 +49,92 @@
                         aria-controls="globalSearchResults"
                         aria-expanded="{{ !empty($searchResults) ? 'true' : 'false' }}">
 
-                    <div class="search-kbd-hint" aria-hidden="true">
-                        <kbd>⌘</kbd><kbd>K</kbd>
-                    </div>
+                    {{-- Clear button — only when text is present --}}
+                    @if($search)
+                        <button
+                            type="button"
+                            wire:click="clearSearch"
+                            class="search-clear-btn"
+                            aria-label="Clear search">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                        </button>
+                    @endif
 
+                    {{-- Search results dropdown --}}
                     @if(!empty($searchResults))
-                    <div class="global-search-results" id="globalSearchResults" role="listbox" aria-label="Search results">
+                    <div class="global-search-results" id="globalSearchResults"
+                         role="listbox" aria-label="Search results">
                         @foreach($searchResults as $user)
+                            @php
+                                $existingConv    = auth()->user()->getConversationWith($user->id);
+                                $alreadyAccepted = $existingConv && $existingConv->status === 'accepted';
+                                $alreadyPending  = $existingConv && $existingConv->status === 'pending';
 
-                        @php
-                            $alreadyConnected    = auth()->user()->hasConversationWith($user->id);
-                            $isAdminConversation = auth()->user()->is_admin || $user->is_admin;
-                        @endphp
+                                // Check direction of the pending request
+                                $iSent    = $alreadyPending && $existingConv->user_one_id === auth()->id();
+                                $iReceived = $alreadyPending && $existingConv->user_two_id === auth()->id();
 
-                        <div class="global-search-item" role="option">
-                            <div class="global-search-avatar" aria-hidden="true">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                                $isAdminConversation = auth()->user()->is_admin || $user->is_admin;
+                            @endphp
+
+                            <div class="global-search-item" role="option">
+                                <div class="global-search-avatar" aria-hidden="true">
+                                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                                </div>
+
+                                <div class="global-search-info">
+                                    <div class="global-search-name">{{ $user->name }}</div>
+                                    <div class="global-search-email">{{ $user->email }}</div>
+                                </div>
+
+                                <div class="global-search-action">
+                                    @if($alreadyAccepted)
+                                        {{-- Already connected → open the chat --}}
+                                        <button
+                                            type="button"
+                                            wire:click="openExistingConversation({{ $user->id }})"
+                                            class="search-action-btn search-action-btn--open">
+                                            Open Chat
+                                        </button>
+
+                                    @elseif($iSent)
+                                        {{-- Current user already sent a request → show status only --}}
+                                        <span class="search-status-badge search-status-badge--pending">
+                                            Request Sent
+                                        </span>
+
+                                    @elseif($iReceived)
+                                        {{-- Current user has received a request from this person → accept --}}
+                                        <button
+                                            type="button"
+                                            wire:click="acceptRequest({{ $existingConv->id }})"
+                                            class="search-action-btn search-action-btn--accept">
+                                            Accept
+                                        </button>
+
+                                    @else
+                                        {{-- No relationship yet --}}
+                                        <button
+                                            type="button"
+                                            wire:click="startConversation({{ $user->id }})"
+                                            class="search-action-btn">
+                                            {{ $isAdminConversation ? 'Start Chat' : 'Send Request' }}
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
-
-                            <div class="global-search-info">
-                                <div class="global-search-name">{{ $user->name }}</div>
-                                <div class="global-search-email">{{ $user->email }}</div>
-                            </div>
-
-                            <div class="global-search-action">
-                                @if($alreadyConnected)
-                                    <button
-                                        type="button"
-                                        wire:click="openExistingConversation({{ $user->id }})"
-                                        class="search-action-btn">
-                                        Open Chat
-                                    </button>
-                                @elseif($isAdminConversation)
-                                    <button
-                                        type="button"
-                                        wire:click="startConversation({{ $user->id }})"
-                                        class="search-action-btn">
-                                        Start Chat
-                                    </button>
-                                @else
-                                    <button
-                                        type="button"
-                                        wire:click="startConversation({{ $user->id }})"
-                                        class="search-action-btn">
-                                        Send Request
-                                    </button>
-                                @endif
-                            </div>
-                        </div>
                         @endforeach
                     </div>
                     @endif
+
                 </div>
             </div>
 
-            {{-- Right: Profile --}}
+            {{-- Right: Profile & Logout --}}
             <div class="topbar-right">
                 <div class="profile-wrap" id="profileWrap">
                     <button
@@ -109,7 +151,8 @@
                             <div class="profile-name">{{ auth()->user()->name }}</div>
                             <div class="profile-role">{{ auth()->user()->is_admin ? 'Admin' : 'Member' }}</div>
                         </div>
-                        <svg class="profile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <svg class="profile-chevron" width="14" height="14" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M6 9l6 6 6-6" />
                         </svg>
                     </button>
@@ -138,7 +181,8 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button class="dropdown-item dropdown-item-danger" role="menuitem" type="submit">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                                     <polyline points="16 17 21 12 16 7" />
                                     <line x1="21" y1="12" x2="9" y2="12" />
@@ -149,6 +193,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -166,68 +211,64 @@
                 <div class="sidebar-title-row">
                     <h2 class="sidebar-title">Chat</h2>
                 </div>
-                <div class="search-wrap">
-                    <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                    </svg>
-                    <input
-                        type="text"
-                        placeholder="Filter conversations"
-                        class="search-input"
-                        wire:model.live="search"
-                        aria-label="Filter conversations">
-                </div>
             </div>
 
-            {{-- ── Sent Requests link (visible when user has sent requests) ── --}}
-            @if($sentRequests && count($sentRequests) > 0)
+            {{-- ── Sent Requests banner (visible when user has outgoing pending requests) ── --}}
+            @if($sentRequests && $sentRequests->count() > 0)
             <div class="sent-requests-banner">
                 <button
                     type="button"
                     wire:click="openSentRequests"
                     class="sent-requests-btn {{ $activeScreen === 'sent-requests' ? 'sent-requests-btn-active' : '' }}">
                     <div class="sent-req-left">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M22 2L11 13"/>
                             <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
                         </svg>
                         <span>Pending Requests</span>
                     </div>
-                    <span class="sent-req-badge">{{ count($sentRequests) }}</span>
+                    <span class="sent-req-badge">{{ $sentRequests->count() }}</span>
                 </button>
             </div>
             @endif
 
             {{-- ── Incoming Requests Section ── --}}
-            @if($pendingRequests && count($pendingRequests) > 0)
+            @if($pendingRequests && $pendingRequests->count() > 0)
             <div class="request-section">
                 <button
                     type="button"
                     class="request-header"
-                    wire:click="toggleRequests">
+                    wire:click="toggleRequests"
+                    aria-expanded="{{ $showRequests ? 'true' : 'false' }}">
                     <div class="request-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                         <span>Requests</span>
                     </div>
                     <div class="request-header-right">
-                        <span class="request-count">{{ count($pendingRequests) }}</span>
-                        <span class="request-chevron">{{ $showRequests ? '▾' : '▸' }}</span>
+                        <span class="request-count">{{ $pendingRequests->count() }}</span>
+                        <svg
+                            width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" aria-hidden="true"
+                            style="transform: {{ $showRequests ? 'rotate(180deg)' : 'rotate(0)' }}; transition: transform .2s">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
                     </div>
                 </button>
 
                 @if($showRequests)
-                <div class="request-list">
+                <div class="request-list" role="list">
                     @foreach($pendingRequests as $request)
-                    <div class="request-item">
+                    <div class="request-item" role="listitem">
                         <button
                             type="button"
                             wire:click="openRequest({{ $request->id }})"
                             class="request-toggle {{ ($activeScreen === 'request-preview' && $selectedRequest?->id === $request->id) ? 'request-toggle-active' : '' }}">
                             <div class="request-user">
-                                <div class="request-avatar">
+                                <div class="request-avatar" aria-hidden="true">
                                     {{ strtoupper(substr($request->userOne->name, 0, 1)) }}
                                 </div>
                                 <div class="request-user-info">
@@ -235,7 +276,10 @@
                                     <div class="request-user-text">Wants to connect</div>
                                 </div>
                             </div>
-                            <div class="request-arrow">→</div>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
                         </button>
                     </div>
                     @endforeach
@@ -252,12 +296,13 @@
                     class="conv-item {{ ($selectedConversation && $selectedConversation->id === $conversation->id) ? 'conv-active' : '' }}"
                     role="listitem"
                     tabindex="0"
-                    aria-label="Conversation with {{ $conversation->otherUser()->name }}">
+                    aria-label="Conversation with {{ $conversation->otherUser()->name }}"
+                    wire:key="conv-{{ $conversation->id }}">
                     <div class="conv-avatar-wrap">
                         <div class="conv-avatar" aria-hidden="true">
                             {{ strtoupper(substr($conversation->otherUser()->name, 0, 1)) }}
                         </div>
-                        <span class="presence-dot presence-online"></span>
+                        <span class="presence-dot presence-online" aria-hidden="true"></span>
                     </div>
                     <div class="conv-info">
                         <div class="conv-info-top">
@@ -271,7 +316,8 @@
                 </div>
                 @empty
                 <div class="empty-list" role="status">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4" aria-hidden="true">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.5" opacity=".4" aria-hidden="true">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     <p>No conversations yet</p>
@@ -286,13 +332,15 @@
         ─────────────────────────────────────────────── --}}
         <main class="teams-main" id="teamsMain">
 
-            {{-- ── ACTIVE CHAT ── --}}
+            {{-- ══ ACTIVE CHAT ══ --}}
             @if($activeScreen === 'chat' && $selectedConversation)
 
-                {{-- Header --}}
+                {{-- Chat Header --}}
                 <div class="chat-header">
-                    <button class="mobile-back-btn" id="mobileBackBtn" title="Back" aria-label="Back to conversations">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="mobile-back-btn" id="mobileBackBtn"
+                            title="Back" aria-label="Back to conversations">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2">
                             <path d="M19 12H5M12 5l-7 7 7 7" />
                         </svg>
                     </button>
@@ -308,10 +356,14 @@
                 </div>
 
                 {{-- Messages --}}
-                <div class="messages-area" id="messages-container" role="log" aria-live="polite" aria-label="Messages">
+                <div class="messages-area" id="messages-container"
+                     role="log" aria-live="polite" aria-label="Messages">
                     @forelse($messages as $message)
                         @php $isMine = $message->sender_id === auth()->id(); @endphp
-                        <div class="msg-row {{ $isMine ? 'msg-mine' : 'msg-theirs' }}" role="article">
+                        <div
+                            class="msg-row {{ $isMine ? 'msg-mine' : 'msg-theirs' }}"
+                            role="article"
+                            wire:key="msg-{{ $message->id }}">
                             @if(!$isMine)
                                 <div class="msg-avatar" aria-hidden="true">
                                     {{ strtoupper(substr($message->sender->name, 0, 1)) }}
@@ -342,17 +394,14 @@
                     <div id="scroll-anchor" aria-hidden="true"></div>
                 </div>
 
-                {{-- Input --}}
+                {{-- Message Input --}}
                 <div class="chat-input-area">
                     <form
                         wire:submit="sendMessage"
-                        class="input-form"
-                        x-data
-                        @submit="$refs.msg.value = ''">
+                        class="input-form">
                         <input
                             type="text"
                             wire:model="body"
-                            x-ref="msg"
                             placeholder="Type a new message"
                             class="message-input"
                             id="messageInput"
@@ -363,7 +412,8 @@
                             class="send-btn"
                             title="Send message"
                             aria-label="Send message">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
                                 <line x1="22" y1="2" x2="11" y2="13" />
                                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
                             </svg>
@@ -371,50 +421,55 @@
                     </form>
                 </div>
 
-            {{-- ── INCOMING REQUEST PREVIEW ── --}}
+            {{-- ══ INCOMING REQUEST PREVIEW ══ --}}
             @elseif($activeScreen === 'request-preview' && $selectedRequest)
 
                 <div class="request-preview-screen">
                     <div class="request-preview-card">
-                        <div class="request-preview-avatar">
+                        <div class="request-preview-avatar" aria-hidden="true">
                             {{ strtoupper(substr($selectedRequest->userOne->name, 0, 1)) }}
                         </div>
                         <h2 class="request-preview-title">
                             {{ $selectedRequest->userOne->name }} wants to connect
                         </h2>
                         <p class="request-preview-message">
-                            Hi {{ auth()->user()->name }}! I'd like to chat with you.
+                            Accept to start chatting with {{ $selectedRequest->userOne->name }}.
                         </p>
                         <div class="request-preview-actions">
                             <button
                                 wire:click="acceptRequest({{ $selectedRequest->id }})"
                                 class="request-accept"
                                 wire:loading.attr="disabled">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                     <polyline points="20 6 9 17 4 12"/>
                                 </svg>
-                                Accept
+                                <span>Accept</span>
+                                <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">…</span>
                             </button>
                             <button
                                 wire:click="rejectRequest({{ $selectedRequest->id }})"
                                 class="request-reject"
                                 wire:loading.attr="disabled">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
                                 </svg>
-                                Decline
+                                <span>Decline</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-            {{-- ── SENT REQUESTS (PENDING) SCREEN ── --}}
+            {{-- ══ SENT / PENDING REQUESTS SCREEN ══ --}}
             @elseif($activeScreen === 'sent-requests')
 
                 <div class="pending-page">
                     <div class="pending-page-header">
-                        <div class="pending-page-icon">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <div class="pending-page-icon" aria-hidden="true">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2">
                                 <path d="M22 2L11 13"/>
                                 <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
                             </svg>
@@ -427,16 +482,17 @@
 
                     <div class="pending-grid">
                         @forelse($sentRequests as $request)
-                        <div class="pending-card">
+                        <div class="pending-card" wire:key="sent-{{ $request->id }}">
                             <div class="pending-card-left">
-                                <div class="pending-avatar">
+                                <div class="pending-avatar" aria-hidden="true">
                                     {{ strtoupper(substr($request->userTwo->name, 0, 1)) }}
                                 </div>
                                 <div class="pending-user-meta">
                                     <div class="pending-user-name">{{ $request->userTwo->name }}</div>
                                     <div class="pending-user-email">{{ $request->userTwo->email }}</div>
                                     <div class="pending-user-time">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" aria-hidden="true">
                                             <circle cx="12" cy="12" r="10"/>
                                             <polyline points="12 6 12 12 16 14"/>
                                         </svg>
@@ -449,7 +505,7 @@
                             </div>
                         </div>
                         @empty
-                        <div class="pending-empty">
+                        <div class="pending-empty" role="status">
                             <h3>No pending requests</h3>
                             <p>When you send requests, they'll appear here.</p>
                         </div>
@@ -457,11 +513,12 @@
                     </div>
                 </div>
 
-            {{-- ── EMPTY STATE ── --}}
+            {{-- ══ EMPTY / WELCOME STATE ══ --}}
             @else
                 <div class="empty-state" role="status">
                     <div class="empty-state-icon" aria-hidden="true">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity=".3">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="1" opacity=".3">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                     </div>
@@ -475,4 +532,5 @@
 
         </main>
     </div>
+
 </div>
