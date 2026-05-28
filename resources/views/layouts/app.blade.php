@@ -590,22 +590,7 @@
                     Chat
                 </a>
 
-                {{-- Pending requests badge — live count via PendingCount component --}}
-                <a href="{{ route('chat.index') }}"
-                   class="nav-link nav-request-link"
-                   title="Pending Requests"
-                   aria-label="Pending Requests">
-                    <div class="nav-request-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <path d="M22 2L11 13" />
-                            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                        </svg>
-                        {{-- PendingCount renders only the badge span --}}
-                        <livewire:chat.pending-count />
-                    </div>
-                    Pending
-                </a>
+
 
                 @endauth
             </nav>
