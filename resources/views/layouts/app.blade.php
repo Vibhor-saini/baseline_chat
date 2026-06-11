@@ -219,6 +219,219 @@
             border-radius: 4px;
         }
 
+        /* ── Presence dots ──────────────────────── */
+        .presence-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid var(--surface);
+            background: var(--text-3); /* default = offline grey */
+            transition: background .4s;
+        }
+
+        .presence-dot.presence-online  { background: var(--online); }
+        .presence-dot.presence-offline { background: var(--text-3); }
+
+        /* Status dot in chat header */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-3);
+            transition: background .4s;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
+        .status-dot.status-online  { background: var(--online); }
+        .status-dot.status-offline { background: var(--text-3); }
+
+        /* ── WhatsApp message ticks ────────────────── */
+        .tick { display: inline-block; vertical-align: middle; margin-left: 3px; flex-shrink: 0; }
+
+        /* ── Message bubbles ────────────────────── */
+        .msg-row { display: flex; align-items: flex-end; gap: 8px; margin: 4px 16px; position: relative; }
+        .msg-row:hover .msg-actions { opacity: 1; pointer-events: auto; }
+        .msg-mine  { flex-direction: row-reverse; }
+        .msg-theirs { flex-direction: row; }
+
+        .msg-avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--accent); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .75rem; font-weight: 700; flex-shrink: 0;
+        }
+        .msg-avatar-mine { background: var(--surface-2); }
+
+        .msg-body-wrap { max-width: 65%; display: flex; flex-direction: column; position: relative; }
+        .msg-mine .msg-body-wrap  { align-items: flex-end; }
+        .msg-theirs .msg-body-wrap { align-items: flex-start; }
+
+        .fwd-label {
+            font-size: .7rem; color: var(--accent-h);
+            display: flex; align-items: center; gap: 4px;
+            margin-bottom: 2px; padding: 0 4px;
+        }
+
+        .msg-bubble {
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: .88rem;
+            line-height: 1.45;
+            word-break: break-word;
+            position: relative;
+        }
+        .bubble-mine   { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+        .bubble-theirs { background: var(--surface-2); color: var(--text-1); border-bottom-left-radius: 4px; }
+        .bubble-deleted { background: transparent !important; border: 1px solid var(--border); color: var(--text-3) !important; font-style: italic; }
+
+        .deleted-text { display: flex; align-items: center; gap: 5px; font-size: .82rem; }
+
+        .msg-time-wrap {
+            display: flex; align-items: center; gap: 3px;
+            justify-content: flex-end;
+            margin-top: 3px; padding: 0 2px;
+        }
+        .msg-time { font-size: .68rem; color: rgba(255,255,255,.6); }
+        .bubble-theirs .msg-time { color: var(--text-3); }
+
+        /* ── Image & file bubbles ───────────────── */
+        .msg-img-wrap { display: block; }
+        .msg-image { max-width: 240px; max-height: 240px; border-radius: 8px; display: block; object-fit: cover; cursor: zoom-in; }
+
+        .msg-file-wrap {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,.15);
+            border-radius: 8px;
+            text-decoration: none; color: inherit;
+            min-width: 180px;
+        }
+        .msg-file-icon { flex-shrink: 0; opacity: .8; }
+        .msg-file-name { flex: 1; font-size: .82rem; word-break: break-all; }
+        .msg-file-dl   { flex-shrink: 0; opacity: .7; }
+        .msg-caption   { margin: 4px 0 0; font-size: .82rem; opacity: .85; }
+
+        /* ── Message actions hover menu ─────────── */
+        .msg-actions {
+            display: flex; gap: 4px;
+            position: absolute; top: -28px;
+            opacity: 0; pointer-events: none;
+            transition: opacity .15s;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px 5px;
+            z-index: 10;
+        }
+        .msg-actions--mine   { right: 0; }
+        .msg-actions--theirs { left: 0; }
+
+        .msg-action-btn {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-2); padding: 3px;
+            border-radius: 4px; display: flex;
+            transition: color .15s, background .15s;
+        }
+        .msg-action-btn:hover { color: var(--text-1); background: var(--surface-2); }
+        .msg-action-btn--delete:hover { color: var(--danger); }
+
+        /* ── Attachment preview ─────────────────── */
+        .attachment-preview {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 16px;
+            background: var(--surface-2);
+            border-top: 1px solid var(--border);
+        }
+        .attachment-thumb { height: 48px; width: 48px; object-fit: cover; border-radius: 6px; }
+        .attachment-file-name { font-size: .82rem; color: var(--text-2); flex: 1; }
+        .attachment-remove {
+            background: none; border: none; color: var(--text-3);
+            cursor: pointer; font-size: 1rem; padding: 2px 6px;
+            border-radius: 4px; transition: color .15s;
+        }
+        .attachment-remove:hover { color: var(--danger); }
+
+        /* ── File input hidden ──────────────────── */
+        .file-input-hidden { display: none; }
+
+        .attach-btn {
+            cursor: pointer; color: var(--text-2);
+            display: flex; align-items: center; padding: 0 8px;
+            transition: color .15s;
+            flex-shrink: 0;
+        }
+        .attach-btn:hover { color: var(--accent-h); }
+
+        /* ── Unread badge ───────────────────────── */
+        .conv-bottom-row { display: flex; align-items: center; gap: 6px; }
+        .conv-preview    { flex: 1; margin: 0; }
+
+        .unread-badge {
+            min-width: 20px; height: 20px; padding: 0 5px;
+            border-radius: 999px;
+            background: var(--online);
+            color: #fff;
+            font-size: .65rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ── Forward modal ──────────────────────── */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 500;
+        }
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            width: 360px; max-height: 520px;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-title { margin: 0; font-size: 1rem; font-weight: 700; }
+        .modal-close {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-2); padding: 4px;
+            border-radius: 6px; transition: color .15s;
+        }
+        .modal-close:hover { color: var(--danger); }
+        .modal-extra-text { padding: 10px 16px 0; }
+        .modal-search { padding: 10px 16px 12px; border-bottom: 1px solid var(--border); }
+        .modal-search-input {
+            width: 100%; background: var(--surface-2);
+            border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text-1); padding: 8px 12px;
+            font-size: .88rem; outline: none;
+        }
+        .modal-search-input:focus { border-color: var(--accent); }
+        .modal-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .modal-conv-item {
+            width: 100%; display: flex; align-items: center; gap: 12px;
+            padding: 10px 20px; background: none; border: none;
+            cursor: pointer; color: var(--text-1);
+            transition: background .15s;
+        }
+        .modal-conv-item:hover { background: var(--surface-2); }
+        .modal-conv-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--accent); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .85rem; flex-shrink: 0;
+        }
+        .modal-conv-name { flex: 1; text-align: left; font-size: .9rem; }
+        .modal-empty { padding: 24px; text-align: center; color: var(--text-3); }
+
         /* ── Pending nav badge ──────────────────── */
         .nav-request-link { margin-top: 8px; }
 
@@ -551,6 +764,7 @@
 
                 @if(auth()->user()->is_admin)
                 <a href="{{ route('dashboard') }}"
+                   wire:navigate
                    class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                    title="Dashboard"
                    aria-label="Dashboard">
@@ -565,6 +779,7 @@
                 </a>
 
                 <a href="{{ route('users.index') }}"
+                   wire:navigate
                    class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
                    title="Users"
                    aria-label="Users">
@@ -580,6 +795,7 @@
                 @endif
 
                 <a href="{{ route('chat.index') }}"
+                   wire:navigate
                    class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}"
                    title="Chat"
                    aria-label="Chat">
@@ -613,7 +829,8 @@
 
             <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}">
                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                <span class="presence" aria-hidden="true"></span>
+                {{-- Self dot — always online while logged in --}}
+                <span class="presence presence-online" aria-hidden="true"></span>
             </div>
             @endauth
 
@@ -640,6 +857,7 @@
                 @auth
                 @if(auth()->user()->is_admin)
                 <a href="{{ route('dashboard') }}"
+                   wire:navigate
                    class="mob-nav-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -652,6 +870,7 @@
                 </a>
 
                 <a href="{{ route('users.index') }}"
+                   wire:navigate
                    class="mob-nav-btn {{ request()->routeIs('users.*') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -663,6 +882,7 @@
                 @endif
 
                 <a href="{{ route('chat.index') }}"
+                   wire:navigate
                    class="mob-nav-btn {{ request()->routeIs('chat.*') ? 'active' : '' }}">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="1.8" aria-hidden="true">

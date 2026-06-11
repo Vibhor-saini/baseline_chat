@@ -63,7 +63,7 @@ class Edit extends Component
 
         session()->flash('success', 'User updated successfully.');
 
-        return redirect()->route('users.index');
+        return $this->redirect(route('users.index'), navigate: true);
     }
 
     public function render()

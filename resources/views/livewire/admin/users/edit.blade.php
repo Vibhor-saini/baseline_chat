@@ -225,7 +225,7 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                         Update User
                     </button>
-                    <a href="{{ route('users.index') }}" class="btn-cancel">Cancel</a>
+                    <a href="{{ route('users.index') }}" wire:navigate class="btn-cancel">Cancel</a>
                 </div>
 
             </form>

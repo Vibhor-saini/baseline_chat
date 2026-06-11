@@ -4,6 +4,23 @@ use Illuminate\Support\Facades\Broadcast;
 
 /*
 |--------------------------------------------------------------------------
+| PRESENCE CHANNEL — presence.chat
+|
+| All authenticated users join this single channel.
+| Echo tracks who is online via here/joining/leaving callbacks.
+| The member object exposed to JS: { id, name }
+|--------------------------------------------------------------------------
+*/
+
+Broadcast::channel('presence.chat', function ($user) {
+    return [
+        'id'   => $user->id,
+        'name' => $user->name,
+    ];
+});
+
+/*
+|--------------------------------------------------------------------------
 | PRIVATE USER CHANNEL
 | Each user can only subscribe to their own channel.
 | Used for: PendingRequestUpdated, ConversationUpdated

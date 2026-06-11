@@ -3,83 +3,87 @@
 namespace App\Livewire\Chat;
 
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Message;
 use App\Models\Conversation;
 use App\Events\MessageSent;
+use App\Events\MessageDelivered;
+use App\Events\MessageRead;
+use App\Events\MessageDeleted;
 use App\Events\ConversationUpdated;
 use App\Events\PendingRequestUpdated;
+use App\Events\UserTyping;
 
 class Index extends Component
 {
+    use WithFileUploads;
+
     /*
     |--------------------------------------------------------------------------
     | PUBLIC STATE
     |--------------------------------------------------------------------------
-    | All UI state lives here. activeScreen is the single source of truth for
-    | which panel is visible. Never use URL params for screen state.
+    | ALL collection-type properties are stored as plain arrays (not Eloquent
+    | Collections). Livewire's validate() calls array_merge() on every public
+    | property — if any property is a Collection, it throws:
+    |   "array_merge(): Argument #1 must be of type array, Collection given"
+    |
+    | Fix: always end ->get()->all() or ->values()->all() so Livewire only
+    | ever sees plain PHP arrays here.
     |--------------------------------------------------------------------------
     */
 
-    /** @var \Illuminate\Support\Collection Accepted conversations shown in sidebar */
-    public $conversations = [];
+    public array $conversations   = [];
+    public array $messages        = [];
+    public array $searchResults   = [];
+    public array $pendingRequests = [];
+    public array $sentRequests    = [];
 
-    /** @var array Messages for the currently open chat */
-    public $messages = [];
+    public ?Conversation $selectedConversation   = null;
+    public ?int          $selectedConversationId = null;
+    public               $selectedRequest        = null;
 
-    /** @var \Illuminate\Support\Collection Search results from global user search */
-    public $searchResults = [];
-
-    /** @var \Illuminate\Support\Collection Requests received by the current user */
-    public $pendingRequests = [];
-
-    /** @var \Illuminate\Support\Collection Requests sent by the current user */
-    public $sentRequests = [];
-
-    /** @var Conversation|null The currently open conversation */
-    public ?Conversation $selectedConversation = null;
-
-    /** @var int|null ID of the selected conversation (used for JS channel binding) */
-    public ?int $selectedConversationId = null;
-
-    /** @var Conversation|null The request being previewed (receiver side) */
-    public $selectedRequest = null;
-
-    /** @var string The message being typed */
+    /** Text body being composed */
     public string $body = '';
 
-    /** @var string Search query for global user search */
-    public string $search = '';
+    /** Livewire temp-upload file */
+    public $attachment = null;
 
-    /** @var bool Whether the incoming-requests accordion is expanded in the sidebar */
-    public bool $showRequests = false;
+    /** Forward modal ─────────────────────── */
+    public bool   $showForwardModal    = false;
+    public ?int   $forwardingMessageId = null;
+    public string $forwardSearch       = '';
+    public string $forwardExtraText    = '';
 
     /**
-     * Single source of truth for which screen is visible.
-     *
-     * Possible values:
-     *   'empty'           — default / welcome state
-     *   'chat'            — an accepted conversation is open
-     *   'request-preview' — receiver is viewing an incoming request
-     *   'sent-requests'   — sender is viewing their pending sent requests
+     * Plain array — avoids Livewire's array_merge crash.
+     * Shape: [['id' => int, 'other_name' => string, 'other_initial' => string], …]
      */
+    public array $forwardTargets = [];
+
+    public string $search       = '';
+    public bool   $showRequests = false;
+
+    /** 'empty' | 'chat' | 'request-preview' | 'sent-requests' */
     public string $activeScreen = 'empty';
 
     /*
     |--------------------------------------------------------------------------
-    | LIVEWIRE LISTENERS
-    | Called from JavaScript via component.call(...)
+    | LISTENERS
     |--------------------------------------------------------------------------
     */
 
     protected $listeners = [
         'refreshPendingData'      => 'refreshPendingData',
         'refreshConversationData' => 'refreshConversationData',
+        'markConversationRead'    => 'markConversationRead',
+        'refreshSidebarForConv'   => 'refreshSidebarForConv',
     ];
 
     /*
     |--------------------------------------------------------------------------
-    | LIFECYCLE — MOUNT
+    | LIFECYCLE
     |--------------------------------------------------------------------------
     */
 
@@ -93,29 +97,27 @@ class Index extends Component
     /*
     |--------------------------------------------------------------------------
     | DATA LOADERS
-    | Each method loads only what it owns. Call only what changed.
+    | Always call ->all() at the end so the result is a plain PHP array,
+    | never an Eloquent Collection.
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Load accepted conversations for the current user's sidebar.
-     */
     public function loadConversations(): void
     {
+        $userId = auth()->id();
+
         $this->conversations = Conversation::query()
             ->where('status', 'accepted')
-            ->where(function ($q) {
-                $q->where('user_one_id', auth()->id())
-                  ->orWhere('user_two_id', auth()->id());
+            ->where(function ($q) use ($userId) {
+                $q->where('user_one_id', $userId)
+                  ->orWhere('user_two_id', $userId);
             })
-            ->with(['userOne', 'userTwo'])
+            ->with(['userOne', 'userTwo', 'latestMessage.sender'])
             ->latest('last_message_at')
-            ->get();
+            ->get()
+            ->all();          // <── plain array, never Collection
     }
 
-    /**
-     * Load pending requests sent TO the current user (they are user_two).
-     */
     public function loadPendingRequests(): void
     {
         $this->pendingRequests = Conversation::query()
@@ -123,12 +125,10 @@ class Index extends Component
             ->where('user_two_id', auth()->id())
             ->with(['userOne'])
             ->latest()
-            ->get();
+            ->get()
+            ->all();          // <── plain array
     }
 
-    /**
-     * Load pending requests sent BY the current user (they are user_one).
-     */
     public function loadSentRequests(): void
     {
         $this->sentRequests = Conversation::query()
@@ -136,67 +136,51 @@ class Index extends Component
             ->where('user_one_id', auth()->id())
             ->with(['userTwo'])
             ->latest()
-            ->get();
+            ->get()
+            ->all();          // <── plain array
     }
 
     /*
     |--------------------------------------------------------------------------
-    | REALTIME REFRESH — called from JS after a broadcast event fires
+    | REALTIME REFRESH
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Refresh only the pending/sent-request lists.
-     * Triggered by PendingRequestUpdated (request sent, accepted, or rejected).
-     */
     public function refreshPendingData(): void
     {
         $this->loadPendingRequests();
         $this->loadSentRequests();
-
-        // If the user is watching sent-requests but all requests are gone, reset.
         $this->clearSentRequestsScreenIfEmpty();
     }
 
-    /**
-     * Refresh conversations AND request lists.
-     * Triggered by ConversationUpdated (request accepted → conversation appears).
-     */
     public function refreshConversationData(): void
     {
         $this->loadConversations();
         $this->loadPendingRequests();
         $this->loadSentRequests();
-
         $this->clearSentRequestsScreenIfEmpty();
-
-        // If we were waiting for a specific conversation to be accepted, open it now.
-        if ($this->selectedConversationId) {
-            $conversation = Conversation::find($this->selectedConversationId);
-
-            if ($conversation && $conversation->status === 'accepted') {
-                $this->selectConversation($conversation->id);
-            }
-        }
+        $this->refreshSelectedConversation();
     }
 
     /**
-     * Helper: if the sent-requests screen is active but the list is now empty,
-     * fall back to the empty state automatically.
+     * Called from JS when a message.sent arrives for a conversation that is
+     * NOT currently open — refreshes sidebar preview + unread counts only.
      */
+    public function refreshSidebarForConv(int $conversationId): void
+    {
+        $this->loadConversations();
+    }
+
     private function clearSentRequestsScreenIfEmpty(): void
     {
-        if (
-            $this->activeScreen === 'sent-requests'
-            && $this->sentRequests->isEmpty()
-        ) {
+        if ($this->activeScreen === 'sent-requests' && empty($this->sentRequests)) {
             $this->activeScreen = 'empty';
         }
     }
 
     /*
     |--------------------------------------------------------------------------
-    | SEARCH — real-time user search from the topbar
+    | SEARCH
     |--------------------------------------------------------------------------
     */
 
@@ -211,17 +195,12 @@ class Index extends Component
 
         $this->searchResults = User::query()
             ->where('id', '!=', auth()->id())
-            ->where(function ($q) use ($term) {
-                $q->where('name',  'like', $term)
-                  ->orWhere('email', 'like', $term);
-            })
+            ->where(fn($q) => $q->where('name', 'like', $term)->orWhere('email', 'like', $term))
             ->limit(8)
-            ->get();
+            ->get()
+            ->all();          // <── plain array
     }
 
-    /**
-     * Close the search dropdown without starting anything.
-     */
     public function clearSearch(): void
     {
         $this->search        = '';
@@ -230,29 +209,15 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | START CONVERSATION / SEND REQUEST
+    | CONVERSATIONS
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Called when the user clicks "Send Request" or "Start Chat" from search.
-     *
-     * Logic:
-     *  - If a conversation already exists and is accepted → open it.
-     *  - If a conversation already exists and is pending  → show the pending screen.
-     *  - If no conversation exists:
-     *      * Admin-involved conversations are auto-accepted.
-     *      * Normal user → normal user sends a pending request.
-     */
     public function startConversation(int $userId): void
     {
-        $authId = auth()->id();
-
-        $conversation = $this->findConversationBetween($authId, $userId);
-
-        if (! $conversation) {
-            $conversation = $this->createConversation($authId, $userId);
-        }
+        $authId       = auth()->id();
+        $conversation = $this->findConversationBetween($authId, $userId)
+                     ?? $this->createConversation($authId, $userId);
 
         $this->clearSearch();
         $this->loadConversations();
@@ -266,60 +231,92 @@ class Index extends Component
         }
     }
 
-    /**
-     * Called when the user clicks "Open Chat" on an already-connected person
-     * from the search dropdown.
-     */
     public function openExistingConversation(int $userId): void
     {
-        $authId       = auth()->id();
-        $conversation = $this->findConversationBetween($authId, $userId);
-
-        if ($conversation) {
-            $this->openChat($conversation->id);
-        }
-
+        $conversation = $this->findConversationBetween(auth()->id(), $userId);
+        if ($conversation) $this->openChat($conversation->id);
         $this->clearSearch();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CONVERSATION SELECTION
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Open a conversation by ID and switch the main panel to chat view.
-     */
     public function selectConversation(int $conversationId): void
     {
         $this->selectedConversation   = Conversation::with(['userOne', 'userTwo'])
             ->findOrFail($conversationId);
         $this->selectedConversationId = $conversationId;
 
-        $this->messages = Message::query()
+        $this->messages = Message::withTrashed()
             ->where('conversation_id', $conversationId)
-            ->with('sender')
+            ->with(['sender', 'forwardedFrom.sender'])
             ->latest()
             ->take(50)
             ->get()
             ->reverse()
-            ->values();
+            ->values()
+            ->all();          // <── plain array
 
-        $this->selectedRequest  = null;
-        $this->showRequests     = false;
-        $this->activeScreen     = 'chat';
+        $this->selectedRequest = null;
+        $this->showRequests    = false;
+        $this->activeScreen    = 'chat';
+
+        $this->markMessagesDelivered($conversationId);
+        $this->markMessagesRead($conversationId);
+        $this->loadConversations();
     }
 
     /*
     |--------------------------------------------------------------------------
-    | REQUEST ACTIONS (RECEIVER SIDE)
+    | MARK DELIVERED / READ
     |--------------------------------------------------------------------------
     */
 
+    private function markMessagesDelivered(int $conversationId): void
+    {
+        $now = now();
+
+        $undelivered = Message::where('conversation_id', $conversationId)
+            ->where('sender_id', '!=', auth()->id())
+            ->whereNull('delivered_at')
+            ->get();
+
+        foreach ($undelivered as $msg) {
+            $msg->update(['delivered_at' => $now]);
+            broadcast(new MessageDelivered($msg->id, $conversationId, $now->toISOString()))->toOthers();
+        }
+    }
+
+    private function markMessagesRead(int $conversationId): void
+    {
+        $now = now();
+
+        Message::where('conversation_id', $conversationId)
+            ->where('sender_id', '!=', auth()->id())
+            ->whereNull('read_at')
+            ->update(['read_at' => $now, 'is_read' => true]);
+
+        broadcast(new MessageRead($conversationId, auth()->id(), $now->toISOString()))->toOthers();
+    }
+
     /**
-     * Open the preview panel for an incoming request.
+     * Called from JS after message.read fires on the open conversation.
+     * Flips all MY sent messages to read status in the in-memory array.
      */
+    public function markConversationRead(int $conversationId, string $readAt): void
+    {
+        if ((int) $conversationId !== (int) $this->selectedConversationId) return;
+
+        foreach ($this->messages as $i => $msg) {
+            if ($msg->sender_id === auth()->id() && ! $msg->read_at) {
+                $this->messages[$i]->read_at = $readAt;
+            }
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | REQUEST ACTIONS
+    |--------------------------------------------------------------------------
+    */
+
     public function openRequest(int $requestId): void
     {
         $this->selectedRequest      = Conversation::with(['userOne'])->findOrFail($requestId);
@@ -327,53 +324,35 @@ class Index extends Component
         $this->activeScreen         = 'request-preview';
     }
 
-    /**
-     * Accept an incoming request.
-     * Transitions the conversation to accepted and opens the chat immediately.
-     */
     public function acceptRequest(int $conversationId): void
     {
         $conversation = Conversation::findOrFail($conversationId);
-
         $conversation->update(['status' => 'accepted']);
 
         $senderId   = $conversation->user_one_id;
         $receiverId = $conversation->user_two_id;
 
-        // Notify both sides so their UIs update instantly.
         $this->broadcastPendingUpdate($senderId, $receiverId);
         $this->broadcastConversationUpdate($conversation, $senderId, $receiverId);
 
-        // Refresh local state for the receiver who just accepted.
         $this->loadConversations();
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // Open the accepted chat immediately for the receiver.
         $this->selectedRequest = null;
         $this->openChat($conversation->id);
     }
 
-    /**
-     * Reject and delete an incoming request.
-     */
     public function rejectRequest(int $conversationId): void
     {
         $conversation = Conversation::findOrFail($conversationId);
 
-        $senderId   = $conversation->user_one_id;
-        $receiverId = $conversation->user_two_id;
-
+        $this->broadcastPendingUpdate($conversation->user_one_id, $conversation->user_two_id);
         $conversation->delete();
 
-        // Notify both sides.
-        $this->broadcastPendingUpdate($senderId, $receiverId);
-
-        // Refresh local state for the receiver.
         $this->loadPendingRequests();
         $this->loadSentRequests();
 
-        // Close the preview and return to empty state.
         $this->selectedRequest = null;
         $this->activeScreen    = 'empty';
     }
@@ -384,27 +363,46 @@ class Index extends Component
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Send a message in the currently open conversation.
-     */
     public function sendMessage(): void
     {
-        if (! $this->selectedConversation || trim($this->body) === '') {
-            return;
+        if (! $this->selectedConversation) return;
+        if (trim($this->body) === '' && ! $this->attachment) return;
+
+        $type     = 'text';
+        $filePath = null;
+
+        if ($this->attachment) {
+            // Inline validation — 5 MB limit
+            $this->validate([
+                'attachment' => [
+                    'required',
+                    'file',
+                    'max:5120',
+                    'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx',
+                ],
+            ]);
+
+            $mime = $this->attachment->getMimeType();
+            $type = str_starts_with($mime, 'image/') ? 'image' : 'file';
+
+            $filePath         = $this->attachment->store('chat-files', 'public');
+            $this->attachment = null;
         }
 
         $message = Message::create([
             'conversation_id' => $this->selectedConversation->id,
             'sender_id'       => auth()->id(),
-            'body'            => $this->body,
+            'body'            => trim($this->body),
+            'type'            => $type,
+            'file_path'       => $filePath,
         ]);
 
-        $message->load('sender');
+        $message->load('sender', 'forwardedFrom.sender');
 
         $this->messages[] = $message;
 
         $this->selectedConversation->update(['last_message_at' => now()]);
-        $this->loadConversations(); // Re-sort sidebar by last_message_at.
+        $this->loadConversations();
 
         broadcast(new MessageSent($message))->toOthers();
 
@@ -412,25 +410,204 @@ class Index extends Component
     }
 
     /**
-     * Append a message received via broadcast.
-     * Called from JavaScript when a MessageSent event fires on the private channel.
+     * Append a message received via WebSocket.
+     * If the chat is open → mark delivered + read immediately.
+     * If chat is NOT open → only refresh sidebar (preview + unread count).
      */
     public function appendMessage(array $messageData): void
     {
-        $message = Message::with('sender')->find($messageData['id']);
+        $incomingConvId = (int) ($messageData['conversation_id'] ?? 0);
 
-        if (! $message) {
+        // ── Sidebar-only update (conversation not currently open) ──────────
+        if ($incomingConvId !== (int) $this->selectedConversationId) {
+            $this->loadConversations();
             return;
         }
 
-        // Prevent duplicates (e.g. if the event fires more than once).
+        // ── Active conversation: append + mark read ────────────────────────
+        $message = Message::withTrashed()
+            ->with(['sender', 'forwardedFrom.sender'])
+            ->find($messageData['id']);
+
+        if (! $message) return;
+
         foreach ($this->messages as $existing) {
-            if ($existing->id === $message->id) {
-                return;
-            }
+            if ($existing->id === $message->id) return; // deduplicate
         }
 
         $this->messages[] = $message;
+
+        $now = now();
+        $message->update(['delivered_at' => $now, 'read_at' => $now, 'is_read' => true]);
+        broadcast(new MessageDelivered($message->id, $message->conversation_id, $now->toISOString()))->toOthers();
+        broadcast(new MessageRead($message->conversation_id, auth()->id(), $now->toISOString()))->toOthers();
+
+        $this->loadConversations();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    public function deleteMessage(int $messageId): void
+    {
+        $message = Message::where('id', $messageId)
+            ->where('sender_id', auth()->id())
+            ->firstOrFail();
+
+        $conversationId = $message->conversation_id;
+
+        if ($message->file_path) {
+            Storage::disk('public')->delete($message->file_path);
+        }
+
+        $message->delete(); // soft delete
+
+        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+
+        foreach ($this->messages as $i => $msg) {
+            if ($msg->id === $messageId) {
+                $this->messages[$i]->deleted_at = now();
+                break;
+            }
+        }
+
+        $this->loadConversations();
+    }
+
+    /** Called from JS when the other user deletes a message. */
+    public function handleRemoteDelete(int $messageId): void
+    {
+        foreach ($this->messages as $i => $msg) {
+            if ($msg->id === $messageId) {
+                $this->messages[$i]->deleted_at = now();
+                break;
+            }
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORWARD MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    public function openForwardModal(int $messageId): void
+    {
+        $this->forwardingMessageId = $messageId;
+        $this->showForwardModal    = true;
+        $this->forwardSearch       = '';
+        $this->forwardExtraText    = '';
+        $this->forwardTargets      = [];
+        $this->loadForwardTargets();
+    }
+
+    public function closeForwardModal(): void
+    {
+        $this->showForwardModal    = false;
+        $this->forwardingMessageId = null;
+        $this->forwardExtraText    = '';
+    }
+
+    public function updatedForwardSearch(): void
+    {
+        $this->loadForwardTargets();
+    }
+
+    /**
+     * Builds $forwardTargets as a PLAIN ARRAY so Livewire never tries
+     * to serialize Eloquent Collections through array_merge.
+     */
+    private function loadForwardTargets(): void
+    {
+        $userId = auth()->id();
+        $term   = mb_strlen(trim($this->forwardSearch)) >= 1
+            ? '%' . trim($this->forwardSearch) . '%'
+            : null;
+
+        $query = Conversation::query()
+            ->where('status', 'accepted')
+            ->where(fn($q) => $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId))
+            ->with(['userOne', 'userTwo']);
+
+        if ($term) {
+            $query->where(function ($q) use ($term, $userId) {
+                $q->whereHas('userOne', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term))
+                  ->orWhereHas('userTwo', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term));
+            });
+        }
+
+        $this->forwardTargets = $query->limit(10)->get()->map(function ($conv) {
+            $other = $conv->otherUser();
+            return [
+                'id'            => $conv->id,
+                'other_name'    => $other->name,
+                'other_initial' => strtoupper(substr($other->name, 0, 1)),
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Forward message to a target conversation.
+     */
+    public function forwardTo(int $targetConversationId): void
+    {
+        if (! $this->forwardingMessageId) return;
+
+        $original  = Message::withTrashed()->findOrFail($this->forwardingMessageId);
+        $extraText = trim($this->forwardExtraText);
+
+        $body = $original->deleted_at
+            ? $extraText
+            : ($extraText ? $extraText . "\n" . $original->body : $original->body);
+
+        $newMessage = Message::create([
+            'conversation_id'   => $targetConversationId,
+            'sender_id'         => auth()->id(),
+            'body'              => $body,
+            'type'              => $original->deleted_at ? 'text' : $original->type,
+            'file_path'         => $original->deleted_at ? null : $original->file_path,
+            'forwarded_from_id' => $original->id,
+        ]);
+
+        $newMessage->load('sender', 'forwardedFrom.sender');
+
+        $conv = Conversation::findOrFail($targetConversationId);
+        $conv->update(['last_message_at' => now()]);
+
+        broadcast(new MessageSent($newMessage))->toOthers();
+
+        if ((int) $targetConversationId === (int) $this->selectedConversationId) {
+            $this->messages[] = $newMessage;
+        }
+
+        $this->loadConversations();
+        $this->closeForwardModal();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TYPING
+    |--------------------------------------------------------------------------
+    */
+
+    public function broadcastTyping(bool $isTyping): void
+    {
+        if (! $this->selectedConversation) return;
+
+        $recipientId = $this->selectedConversation->user_one_id === auth()->id()
+            ? $this->selectedConversation->user_two_id
+            : $this->selectedConversation->user_one_id;
+
+        broadcast(new UserTyping(
+            $this->selectedConversation->id,
+            auth()->id(),
+            auth()->user()->name,
+            $isTyping,
+            $recipientId,
+        ))->toOthers();
     }
 
     /*
@@ -439,30 +616,19 @@ class Index extends Component
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Toggle the incoming-requests accordion in the sidebar.
-     */
     public function toggleRequests(): void
     {
         $this->showRequests = ! $this->showRequests;
 
-        if (! $this->showRequests) {
-            // If the request-preview screen was open, close it.
-            if ($this->activeScreen === 'request-preview') {
-                $this->selectedRequest = null;
-                $this->activeScreen    = 'empty';
-            }
+        if (! $this->showRequests && $this->activeScreen === 'request-preview') {
+            $this->selectedRequest = null;
+            $this->activeScreen    = 'empty';
         }
     }
 
-    /**
-     * Switch to the sent-requests screen.
-     * Refreshes the list immediately before rendering.
-     */
     public function openSentRequests(): void
     {
         $this->loadSentRequests();
-
         $this->selectedConversation = null;
         $this->selectedRequest      = null;
         $this->activeScreen         = 'sent-requests';
@@ -474,27 +640,14 @@ class Index extends Component
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Find an existing conversation between two users regardless of direction.
-     */
     private function findConversationBetween(int $userA, int $userB): ?Conversation
     {
         return Conversation::query()
-            ->where(function ($q) use ($userA, $userB) {
-                $q->where('user_one_id', $userA)
-                  ->where('user_two_id', $userB);
-            })
-            ->orWhere(function ($q) use ($userA, $userB) {
-                $q->where('user_one_id', $userB)
-                  ->where('user_two_id', $userA);
-            })
+            ->where(fn($q) => $q->where('user_one_id', $userA)->where('user_two_id', $userB))
+            ->orWhere(fn($q) => $q->where('user_one_id', $userB)->where('user_two_id', $userA))
             ->first();
     }
 
-    /**
-     * Create a new conversation (pending or auto-accepted for admins).
-     * Auto-sends a greeting message for pending (non-admin) requests.
-     */
     private function createConversation(int $authId, int $userId): Conversation
     {
         $targetUser          = User::findOrFail($userId);
@@ -506,40 +659,27 @@ class Index extends Component
             'status'      => $isAdminConversation ? 'accepted' : 'pending',
         ]);
 
-        // Automatically send a greeting message for non-admin (pending) requests.
         if (! $isAdminConversation) {
             Message::create([
                 'conversation_id' => $conversation->id,
                 'sender_id'       => $authId,
                 'body'            => 'Hi ' . $targetUser->name,
+                'type'            => 'text',
             ]);
         }
 
-        // Notify both participants instantly via WebSocket.
         $this->broadcastPendingUpdate($authId, $userId);
         $this->broadcastConversationUpdate($conversation, $authId, $userId);
 
         return $conversation;
     }
 
-    /**
-     * Switch to the chat screen for a given conversation ID.
-     */
     private function openChat(int $conversationId): void
     {
         $this->activeScreen = 'chat';
         $this->selectConversation($conversationId);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | BROADCAST HELPERS — thin wrappers to keep callers DRY
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Notify a set of users that their pending-request list has changed.
-     */
     private function broadcastPendingUpdate(int ...$userIds): void
     {
         foreach ($userIds as $userId) {
@@ -547,13 +687,8 @@ class Index extends Component
         }
     }
 
-    /**
-     * Notify a set of users that a conversation was created or updated.
-     */
-    private function broadcastConversationUpdate(
-        Conversation $conversation,
-        int ...$userIds
-    ): void {
+    private function broadcastConversationUpdate(Conversation $conversation, int ...$userIds): void
+    {
         foreach ($userIds as $userId) {
             broadcast(new ConversationUpdated($conversation, $userId));
         }
@@ -570,3 +705,4 @@ class Index extends Component
         return view('livewire.chat.index');
     }
 }
+

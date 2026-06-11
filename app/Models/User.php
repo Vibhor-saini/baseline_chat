@@ -14,6 +14,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'last_seen',
     ];
 
     protected $hidden = [
@@ -25,7 +26,35 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password'          => 'hashed',
         'is_admin'          => 'boolean',
+        'last_seen'         => 'datetime',
     ];
+
+    /**
+     * A user is considered online if their last_seen is within the last 2 minutes.
+     * This is a fallback for the DB-based check; realtime status comes from
+     * the presence channel in chat.js.
+     */
+    public function isOnline(): bool
+    {
+        return $this->last_seen !== null
+            && $this->last_seen->diffInMinutes(now()) < 2;
+    }
+
+    /**
+     * Human-readable last seen string, e.g. "last seen 5 minutes ago".
+     */
+    public function lastSeenText(): string
+    {
+        if ($this->isOnline()) {
+            return 'Online';
+        }
+
+        if ($this->last_seen === null) {
+            return 'Never seen';
+        }
+
+        return 'Last seen ' . $this->last_seen->diffForHumans();
+    }
 
     /*
     |--------------------------------------------------------------------------

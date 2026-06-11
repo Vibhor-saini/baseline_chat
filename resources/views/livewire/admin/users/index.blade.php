@@ -265,7 +265,7 @@
                 <h1>Users</h1>
                 <p>Manage platform users and permissions</p>
             </div>
-            <a href="{{ route('users.create') }}" class="btn-primary">
+            <a href="{{ route('users.create') }}" wire:navigate class="btn-primary">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                 Add User
             </a>
@@ -326,7 +326,7 @@
                             <td class="td-muted col-joined">{{ $user->created_at->diffForHumans() }}</td>
                             <td>
                                 <div class="actions-cell">
-                                    <a href="{{ route('users.edit', $user) }}" class="act-btn act-btn-edit">
+                                    <a href="{{ route('users.edit', $user) }}" wire:navigate class="act-btn act-btn-edit">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                         Edit
                                     </a>

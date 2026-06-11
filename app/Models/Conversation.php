@@ -38,6 +38,20 @@ class Conversation extends Model
         return $this->hasMany(Message::class);
     }
 
+    public function latestMessage()
+    {
+        return $this->hasOne(Message::class)->withTrashed()->latestOfMany();
+    }
+
+    /** Count of unread messages from the other user */
+    public function unreadCountFor(int $userId): int
+    {
+        return $this->messages()
+            ->where('sender_id', '!=', $userId)
+            ->whereNull('read_at')
+            ->count();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | HELPERS
