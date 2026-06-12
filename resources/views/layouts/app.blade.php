@@ -325,13 +325,7 @@
             display: flex; align-items: center; gap: 3px;
             justify-content: flex-end;
             margin-top: 3px; padding: 0 2px;
-            opacity: 0;
-            transition: opacity .15s;
         }
-        /* Show time on bubble hover */
-        .msg-row:hover .msg-time-wrap { opacity: 1; }
-        /* Always show ticks (delivery status must always be visible) */
-        .msg-tick { opacity: 1 !important; }
         .msg-time { font-size: .68rem; color: rgba(255,255,255,.6); }
         .bubble-theirs .msg-time { color: var(--text-3); }
 
