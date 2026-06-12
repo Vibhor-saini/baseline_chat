@@ -397,6 +397,17 @@
         }
         .attach-btn:hover { color: var(--accent-h); }
 
+        /* ── Draft preview label in sidebar ─────────── */
+        .draft-label {
+            color: #e05a5a;
+            font-size: .7rem;
+            font-weight: 600;
+        }
+        .draft-text {
+            color: var(--text-2);
+            font-size: .78rem;
+        }
+
         /* ── Unread badge ───────────────────────── */
         .conv-bottom-row { display: flex; align-items: center; gap: 6px; }
         .conv-preview    { flex: 1; margin: 0; }

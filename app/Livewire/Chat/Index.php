@@ -71,6 +71,9 @@ class Index extends Component
      */
     public array  $replyingToPreview   = [];
 
+    /** Per-conversation draft bodies — keyed by conversation ID */
+    public array $draftBodies = [];
+
     public string $search       = '';
     public bool   $showRequests = false;
 
@@ -259,9 +262,20 @@ class Index extends Component
 
     public function selectConversation(int $conversationId): void
     {
+        // ── Save current draft before switching ───────────────────────────
+        if ($this->selectedConversationId && trim($this->body) !== '') {
+            $this->draftBodies[(string) $this->selectedConversationId] = $this->body;
+        } elseif ($this->selectedConversationId) {
+            // Body was cleared — remove any stored draft for this conversation
+            unset($this->draftBodies[(string) $this->selectedConversationId]);
+        }
+
         $this->selectedConversation   = Conversation::with(['userOne', 'userTwo'])
             ->findOrFail($conversationId);
         $this->selectedConversationId = $conversationId;
+
+        // ── Restore draft for the new conversation ────────────────────────
+        $this->body = $this->draftBodies[(string) $conversationId] ?? '';
 
         $this->messages = Message::withTrashed()
             ->where('conversation_id', $conversationId)
@@ -507,6 +521,9 @@ class Index extends Component
 
         $this->body = '';
         $this->cancelReply();
+
+        // Draft sent — remove from store
+        unset($this->draftBodies[(string) $this->selectedConversation->id]);
     }
 
     /**

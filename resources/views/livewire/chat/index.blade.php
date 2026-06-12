@@ -193,8 +193,17 @@
               <span class="conv-time">{{ $conversation->last_message_at?->diffForHumans(short:true) ?? '' }}</span>
             </div>
             <div class="conv-bottom-row">
-              <p class="conv-preview" id="conv-preview-{{ $conversation->id }}">
-                @if($latest)
+              <p class="conv-preview"
+                 id="conv-preview-{{ $conversation->id }}"
+                 data-last-preview="@if($latest){{ $latest->deleted_at ? 'This message was deleted' : ($latest->type !== 'text' ? ($latest->type === 'image' ? '📷 Image' : '📎 File') : \Illuminate\Support\Str::limit($latest->body, 30)) }}@endif">
+                @php
+                  $convDraft = $draftBodies[(string) $conversation->id] ?? null;
+                @endphp
+                @if($convDraft && $selectedConversationId !== $conversation->id)
+                  {{-- Draft label — only shown for non-active conversations --}}
+                  <span class="draft-label">Draft:</span>
+                  <span class="draft-text">{{ \Illuminate\Support\Str::limit($convDraft, 28) }}</span>
+                @elseif($latest)
                   @if($isMineLatest)
                     @include('livewire.chat.partials.tick', ['status' => $latest->deliveryStatus()])
                     <span>{{ $latest->deleted_at ? 'This message was deleted' : ($latest->type !== 'text' ? ($latest->type === 'image' ? '📷 Image' : '📎 File') : \Illuminate\Support\Str::limit($latest->body, 30)) }}</span>

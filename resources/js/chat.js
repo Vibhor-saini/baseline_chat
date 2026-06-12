@@ -56,6 +56,47 @@
     }
 
     /* ───────────────────────────────────────────────────────────────────────
+     | SIDEBAR PREVIEW CACHE
+     |
+     | Keeps the real last-message text for each conversation so we can
+     | restore it instantly when typing/draft indicators are cleared,
+     | without waiting for a Livewire server round-trip.
+     |
+     | Populated on every Livewire render from data-last-preview attributes.
+     | Also updated live when a new message arrives via WebSocket.
+     | ─────────────────────────────────────────────────────────────────────*/
+    const _sidebarPreviewCache = new Map(); // Map<convId:string, html:string>
+
+    /**
+     * Walk all sidebar conv-preview elements and cache their current
+     * data-last-preview attribute value.
+     * Called after every Livewire render commit.
+     */
+    function cacheSidebarPreviews() {
+        document.querySelectorAll('[id^="conv-preview-"]').forEach(el => {
+            const convId = el.id.replace('conv-preview-', '');
+            const val    = el.dataset.lastPreview;
+            if (val !== undefined && val !== '') {
+                _sidebarPreviewCache.set(convId, val);
+            }
+        });
+    }
+
+    /**
+     * Restore a sidebar preview to its last-known real message text.
+     * Falls back to data-last-preview attribute, then empty string.
+     */
+    function restoreSidebarPreview(convId) {
+        const preview = document.getElementById(`conv-preview-${convId}`);
+        if (!preview) return;
+        const text = _sidebarPreviewCache.get(String(convId))
+                  || preview.dataset.lastPreview
+                  || '';
+        preview.textContent = text;
+        preview.classList.remove('conv-preview--typing');
+    }
+
+    /* ───────────────────────────────────────────────────────────────────────
      | CLIENT-SIDE TYPING INDICATOR
      |
      | All DOM manipulation — no Livewire calls, no server round-trips.
@@ -118,10 +159,7 @@
         if (_activeConvIdForTyping) {
             const preview = document.getElementById(`conv-preview-${_activeConvIdForTyping}`);
             if (preview && preview.classList.contains('conv-preview--typing')) {
-                preview.classList.remove('conv-preview--typing');
-                // Restore placeholder — Livewire will re-render the real text
-                // on the next commit, so this is only a short-lived fallback.
-                preview.textContent = '…';
+                restoreSidebarPreview(_activeConvIdForTyping);
             }
         }
 
@@ -231,6 +269,9 @@
             else if (message.type === 'file') text = '📎 File';
             else                              text = (message.body || '').substring(0, 30);
             preview.textContent = text;
+            // Keep cache + data attribute in sync
+            preview.dataset.lastPreview = text;
+            _sidebarPreviewCache.set(String(convId), text);
         }
 
         // Increment unread badge
@@ -485,6 +526,8 @@
                     scrollToBottom(true);
                     // Re-apply presence dots after any Livewire re-render
                     if (window._applyPresence) window._applyPresence();
+                    // Refresh sidebar preview cache after every Livewire render
+                    cacheSidebarPreviews();
                 });
 
                 // When sendMessage or forwardTo completes, immediately check
@@ -607,15 +650,13 @@
                     // Auto-restore the sidebar text if stop event is missed.
                     _sidebarTypingTimer = setTimeout(() => {
                         if (preview.classList.contains('conv-preview--typing')) {
-                            preview.classList.remove('conv-preview--typing');
-                            preview.textContent = '…';
+                            restoreSidebarPreview(convId);
                         }
                     }, 4000);
                 } else {
                     // Explicit stop — restore sidebar preview text.
                     if (preview.classList.contains('conv-preview--typing')) {
-                        preview.classList.remove('conv-preview--typing');
-                        preview.textContent = '…';
+                        restoreSidebarPreview(convId);
                     }
                 }
             });
