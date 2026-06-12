@@ -248,18 +248,60 @@
 
       {{-- Messages Area --}}
       <div class="messages-area" id="messages-container" role="log" aria-live="polite" aria-label="Messages">
+        @php
+          $prevDate      = null;
+          $prevSenderId  = null;
+          $prevMsgTime   = null;
+          $groupGapSecs  = 120; // new sender group if > 2 min gap
+        @endphp
         @forelse($messages as $message)
-          @php $isMine = $message->sender_id === auth()->id(); @endphp
-          <div class="msg-row {{ $isMine ? 'msg-mine' : 'msg-theirs' }}"
+          @php
+            $isMine      = $message->sender_id === auth()->id();
+            $msgDate     = $message->created_at->toDateString();
+            $isNewDate   = $msgDate !== $prevDate;
+            // New group if: different sender OR same sender but gap > 2 min
+            $timeDiff    = $prevMsgTime ? $message->created_at->diffInSeconds($prevMsgTime) : 999;
+            $isNewGroup  = $isNewDate || ($message->sender_id !== $prevSenderId) || ($timeDiff > $groupGapSecs);
+            $showAvatar  = !$isMine && $isNewGroup;
+            $prevDate    = $msgDate;
+            $prevSenderId = $message->sender_id;
+            $prevMsgTime  = $message->created_at;
+          @endphp
+
+          {{-- ── Date Separator ──────────────────────────────────── --}}
+          @if($isNewDate)
+            @php
+              $today     = now()->toDateString();
+              $yesterday = now()->subDay()->toDateString();
+              $label     = $msgDate === $today
+                          ? 'Today'
+                          : ($msgDate === $yesterday
+                            ? 'Yesterday'
+                            : $message->created_at->format('M j, Y'));
+            @endphp
+            <div class="date-separator" role="separator" aria-label="{{ $label }}">
+              <span class="date-separator-label">{{ $label }}</span>
+            </div>
+          @endif
+
+          <div class="msg-row {{ $isMine ? 'msg-mine' : 'msg-theirs' }} {{ !$isNewGroup ? 'msg-continued' : '' }}"
                role="article"
                wire:key="msg-{{ $message->id }}"
                id="msg-{{ $message->id }}">
 
+            {{-- Avatar: only on first message of a group, theirs side --}}
             @if(!$isMine)
-              <div class="msg-avatar">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+              <div class="msg-avatar {{ !$showAvatar ? 'msg-avatar-hidden' : '' }}">
+                @if($showAvatar){{ strtoupper(substr($message->sender->name,0,1)) }}@endif
+              </div>
             @endif
 
             <div class="msg-body-wrap">
+
+              {{-- Sender name: only first message of a group, theirs side --}}
+              @if(!$isMine && $isNewGroup)
+                <div class="msg-sender-name">{{ $message->sender->name }}</div>
+              @endif
 
               {{-- Forwarded label --}}
               @if($message->forwarded_from_id && !$message->deleted_at)
@@ -278,32 +320,60 @@
                     This message was deleted
                   </span>
 
-                @elseif($message->type === 'image')
-                  <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
-                    <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
-                  </a>
-                  @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
-
-                @elseif($message->type === 'file')
-                  <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
-                    <span class="msg-file-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </span>
-                    <span class="msg-file-name">{{ $message->fileName() }}</span>
-                    <span class="msg-file-dl">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    </span>
-                  </a>
-                  @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
-
                 @else
-                  <span>{{ $message->body }}</span>
+
+                  {{-- ── Reply quote block ── --}}
+                  @if($message->reply_to_id && $message->replyTo)
+                  <button type="button"
+                          class="reply-quote {{ $isMine ? 'reply-quote--mine' : 'reply-quote--theirs' }}"
+                          onclick="document.getElementById('msg-{{ $message->reply_to_id }}')?.scrollIntoView({behavior:'smooth',block:'center'}); document.getElementById('msg-{{ $message->reply_to_id }}')?.classList.add('msg-highlight'); setTimeout(()=>document.getElementById('msg-{{ $message->reply_to_id }}')?.classList.remove('msg-highlight'),1500);"
+                          aria-label="Jump to original message">
+                    <span class="reply-quote-sender">{{ $message->replyTo->sender?->name ?? 'Unknown' }}</span>
+                    <span class="reply-quote-body">
+                      @if($message->replyTo->deleted_at)
+                        <em>This message was deleted</em>
+                      @elseif($message->replyTo->type === 'image')
+                        📷 Image
+                      @elseif($message->replyTo->type === 'file')
+                        📎 {{ $message->replyTo->fileName() }}
+                      @else
+                        {{ \Illuminate\Support\Str::limit($message->replyTo->body, 80) }}
+                      @endif
+                    </span>
+                  </button>
+                  @endif
+
+                  {{-- ── Message content ── --}}
+                  @if($message->type === 'image')
+                    <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
+                      <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
+                    </a>
+                    @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
+
+                  @elseif($message->type === 'file')
+                    <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
+                      <span class="msg-file-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </span>
+                      <span class="msg-file-name">{{ $message->fileName() }}</span>
+                      <span class="msg-file-dl">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      </span>
+                    </a>
+                    @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
+
+                  @else
+                    <span>{{ $message->body }}</span>
+                  @endif
+
                 @endif
 
-                {{-- Timestamp + ticks --}}
+                {{-- Timestamp + ticks — hidden by default, visible on hover via CSS --}}
                 @if(!$message->deleted_at)
                 <span class="msg-time-wrap">
-                  <span class="msg-time">{{ $message->created_at->format('g:i A') }}</span>
+                  <span class="msg-time"
+                        data-timestamp="{{ $message->created_at->toISOString() }}"
+                        title="{{ $message->created_at->setTimezone('Asia/Kolkata')->format('M j, Y  g:i A') }}">{{ $message->created_at->setTimezone('Asia/Kolkata')->format('g:i A') }}</span>
                   @if($isMine)
                     <span class="msg-tick" id="tick-{{ $message->id }}">
                       @include('livewire.chat.partials.tick', ['status' => $message->deliveryStatus()])
@@ -317,6 +387,15 @@
               {{-- Message Actions (hover menu) --}}
               @if(!$message->deleted_at)
               <div class="msg-actions {{ $isMine ? 'msg-actions--mine' : 'msg-actions--theirs' }}">
+                <button type="button" class="msg-action-btn" title="Reply"
+                        wire:click="setReply({{ $message->id }})"
+                        aria-label="Reply">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                </button>
+                <button type="button" class="msg-action-btn msg-action-btn--react" title="React"
+                        aria-label="React">
+                  <span style="font-size:13px;line-height:1;">🙂</span>
+                </button>
                 <button type="button" class="msg-action-btn" title="Forward"
                         wire:click="openForwardModal({{ $message->id }})">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
@@ -362,6 +441,20 @@
 
       {{-- Input Area --}}
       <div class="chat-input-area">
+        {{-- Reply preview strip --}}
+        @if($replyingToPreview)
+        <div class="reply-preview-bar" wire:key="reply-preview-bar">
+          <div class="reply-preview-bar-accent"></div>
+          <div class="reply-preview-bar-content">
+            <span class="reply-preview-bar-sender">{{ $replyingToPreview['sender_name'] }}</span>
+            <span class="reply-preview-bar-body">{{ $replyingToPreview['body'] }}</span>
+          </div>
+          <button type="button" wire:click="cancelReply" class="reply-preview-bar-close" aria-label="Cancel reply">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        @endif
+
         {{-- Attachment preview --}}
         @if($attachment)
         <div class="attachment-preview">

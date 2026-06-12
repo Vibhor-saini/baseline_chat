@@ -19,6 +19,7 @@ class Message extends Model
         'delivered_at',
         'read_at',
         'forwarded_from_id',
+        'reply_to_id',
     ];
 
     protected $casts = [
@@ -47,6 +48,15 @@ class Message extends Model
     public function forwardedFrom()
     {
         return $this->belongsTo(Message::class, 'forwarded_from_id')->withTrashed();
+    }
+
+    /**
+     * The message this one is replying to (may be soft-deleted — we still
+     * want to show "This message was deleted" in the quote block).
+     */
+    public function replyTo()
+    {
+        return $this->belongsTo(Message::class, 'reply_to_id')->withTrashed();
     }
 
     /*

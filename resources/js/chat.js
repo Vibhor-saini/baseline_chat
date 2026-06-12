@@ -61,8 +61,9 @@
      | All DOM manipulation — no Livewire calls, no server round-trips.
      | ─────────────────────────────────────────────────────────────────────*/
 
-    let _remoteTypingTimer   = null;   // auto-hide timer on the receiver side
-    let _activeConvIdForTyping = null; // which conversation the indicator belongs to
+    let _remoteTypingTimer        = null;   // auto-hide timer on the receiver side (open chat window)
+    let _sidebarTypingTimer       = null;   // auto-hide timer for sidebar-only typing (non-open conv)
+    let _activeConvIdForTyping    = null;   // which conversation the indicator belongs to
 
     /**
      * Show the typing indicator in both the chat window and the sidebar.
@@ -319,6 +320,8 @@
                 onlineUserIds.clear();
                 members.forEach(m => onlineUserIds.add(String(m.id)));
                 applyPresence();
+                // Check delivery for any messages sent while recipient was already online.
+                setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 500);
             })
 
             // Someone came online
@@ -326,6 +329,8 @@
                 console.log('[Presence] joining:', member);
                 onlineUserIds.add(String(member.id));
                 applyPresence();
+                // Recipient just came online — mark our undelivered messages to them.
+                setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 200);
             })
 
             // Someone went offline
@@ -342,6 +347,18 @@
         // Re-apply presence after every Livewire render (new conv items may appear)
         // We expose applyPresence globally so the commit hook below can call it.
         window._applyPresence = applyPresence;
+
+        // Expose the live online set globally so server-side delivery checks
+        // can be triggered from the Livewire commit hook after sendMessage.
+        window._onlineUserIds = onlineUserIds;
+
+        // Expose delivery check so it can be called after presence initializes.
+        window._checkAndMarkDelivered = function () {
+            const onlineIds = Array.from(onlineUserIds).map(Number).filter(Boolean);
+            if (onlineIds.length === 0) return;
+            const component = getChatComponent();
+            if (component) component.call('markDeliveredForOnlineRecipients', onlineIds);
+        };
 
         /* ------------------------------------------------------------------
          | connectToConversation(conversationId)
@@ -460,7 +477,7 @@
          |       Re-renders (e.g. from the search input or sidebar clicks)
          |       must not wipe a live typing indicator.
          | ----------------------------------------------------------------*/
-        Livewire.hook('commit', ({ succeed }) => {
+        Livewire.hook('commit', ({ component, commit, succeed }) => {
             succeed(() => {
                 requestAnimationFrame(() => {
                     detectAndConnectConversation();
@@ -469,6 +486,16 @@
                     // Re-apply presence dots after any Livewire re-render
                     if (window._applyPresence) window._applyPresence();
                 });
+
+                // When sendMessage or forwardTo completes, immediately check
+                // if recipients are online and mark the new message delivered.
+                const calls = commit?.calls ?? [];
+                const wasSend = calls.some(c =>
+                    c.method === 'sendMessage' || c.method === 'forwardTo'
+                );
+                if (wasSend) {
+                    setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 100);
+                }
             });
         });
 
@@ -523,18 +550,73 @@
                 updateSidebarForNewMessage(event.message);
             })
 
+            /* ── Delivered tick update — fires on user channel so sender
+             | sees double grey tick even if they've switched conversations.
+             | ────────────────────────────────────────────────────────────*/
+            .listen('.message.delivered', (event) => {
+                console.log('[Chat] message.delivered (user channel):', event);
+                // Update the tick in the chat window (element exists when conv is open).
+                updateTickDOM(event.messageId, 'delivered');
+                // Update the sidebar tick for this conversation.
+                updateSidebarTick(event.conversationId, 'delivered');
+            })
+
+            /* ── Read tick update — fires on user channel so sender sees
+             | blue tick even if they've switched conversations.
+             | ────────────────────────────────────────────────────────────*/
+            .listen('.message.read', (event) => {
+                console.log('[Chat] message.read (user channel):', event);
+                // If the read conversation is currently open, update all ticks in the window.
+                if (String(event.conversationId) === String(currentConversationId)) {
+                    document.querySelectorAll('[id^="tick-"]').forEach(el => {
+                        if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
+                    });
+                }
+                // Always update the sidebar tick.
+                updateSidebarTick(event.conversationId, 'read');
+                // Keep Livewire in-memory state in sync.
+                const component = getChatComponent();
+                if (component) component.call('markConversationRead', event.conversationId, event.readAt);
+            })
+
             .listen('.user.typing', (event) => {
                 console.log('[Chat] user.typing (user channel):', event);
 
                 // Skip if already handled by the open conversation channel
+                // (that handler shows both the chat bubble AND the sidebar).
                 if (String(event.conversationId) === String(currentConversationId)) return;
 
-                clearTimeout(_remoteTypingTimer);
+                // This conversation is NOT open — update the SIDEBAR ONLY.
+                // Never touch the in-chat typing bubble (#typing-indicator-row)
+                // because that belongs to a different conversation's window.
+                const convId  = event.conversationId;
+                const preview = document.getElementById(`conv-preview-${convId}`);
+                if (!preview) return;
+
+                clearTimeout(_sidebarTypingTimer);
+
                 if (event.isTyping) {
-                    showTypingIndicator(event.userName, event.conversationId);
-                    _remoteTypingTimer = setTimeout(() => hideTypingIndicator(), 4000);
+                    preview.classList.add('conv-preview--typing');
+                    preview.innerHTML =
+                        `<span class="sidebar-typing-dots" aria-hidden="true">` +
+                            `<span class="sidebar-typing-dot"></span>` +
+                            `<span class="sidebar-typing-dot"></span>` +
+                            `<span class="sidebar-typing-dot"></span>` +
+                        `</span> ${event.userName} is typing…`;
+
+                    // Auto-restore the sidebar text if stop event is missed.
+                    _sidebarTypingTimer = setTimeout(() => {
+                        if (preview.classList.contains('conv-preview--typing')) {
+                            preview.classList.remove('conv-preview--typing');
+                            preview.textContent = '…';
+                        }
+                    }, 4000);
                 } else {
-                    hideTypingIndicator();
+                    // Explicit stop — restore sidebar preview text.
+                    if (preview.classList.contains('conv-preview--typing')) {
+                        preview.classList.remove('conv-preview--typing');
+                        preview.textContent = '…';
+                    }
                 }
             });
 
@@ -724,5 +806,67 @@
 
     // Best-effort ping on unload
     window.addEventListener('beforeunload', pingLastSeen);
+
+    /* ───────────────────────────────────────────────────────────────────────
+     | LIVE TIMESTAMPS
+     |
+     | Updates every [data-timestamp] element in the chat window so
+     | message times stay current without any server round-trip.
+     |
+     | Logic (mirrors WhatsApp/Telegram):
+     |   < 1 min   → "just now"
+     |   1–59 min  → "5 min ago"
+     |   same day  → "2:35 PM"          (fixed clock time, already past 1 h)
+     |   yesterday → "Yesterday 2:35 PM"
+     |   older     → "Jun 10, 2:35 PM"
+     |
+     | Re-runs every 30 s. Also triggered after each Livewire commit so
+     | freshly appended messages get the right label immediately.
+     | ─────────────────────────────────────────────────────────────────────*/
+
+    function formatLiveTime(isoString) {
+        const date  = new Date(isoString);
+        const now   = new Date();
+        const diffS = Math.floor((now - date) / 1000);
+
+        if (diffS < 60)  return 'just now';
+        if (diffS < 3600) {
+            const m = Math.floor(diffS / 60);
+            return `${m} min ago`;
+        }
+
+        // Same calendar day — show clock time only
+        const isToday = date.toDateString() === now.toDateString();
+        if (isToday) {
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+
+        // Yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        if (date.toDateString() === yesterday.toDateString()) {
+            return 'Yesterday ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+
+        // Older — "Jun 10, 2:35 PM"
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+             + ', '
+             + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function updateLiveTimestamps() {
+        document.querySelectorAll('[data-timestamp]').forEach(el => {
+            const iso = el.dataset.timestamp;
+            if (!iso) return;
+            el.textContent = formatLiveTime(iso);
+        });
+    }
+
+    // Run immediately, then every 30 s
+    document.addEventListener('DOMContentLoaded', updateLiveTimestamps);
+    setInterval(updateLiveTimestamps, 30_000);
+
+    // Also run after every Livewire re-render (new messages appended)
+    document.addEventListener('livewire:update', updateLiveTimestamps);
 
 })();

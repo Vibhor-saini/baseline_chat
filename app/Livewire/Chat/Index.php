@@ -62,6 +62,15 @@ class Index extends Component
      */
     public array $forwardTargets = [];
 
+    /** Reply state ───────────────────────── */
+    public ?int   $replyingToMessageId  = null;
+
+    /**
+     * Plain array — safe for Livewire serialization.
+     * Shape: ['id', 'sender_name', 'body', 'type']
+     */
+    public array  $replyingToPreview   = [];
+
     public string $search       = '';
     public bool   $showRequests = false;
 
@@ -159,7 +168,17 @@ class Index extends Component
         $this->loadPendingRequests();
         $this->loadSentRequests();
         $this->clearSentRequestsScreenIfEmpty();
-        $this->refreshSelectedConversation();
+
+        // If a conversation is currently open, re-hydrate it from DB so its
+        // status and participant data stay fresh (e.g. after a request is accepted).
+        if ($this->selectedConversationId) {
+            $fresh = Conversation::with(['userOne', 'userTwo'])
+                ->find($this->selectedConversationId);
+
+            if ($fresh) {
+                $this->selectedConversation = $fresh;
+            }
+        }
     }
 
     /**
@@ -246,7 +265,7 @@ class Index extends Component
 
         $this->messages = Message::withTrashed()
             ->where('conversation_id', $conversationId)
-            ->with(['sender', 'forwardedFrom.sender'])
+            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender'])
             ->latest()
             ->take(50)
             ->get()
@@ -261,6 +280,62 @@ class Index extends Component
         $this->markMessagesDelivered($conversationId);
         $this->markMessagesRead($conversationId);
         $this->loadConversations();
+    }
+
+    /**
+     * Called from JS after every Livewire commit, passing the array of user IDs
+     * currently online (from the presence channel Set).
+     *
+     * Marks any of MY outgoing messages as delivered if the recipient is online right now.
+     * This is the WhatsApp rule: double grey tick = recipient's device is connected.
+     */
+    public function markDeliveredForOnlineRecipients(array $onlineUserIds): void
+    {
+        if (empty($onlineUserIds)) return;
+
+        $now = now();
+        $updatedMessageIds = [];
+
+        // Find all accepted conversations where the OTHER user is currently online.
+        $conversations = Conversation::where('status', 'accepted')
+            ->where(function ($q) use ($onlineUserIds) {
+                $q->where('user_one_id', auth()->id())
+                  ->whereIn('user_two_id', $onlineUserIds);
+            })
+            ->orWhere(function ($q) use ($onlineUserIds) {
+                $q->where('user_two_id', auth()->id())
+                  ->whereIn('user_one_id', $onlineUserIds);
+            })
+            ->get(['id', 'user_one_id', 'user_two_id']);
+
+        foreach ($conversations as $conv) {
+            $undelivered = Message::where('conversation_id', $conv->id)
+                ->where('sender_id', auth()->id())
+                ->whereNull('delivered_at')
+                ->get(['id', 'conversation_id', 'sender_id']);
+
+            foreach ($undelivered as $msg) {
+                $msg->update(['delivered_at' => $now]);
+                $updatedMessageIds[] = $msg->id;
+                // No toOthers() — sender needs this on their own user.{id} channel.
+                broadcast(new MessageDelivered(
+                    $msg->id,
+                    $msg->conversation_id,
+                    $now->toISOString(),
+                    auth()->id()
+                ));
+            }
+        }
+
+        // Sync the in-memory messages array so Livewire re-renders show the
+        // correct delivered status and don't overwrite the tick JS just set.
+        if (!empty($updatedMessageIds)) {
+            foreach ($this->messages as $i => $msg) {
+                if (in_array($msg->id, $updatedMessageIds)) {
+                    $this->messages[$i]->delivered_at = $now;
+                }
+            }
+        }
     }
 
     /*
@@ -280,7 +355,10 @@ class Index extends Component
 
         foreach ($undelivered as $msg) {
             $msg->update(['delivered_at' => $now]);
-            broadcast(new MessageDelivered($msg->id, $conversationId, $now->toISOString()))->toOthers();
+            // No toOthers() — the original sender (msg->sender_id) receives this
+            // on their user.{id} channel to update tick icons even if they
+            // have switched to a different conversation.
+            broadcast(new MessageDelivered($msg->id, $conversationId, $now->toISOString(), $msg->sender_id));
         }
     }
 
@@ -288,12 +366,26 @@ class Index extends Component
     {
         $now = now();
 
+        // Fetch the sender IDs before bulk-updating so we can broadcast per-sender.
+        $unread = Message::where('conversation_id', $conversationId)
+            ->where('sender_id', '!=', auth()->id())
+            ->whereNull('read_at')
+            ->get(['id', 'sender_id']);
+
+        if ($unread->isEmpty()) return;
+
+        $senderIds = $unread->pluck('sender_id')->unique();
+
         Message::where('conversation_id', $conversationId)
             ->where('sender_id', '!=', auth()->id())
             ->whereNull('read_at')
             ->update(['read_at' => $now, 'is_read' => true]);
 
-        broadcast(new MessageRead($conversationId, auth()->id(), $now->toISOString()))->toOthers();
+        // Broadcast one MessageRead per unique sender so each sender's user channel fires.
+        // No toOthers() — the original sender needs to receive this to flip their tick to blue.
+        foreach ($senderIds as $senderId) {
+            broadcast(new MessageRead($conversationId, auth()->id(), $now->toISOString(), $senderId));
+        }
     }
 
     /**
@@ -327,7 +419,13 @@ class Index extends Component
     public function acceptRequest(int $conversationId): void
     {
         $conversation = Conversation::findOrFail($conversationId);
-        $conversation->update(['status' => 'accepted']);
+
+        // Set last_message_at so this conversation sorts to the top of the
+        // sidebar (loadConversations orders by latest('last_message_at')).
+        $conversation->update([
+            'status'          => 'accepted',
+            'last_message_at' => now(),
+        ]);
 
         $senderId   = $conversation->user_one_id;
         $receiverId = $conversation->user_two_id;
@@ -395,9 +493,10 @@ class Index extends Component
             'body'            => trim($this->body),
             'type'            => $type,
             'file_path'       => $filePath,
+            'reply_to_id'     => $this->replyingToMessageId,
         ]);
 
-        $message->load('sender', 'forwardedFrom.sender');
+        $message->load('sender', 'forwardedFrom.sender', 'replyTo.sender');
 
         $this->messages[] = $message;
 
@@ -407,6 +506,7 @@ class Index extends Component
         broadcast(new MessageSent($message))->toOthers();
 
         $this->body = '';
+        $this->cancelReply();
     }
 
     /**
@@ -426,7 +526,7 @@ class Index extends Component
 
         // ── Active conversation: append + mark read ────────────────────────
         $message = Message::withTrashed()
-            ->with(['sender', 'forwardedFrom.sender'])
+            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender'])
             ->find($messageData['id']);
 
         if (! $message) return;
@@ -439,8 +539,9 @@ class Index extends Component
 
         $now = now();
         $message->update(['delivered_at' => $now, 'read_at' => $now, 'is_read' => true]);
-        broadcast(new MessageDelivered($message->id, $message->conversation_id, $now->toISOString()))->toOthers();
-        broadcast(new MessageRead($message->conversation_id, auth()->id(), $now->toISOString()))->toOthers();
+        // No toOthers() so sender receives tick update on their user channel.
+        broadcast(new MessageDelivered($message->id, $message->conversation_id, $now->toISOString(), $message->sender_id));
+        broadcast(new MessageRead($message->conversation_id, auth()->id(), $now->toISOString(), $message->sender_id));
 
         $this->loadConversations();
     }
@@ -585,6 +686,52 @@ class Index extends Component
 
         $this->loadConversations();
         $this->closeForwardModal();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | REPLY TO MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Set the reply context. Called from Blade via wire:click="setReply(id)".
+     * Builds a plain-array preview so Blade can render the strip above the input.
+     */
+    public function setReply(int $messageId): void
+    {
+        // Verify the message belongs to the currently open conversation.
+        $message = Message::withTrashed()
+            ->with('sender')
+            ->where('conversation_id', $this->selectedConversationId)
+            ->find($messageId);
+
+        if (! $message) return;
+
+        $this->replyingToMessageId = $messageId;
+        $this->replyingToPreview   = [
+            'id'          => $message->id,
+            'sender_name' => $message->sender?->name ?? 'Unknown',
+            'type'        => $message->type,
+            // Show a sensible label even for deleted / media messages
+            'body'        => $message->deleted_at
+                ? 'This message was deleted'
+                : ($message->type === 'image'
+                    ? '📷 Image'
+                    : ($message->type === 'file'
+                        ? '📎 ' . $message->fileName()
+                        : \Illuminate\Support\Str::limit($message->body, 80))),
+        ];
+    }
+
+    /**
+     * Cancel / dismiss the reply context.
+     * Called from the ✕ button in the reply preview strip, or after sending.
+     */
+    public function cancelReply(): void
+    {
+        $this->replyingToMessageId = null;
+        $this->replyingToPreview   = [];
     }
 
     /*

@@ -252,10 +252,41 @@
         .tick { display: inline-block; vertical-align: middle; margin-left: 3px; flex-shrink: 0; }
 
         /* ── Message bubbles ────────────────────── */
-        .msg-row { display: flex; align-items: flex-end; gap: 8px; margin: 4px 16px; position: relative; }
+        .msg-row { display: flex; align-items: flex-end; gap: 8px; margin: 2px 16px; position: relative; }
         .msg-row:hover .msg-actions { opacity: 1; pointer-events: auto; }
+        /* First message of group gets normal top margin; continued messages collapse */
+        .msg-continued { margin-top: 1px; }
+        .msg-continued .msg-avatar { visibility: hidden; }
         .msg-mine  { flex-direction: row-reverse; }
         .msg-theirs { flex-direction: row; }
+
+        /* Date separator */
+        .date-separator {
+            display: flex; align-items: center; justify-content: center;
+            margin: 18px 16px 10px;
+            position: relative;
+        }
+        .date-separator::before {
+            content: ''; position: absolute; left: 0; right: 0; top: 50%;
+            height: 1px; background: var(--border);
+        }
+        .date-separator-label {
+            position: relative;
+            background: var(--surface); /* same as messages-area bg */
+            padding: 3px 12px;
+            font-size: .72rem; font-weight: 600;
+            color: var(--text-3);
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            letter-spacing: .03em;
+        }
+
+        /* Sender name above first bubble of a group */
+        .msg-sender-name {
+            font-size: .72rem; font-weight: 600;
+            color: var(--accent-h);
+            margin-bottom: 2px; padding: 0 4px;
+        }
 
         .msg-avatar {
             width: 30px; height: 30px; border-radius: 50%;
@@ -263,6 +294,7 @@
             display: flex; align-items: center; justify-content: center;
             font-size: .75rem; font-weight: 700; flex-shrink: 0;
         }
+        .msg-avatar-hidden { visibility: hidden; }
         .msg-avatar-mine { background: var(--surface-2); }
 
         .msg-body-wrap { max-width: 65%; display: flex; flex-direction: column; position: relative; }
@@ -293,7 +325,13 @@
             display: flex; align-items: center; gap: 3px;
             justify-content: flex-end;
             margin-top: 3px; padding: 0 2px;
+            opacity: 0;
+            transition: opacity .15s;
         }
+        /* Show time on bubble hover */
+        .msg-row:hover .msg-time-wrap { opacity: 1; }
+        /* Always show ticks (delivery status must always be visible) */
+        .msg-tick { opacity: 1 !important; }
         .msg-time { font-size: .68rem; color: rgba(255,255,255,.6); }
         .bubble-theirs .msg-time { color: var(--text-3); }
 

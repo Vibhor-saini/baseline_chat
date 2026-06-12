@@ -19,7 +19,7 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(Message $message)
     {
-        $message->loadMissing('sender', 'forwardedFrom.sender');
+        $message->loadMissing('sender', 'forwardedFrom.sender', 'replyTo.sender');
 
         $this->message = [
             'id'                => $message->id,
@@ -41,6 +41,15 @@ class MessageSent implements ShouldBroadcastNow
                     'id'   => $message->forwardedFrom->sender->id,
                     'name' => $message->forwardedFrom->sender->name,
                 ],
+            ] : null,
+            'reply_to_id'       => $message->reply_to_id,
+            'reply_to'          => $message->replyTo ? [
+                'id'          => $message->replyTo->id,
+                'body'        => $message->replyTo->deleted_at ? null : $message->replyTo->body,
+                'type'        => $message->replyTo->type,
+                'file_path'   => $message->replyTo->file_path,
+                'deleted_at'  => $message->replyTo->deleted_at?->toISOString(),
+                'sender_name' => $message->replyTo->sender?->name ?? 'Unknown',
             ] : null,
             'created_at'        => $message->created_at->toISOString(),
             'sender'            => [

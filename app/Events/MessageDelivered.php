@@ -15,17 +15,24 @@ class MessageDelivered implements ShouldBroadcastNow
     public int    $messageId;
     public int    $conversationId;
     public string $deliveredAt;
+    public int    $senderUserId;   // the original message sender — needs the tick update
 
-    public function __construct(int $messageId, int $conversationId, string $deliveredAt)
+    public function __construct(int $messageId, int $conversationId, string $deliveredAt, int $senderUserId)
     {
         $this->messageId      = $messageId;
         $this->conversationId = $conversationId;
         $this->deliveredAt    = $deliveredAt;
+        $this->senderUserId   = $senderUserId;
     }
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('chat.' . $this->conversationId)];
+        return [
+            // Conversation channel — catches the sender if they still have the chat open.
+            new PrivateChannel('chat.' . $this->conversationId),
+            // Sender's private user channel — catches them even if they switched chats.
+            new PrivateChannel('user.' . $this->senderUserId),
+        ];
     }
 
     public function broadcastAs(): string
@@ -36,8 +43,9 @@ class MessageDelivered implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'messageId'   => $this->messageId,
-            'deliveredAt' => $this->deliveredAt,
+            'messageId'      => $this->messageId,
+            'conversationId' => $this->conversationId,
+            'deliveredAt'    => $this->deliveredAt,
         ];
     }
 }

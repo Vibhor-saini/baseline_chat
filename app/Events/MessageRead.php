@@ -15,17 +15,24 @@ class MessageRead implements ShouldBroadcastNow
     public int    $conversationId;
     public int    $readByUserId;
     public string $readAt;
+    public int    $senderUserId;   // the original message sender — needs the blue tick update
 
-    public function __construct(int $conversationId, int $readByUserId, string $readAt)
+    public function __construct(int $conversationId, int $readByUserId, string $readAt, int $senderUserId)
     {
         $this->conversationId = $conversationId;
         $this->readByUserId   = $readByUserId;
         $this->readAt         = $readAt;
+        $this->senderUserId   = $senderUserId;
     }
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('chat.' . $this->conversationId)];
+        return [
+            // Conversation channel — catches the sender if they still have the chat open.
+            new PrivateChannel('chat.' . $this->conversationId),
+            // Sender's private user channel — catches them even if they switched chats.
+            new PrivateChannel('user.' . $this->senderUserId),
+        ];
     }
 
     public function broadcastAs(): string
