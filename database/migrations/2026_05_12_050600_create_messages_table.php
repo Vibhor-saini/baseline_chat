@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('messages')) {
         Schema::create('messages', function (Blueprint $table) {
 
             $table->id();
@@ -31,6 +32,7 @@ return new class extends Migration
 
             $table->timestamps();
         });
+    }
     }
 
     /**
