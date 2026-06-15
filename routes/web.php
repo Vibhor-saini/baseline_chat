@@ -8,8 +8,15 @@ use App\Livewire\Admin\Users\Create as UsersCreate;
 use App\Livewire\Admin\Users\Edit as UsersEdit;
 use App\Livewire\Chat\Index as ChatIndex;
 
+use App\Http\Controllers\PresenceController;
+
 Route::get('/', function () {
     return view('Auth/login');
+});
+
+Route::middleware('auth')->group(function () {
+    // Presence ping — updates last_seen, called by chat.js
+    Route::post('/presence/ping', [PresenceController::class, 'ping'])->name('presence.ping');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {

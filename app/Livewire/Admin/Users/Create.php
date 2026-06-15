@@ -53,7 +53,7 @@ public function save()
 
     session()->flash('success', 'User created successfully.');
 
-    return redirect()->route('users.index');
+    return $this->redirect(route('users.index'), navigate: true);
 }
 
     public function render()

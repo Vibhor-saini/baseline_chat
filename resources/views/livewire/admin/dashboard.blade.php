@@ -538,7 +538,7 @@
                 </div>
 
                 <div class="actions-list">
-                    <a href="{{ route('users.create') }}" class="action-btn primary">
+                    <a href="{{ route('users.create') }}" wire:navigate class="action-btn primary">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                             <circle cx="9" cy="7" r="4"/>
@@ -548,7 +548,7 @@
                         Create User
                     </a>
 
-                    <a href="{{ route('chat.index') }}" class="action-btn ghost">
+                    <a href="{{ route('chat.index') }}" wire:navigate class="action-btn ghost">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                         </svg>
