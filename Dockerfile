@@ -1,38 +1,44 @@
-FROM php:8.2-apache
+# ─────────────────────────────────────────────────────────────────────────────
+# Baseline Chat — Production Dockerfile
+# PHP 8.2-FPM (Alpine) + Nginx — no Apache MPM conflicts
+# ─────────────────────────────────────────────────────────────────────────────
 
-RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev \
-    libzip-dev zip unzip nodejs npm \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM php:8.2-fpm-alpine
 
+# ── System dependencies ───────────────────────────────────────────────────────
+RUN apk add --no-cache \
+    nginx git curl libpng-dev oniguruma-dev libxml2-dev \
+    libzip-dev zip unzip nodejs npm
+
+# ── PHP extensions ────────────────────────────────────────────────────────────
 RUN docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl bcmath gd
 
+# ── Composer ─────────────────────────────────────────────────────────────────
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# ── Working directory ─────────────────────────────────────────────────────────
 WORKDIR /var/www/html
 
+# ── Copy source ───────────────────────────────────────────────────────────────
 COPY . .
 
+# ── PHP dependencies (no dev) ─────────────────────────────────────────────────
 RUN composer install --no-dev --optimize-autoloader
 
+# ── Frontend assets ───────────────────────────────────────────────────────────
 RUN npm install && npm run build
 
-# Apache config
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' \
-    /etc/apache2/sites-available/000-default.conf
+# ── Nginx config ──────────────────────────────────────────────────────────────
+RUN mkdir -p /run/nginx
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 
-RUN a2enmod rewrite
-
-# Fix MPM conflict - disable all, enable only prefork
-RUN a2dismod mpm_event || true \
-    && a2dismod mpm_worker || true \
-    && a2dismod mpm_prefork || true \
-    && a2enmod mpm_prefork
-
+# ── Permissions ───────────────────────────────────────────────────────────────
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
+# ── Port ──────────────────────────────────────────────────────────────────────
 EXPOSE 80
 
-CMD ["sh", "-c", "php artisan migrate --force; php artisan config:cache; php artisan route:cache; php artisan view:cache; apache2-foreground"]
+# ── Start: migrate → cache → php-fpm → nginx ────────────────────────────────
+CMD ["sh", "-c", "php artisan migrate --force; php artisan config:cache; php artisan route:cache; php artisan view:cache; php-fpm -D; nginx -g 'daemon off;'"]
