@@ -25,6 +25,18 @@ COPY . .
 # ── PHP dependencies (no dev) ─────────────────────────────────────────────────
 RUN composer install --no-dev --optimize-autoloader
 
+
+# ── Frontend assets ───────────────────────────────────────────────────────────
+ARG VITE_REVERB_APP_KEY=dospuzb7cemqgsvkdiev
+ARG VITE_REVERB_HOST=baselinechat-production.up.railway.app
+ARG VITE_REVERB_PORT=443
+ARG VITE_REVERB_SCHEME=https
+
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
+ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
+ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
+ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
 # ── Frontend assets ───────────────────────────────────────────────────────────
 RUN npm install && npm run build
 
