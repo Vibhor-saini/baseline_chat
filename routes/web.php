@@ -11,7 +11,7 @@ use App\Livewire\Chat\Index as ChatIndex;
 use App\Http\Controllers\PresenceController;
 
 Route::get('/', function () {
-    return view('Auth/login');
+    return view('auth.login');
 });
 
 Route::middleware('auth')->group(function () {
