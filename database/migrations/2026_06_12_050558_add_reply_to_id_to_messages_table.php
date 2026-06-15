@@ -8,12 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('messages', 'reply_to_id')) {
+            return; // already exists — nothing to do
+        }
+
         Schema::table('messages', function (Blueprint $table) {
             // Reply chain — nullable FK to the message being replied to.
-            // nullOnDelete so if the original is hard-deleted the reply still exists.
+            // No ->after() hint — column position is irrelevant and ->after()
+            // throws on DBs where the referenced column doesn't exist yet.
             $table->foreignId('reply_to_id')
                 ->nullable()
-                ->after('forwarded_from_id')
                 ->constrained('messages')
                 ->nullOnDelete();
         });
@@ -22,8 +26,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropForeign(['reply_to_id']);
-            $table->dropColumn('reply_to_id');
+            if (Schema::hasColumn('messages', 'reply_to_id')) {
+                $table->dropForeign(['reply_to_id']);
+                $table->dropColumn('reply_to_id');
+            }
         });
     }
 };

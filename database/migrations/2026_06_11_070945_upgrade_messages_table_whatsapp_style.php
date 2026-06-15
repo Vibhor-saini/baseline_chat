@@ -9,32 +9,55 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            // Message type: text | image | file
-            $table->string('type')->default('text')->after('body');
+            // ── type column ───────────────────────────────────────────────
+            // Use ->after('body') only when 'body' exists (local upgraded DB).
+            // On a fresh Railway DB the messages table comes from the initial
+            // migration which has no 'body' column, so we skip the position hint.
+            if (!Schema::hasColumn('messages', 'type')) {
+                if (Schema::hasColumn('messages', 'body')) {
+                    $table->string('type')->default('text')->after('body');
+                } else {
+                    $table->string('type')->default('text');
+                }
+            }
 
-            // Delivery / read timestamps (null = not yet)
-            $table->timestamp('delivered_at')->nullable()->after('type');
-            $table->timestamp('read_at')->nullable()->after('delivered_at');
+            // ── delivered_at ──────────────────────────────────────────────
+            if (!Schema::hasColumn('messages', 'delivered_at')) {
+                $table->timestamp('delivered_at')->nullable();
+            }
 
-            // Soft delete — shows "This message was deleted"
-            $table->softDeletes()->after('read_at');
+            // ── read_at ───────────────────────────────────────────────────
+            if (!Schema::hasColumn('messages', 'read_at')) {
+                $table->timestamp('read_at')->nullable();
+            }
 
-            // Forward chain — nullable FK to the original message
-            $table->foreignId('forwarded_from_id')
-                ->nullable()
-                ->after('deleted_at')
-                ->constrained('messages')
-                ->nullOnDelete();
+            // ── deleted_at (soft deletes) ─────────────────────────────────
+            if (!Schema::hasColumn('messages', 'deleted_at')) {
+                $table->softDeletes();
+            }
+
+            // ── forwarded_from_id ─────────────────────────────────────────
+            if (!Schema::hasColumn('messages', 'forwarded_from_id')) {
+                $table->foreignId('forwarded_from_id')
+                    ->nullable()
+                    ->constrained('messages')
+                    ->nullOnDelete();
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropForeign(['forwarded_from_id']);
-            $table->dropColumn([
-                'type', 'delivered_at', 'read_at', 'deleted_at', 'forwarded_from_id',
-            ]);
+            if (Schema::hasColumn('messages', 'forwarded_from_id')) {
+                $table->dropForeign(['forwarded_from_id']);
+                $table->dropColumn('forwarded_from_id');
+            }
+            foreach (['type', 'delivered_at', 'read_at', 'deleted_at'] as $col) {
+                if (Schema::hasColumn('messages', $col)) {
+                    $table->dropColumn($col);
+                }
+            }
         });
     }
 };
