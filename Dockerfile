@@ -52,5 +52,5 @@ RUN chown -R www-data:www-data /var/www/html \
 # ── Port ──────────────────────────────────────────────────────────────────────
 EXPOSE 80
 
-# ── Start: migrate → cache → php-fpm → nginx ────────────────────────────────
-CMD ["sh", "-c", "php artisan migrate --force; php artisan config:cache; php artisan route:cache; php artisan view:cache; php-fpm -D; nginx -g 'daemon off;'"]
+# ── Start: migrate → cache → reverb → php-fpm → nginx ───────────────────────
+CMD ["sh", "-c", "php artisan migrate --force; php artisan config:cache; php artisan route:cache; php artisan view:cache; php artisan reverb:start --host=0.0.0.0 --port=8080 & php-fpm -D; nginx -g 'daemon off;'"]
