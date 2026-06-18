@@ -74,34 +74,30 @@
     {{-- Profile --}}
     <div class="topbar-right">
       <div class="profile-wrap" id="profileWrap">
-        <button class="profile-btn" id="profileBtn" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown">
-          <div class="profile-avatar" aria-hidden="true">{{ strtoupper(substr(auth()->user()->name,0,1)) }}<span class="profile-status-dot"></span></div>
+        <button class="profile-btn"
+                id="profileBtn"
+                aria-haspopup="dialog"
+                aria-controls="profileDropdown"
+                onclick="Livewire.dispatch('toggle-profile-panel')">
+          {{-- Avatar: show image if set, otherwise initials --}}
+          @if(auth()->user()->profile_image)
+            <img src="{{ Storage::url(auth()->user()->profile_image) }}"
+                 alt="{{ auth()->user()->name }}"
+                 class="profile-avatar profile-avatar--img"
+                 data-user-id="{{ auth()->id() }}">
+          @else
+            <div class="profile-avatar"
+                 data-user-id="{{ auth()->id() }}"
+                 aria-hidden="true">{{ strtoupper(substr(auth()->user()->name,0,1)) }}<span class="profile-status-dot"></span></div>
+          @endif
           <div class="profile-meta">
             <div class="profile-name">{{ auth()->user()->name }}</div>
             <div class="profile-role">{{ auth()->user()->is_admin ? 'Admin' : 'Member' }}</div>
           </div>
           <svg class="profile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div class="profile-dropdown" id="profileDropdown" role="menu">
-          <div class="dropdown-user-card">
-            <div class="dropdown-avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}<span class="dropdown-status-dot"></span></div>
-            <div class="dropdown-user-info">
-              <div class="dropdown-user-name">{{ auth()->user()->name }}</div>
-              <div class="dropdown-user-email">{{ auth()->user()->email }}</div>
-              <div class="dropdown-user-badge">
-                @if(auth()->user()->is_admin)<span class="badge-admin">Admin</span>@else<span class="badge-member">Member</span>@endif
-              </div>
-            </div>
-          </div>
-          <div class="dropdown-divider"></div>
-          <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button class="dropdown-item dropdown-item-danger" role="menuitem" type="submit">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              Sign out
-            </button>
-          </form>
-        </div>
+        {{-- Livewire profile panel component replaces static dropdown --}}
+        <livewire:profile.panel />
       </div>
     </div>
 
@@ -184,7 +180,14 @@
              aria-label="Conversation with {{ $other->name }}"
              wire:key="conv-{{ $conversation->id }}">
           <div class="conv-avatar-wrap">
-            <div class="conv-avatar">{{ strtoupper(substr($other->name,0,1)) }}</div>
+            @if($other->profile_image)
+              <img src="{{ Storage::url($other->profile_image) }}"
+                   alt="{{ $other->name }}"
+                   class="conv-avatar conv-avatar--img"
+                   data-user-id="{{ $other->id }}">
+            @else
+              <div class="conv-avatar" data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+            @endif
             <span class="presence-dot" data-presence-uid="{{ $other->id }}" aria-hidden="true"></span>
           </div>
           <div class="conv-info">
@@ -243,7 +246,16 @@
         <button class="mobile-back-btn" id="mobileBackBtn" title="Back" aria-label="Back to conversations">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
-        <div class="chat-header-avatar">{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}</div>
+        <div class="chat-header-avatar" data-user-id="{{ $selectedConversation->otherUser()->id }}">
+          @if($selectedConversation->otherUser()->profile_image)
+            <img src="{{ Storage::url($selectedConversation->otherUser()->profile_image) }}"
+                 alt="{{ $selectedConversation->otherUser()->name }}"
+                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;"
+                 data-user-id="{{ $selectedConversation->otherUser()->id }}">
+          @else
+            {{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}
+          @endif
+        </div>
         <div class="chat-header-info">
           <h2 class="chat-header-name">{{ $selectedConversation->otherUser()->name }}</h2>
           <span class="chat-header-status" id="chat-header-status"
@@ -301,7 +313,16 @@
             {{-- Avatar: only on first message of a group, theirs side --}}
             @if(!$isMine)
               <div class="msg-avatar {{ !$showAvatar ? 'msg-avatar-hidden' : '' }}">
-                @if($showAvatar){{ strtoupper(substr($message->sender->name,0,1)) }}@endif
+                @if($showAvatar)
+                  @if($message->sender->profile_image)
+                    <img src="{{ Storage::url($message->sender->profile_image) }}"
+                         alt="{{ $message->sender->name }}"
+                         class="msg-avatar-img"
+                         data-user-id="{{ $message->sender->id }}">
+                  @else
+                    <div data-user-id="{{ $message->sender->id }}">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+                  @endif
+                @endif
               </div>
             @endif
 
@@ -422,7 +443,16 @@
             </div>{{-- /msg-body-wrap --}}
 
             @if($isMine)
-              <div class="msg-avatar msg-avatar-mine">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+              <div class="msg-avatar msg-avatar-mine" data-user-id="{{ $message->sender->id }}">
+                @if($message->sender->profile_image)
+                  <img src="{{ Storage::url($message->sender->profile_image) }}"
+                       alt="{{ $message->sender->name }}"
+                       class="msg-avatar-img"
+                       data-user-id="{{ $message->sender->id }}">
+                @else
+                  {{ strtoupper(substr($message->sender->name,0,1)) }}
+                @endif
+              </div>
             @endif
 
           </div>{{-- /msg-row --}}

@@ -768,9 +768,8 @@
 
         .search-clear-btn:hover { color: var(--text-1); }
 
-        /* ── Profile dropdown ───────────────────── */
-        .profile-dropdown { display: none; }
-        .profile-dropdown.profile-dropdown-open { display: block; }
+        /* ── Profile dropdown — visibility is controlled by chat.css via .dropdown-open ── */
+        /* Do NOT override it here; the .dropdown-open class in chat.css handles opacity/transform */
 
         /* ── Responsive ─────────────────────────── */
         @media (max-width: 768px) {

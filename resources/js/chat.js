@@ -768,24 +768,160 @@
     });
 
     /* ───────────────────────────────────────────────────────────────────────
-     | PROFILE DROPDOWN
+     | PROFILE PANEL — outside-click + Escape dismiss + real-time avatars
+     |
+     | The panel open/close state is owned by the Livewire Profile\Panel
+     | component. JS only dispatches Livewire events to trigger toggle/close.
      | ─────────────────────────────────────────────────────────────────────*/
 
+    // Track whether a profile-open click just happened so we can skip
+    // the simultaneous outside-click handler on the same event.
+    let _profileJustToggled = false;
+
+    // Intercept the profile button click BEFORE it reaches Livewire so we
+    // can set the guard flag. The button's own onclick still fires after this.
     document.addEventListener('click', (e) => {
-        const btn      = document.getElementById('profileBtn');
-        const dropdown = document.getElementById('profileDropdown');
-        const wrap     = document.getElementById('profileWrap');
-
-        if (!btn || !dropdown || !wrap) return;
-
-        if (wrap.contains(e.target)) {
-            const isOpen = btn.getAttribute('aria-expanded') === 'true';
-            btn.setAttribute('aria-expanded', String(!isOpen));
-            dropdown.classList.toggle('profile-dropdown-open', !isOpen);
-        } else {
-            btn.setAttribute('aria-expanded', 'false');
-            dropdown.classList.remove('profile-dropdown-open');
+        const btn = e.target.closest('#profileBtn');
+        if (btn) {
+            _profileJustToggled = true;
+            // Clear the guard after this event has fully propagated.
+            setTimeout(() => { _profileJustToggled = false; }, 0);
         }
+    }, true); // capture phase — runs before the bubbling outside-click handler
+
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('profileWrap');
+        if (!wrap) return;
+        // If click is inside profile-wrap, Livewire onclick handles toggling.
+        if (wrap.contains(e.target)) return;
+        // Guard: if we just toggled via the button, don't also close.
+        if (_profileJustToggled) return;
+        // Outside click → close the panel.
+        Livewire.dispatch('close-profile-panel');
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            Livewire.dispatch('close-profile-panel');
+        }
+    });
+
+    // Real-time avatar propagation via profile-updates channel.
+    // Registered inside livewire:init so Echo is guaranteed to be available.
+    document.addEventListener('livewire:init', () => {
+
+        /* ── Helper: apply a status color to all status-bearing dots ──── */
+        function applyStatusColor(userId, status, name, avatarUrl) {
+            const statusColors = {
+                available: '#23e07a',
+                busy:      '#ff5f72',
+                away:      '#ffb547',
+                dnd:       '#ff5f72',
+            };
+            const color = statusColors[status] || statusColors.available;
+            const myUserId = String(document.body.dataset.userId || '');
+            const uid = String(userId);
+
+            // ── Update avatar images for this user everywhere ──────────
+            if (avatarUrl) {
+                document.querySelectorAll(`[data-user-id="${uid}"]`).forEach(el => {
+                    if (el.tagName === 'IMG') {
+                        el.src = avatarUrl;
+                    } else if (
+                        !el.classList.contains('profile-status-dot') &&
+                        !el.classList.contains('presence-dot') &&
+                        !el.classList.contains('profile-status-dot-sm')
+                    ) {
+                        const img = document.createElement('img');
+                        img.src            = avatarUrl;
+                        img.alt            = name || '';
+                        img.className      = el.className + ' profile-avatar--img';
+                        img.dataset.userId = uid;
+                        img.style.cssText  = el.style.cssText;
+                        el.replaceWith(img);
+                    }
+                });
+            }
+
+            // ── If this is MY OWN update → update topbar status dot ───
+            if (uid === myUserId) {
+                document.querySelectorAll('.profile-status-dot').forEach(dot => {
+                    dot.style.background = color;
+                    dot.style.boxShadow  = `0 0 6px ${color}`;
+                });
+                document.querySelectorAll('.nav-profile .presence').forEach(dot => {
+                    dot.style.background = color;
+                });
+                if (name) {
+                    document.querySelectorAll('.profile-name').forEach(el => {
+                        el.textContent = name;
+                    });
+                    document.querySelectorAll('.profile-panel-display-name').forEach(el => {
+                        el.textContent = name;
+                    });
+                }
+            }
+
+            // ── Update presence-dots in sidebar/chat for this user ────
+            // (Sidebar conversation items show a dot per user)
+            document.querySelectorAll(`.presence-dot[data-presence-uid="${uid}"]`).forEach(dot => {
+                // Only color if they are online per our presence set
+                // Keep presence-online logic intact — just tint the dot color
+                if (dot.classList.contains('presence-online') && uid === myUserId) {
+                    dot.style.background = color;
+                    dot.style.boxShadow  = `0 0 5px ${color}`;
+                }
+            });
+        }
+
+        // Listen on the public broadcast channel (all users see each other's updates)
+        Echo.channel('profile-updates')
+            .listen('.profile.updated', (event) => {
+                console.log('[Profile] profile.updated received:', event);
+                applyStatusColor(event.userId, event.status, event.name, event.avatarUrl);
+            });
+    });
+
+    // Also listen for the Livewire dispatch 'profile-saved' event —
+    // this fires on the SENDER's own tab immediately after save()
+    // so their topbar dot updates without waiting for the broadcast round-trip.
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('profile-saved', () => {
+            // Re-read the status from the currently active status button
+            const activeBtn = document.querySelector('.profile-status-btn--active');
+            if (!activeBtn) return;
+            const statusTitle = activeBtn.title?.toLowerCase() || 'available';
+            const statusMap = {
+                available: 'available',
+                busy: 'busy',
+                away: 'away',
+                'do not disturb': 'dnd',
+            };
+            const status = statusMap[statusTitle] || 'available';
+            const myUserId = document.body.dataset.userId || '';
+            const name = document.querySelector('.profile-panel-display-name')?.textContent?.trim() || '';
+            const avatarImg = document.querySelector(`#avatarPreviewWrap img`);
+            const avatarUrl = avatarImg ? avatarImg.src : null;
+
+            const statusColors = {
+                available: '#23e07a',
+                busy:      '#ff5f72',
+                away:      '#ffb547',
+                dnd:       '#ff5f72',
+            };
+            const color = statusColors[status] || '#23e07a';
+
+            document.querySelectorAll('.profile-status-dot').forEach(dot => {
+                dot.style.background = color;
+                dot.style.boxShadow  = `0 0 6px ${color}`;
+            });
+            document.querySelectorAll('.nav-profile .presence').forEach(dot => {
+                dot.style.background = color;
+            });
+            if (name) {
+                document.querySelectorAll('.profile-name').forEach(el => el.textContent = name);
+            }
+        });
     });
 
     /* ───────────────────────────────────────────────────────────────────────

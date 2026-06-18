@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -15,6 +16,9 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'last_seen',
+        'profile_image',
+        'status_quote',
+        'status',
     ];
 
     protected $hidden = [
@@ -27,6 +31,7 @@ class User extends Authenticatable
         'password'          => 'hashed',
         'is_admin'          => 'boolean',
         'last_seen'         => 'datetime',
+        'status'            => \App\Enums\UserStatus::class,
     ];
 
     /**
@@ -77,6 +82,16 @@ class User extends Authenticatable
     | HELPERS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Return the public URL for the user's profile image, or null if none set.
+     */
+    public function avatarUrl(): ?string
+    {
+        return $this->profile_image
+            ? Storage::url($this->profile_image)
+            : null;
+    }
 
     /**
      * Return the Conversation record (any status) between this user and $otherUserId,
