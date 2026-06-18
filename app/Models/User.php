@@ -19,6 +19,7 @@ class User extends Authenticatable
         'profile_image',
         'status_quote',
         'status',
+        'status_manually_set',
     ];
 
     protected $hidden = [
@@ -27,11 +28,12 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password'          => 'hashed',
-        'is_admin'          => 'boolean',
-        'last_seen'         => 'datetime',
-        'status'            => \App\Enums\UserStatus::class,
+        'email_verified_at'   => 'datetime',
+        'password'            => 'hashed',
+        'is_admin'            => 'boolean',
+        'last_seen'           => 'datetime',
+        'status'              => \App\Enums\UserStatus::class,
+        'status_manually_set' => 'boolean',
     ];
 
     /**

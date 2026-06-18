@@ -14,8 +14,14 @@ use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('presence.chat', function ($user) {
     return [
-        'id'   => $user->id,
-        'name' => $user->name,
+        'id'     => $user->id,
+        'name'   => $user->name,
+        'status' => $user->status instanceof \App\Enums\UserStatus
+            ? $user->status->value
+            : ($user->status ?? 'available'),
+        'avatarUrl' => $user->profile_image
+            ? \Illuminate\Support\Facades\Storage::url($user->profile_image)
+            : '',
     ];
 });
 

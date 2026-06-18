@@ -1,132 +1,86 @@
 /**
- * chat.js
- * ───────────────────────────────────────────────────────────────────────────
- * Realtime layer for Baseline Chat.
- *
- * Typing indicator design
- * ────────────────────────
- * Typing state is managed 100% client-side — no Livewire server round-trip.
- *
- *  SENDER side:
- *   - input event   → broadcast isTyping=true  (once per burst via flag)
- *   - 2.5 s silence → broadcast isTyping=false
- *   - Enter pressed → broadcast isTyping=false immediately
- *   - broadcastTyping() calls the Livewire method which fires UserTyping event
- *
- *  RECEIVER side:
- *   - Echo .user.typing event → showTypingIndicator() / hideTypingIndicator()
- *     purely in the DOM, zero server calls.
- *   - Auto-hide after 3 s if the stop event is missed.
- * ───────────────────────────────────────────────────────────────────────────
+ * chat.js — Baseline Chat realtime layer
+ * Handles: presence, typing, ticks, profile updates, status colors, avatars.
  */
-
 (function () {
     'use strict';
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | SCROLL HELPERS
-     | ─────────────────────────────────────────────────────────────────────*/
+    /* ── Status color map ────────────────────────────────────────────────── */
+    const STATUS_COLORS = {
+        available: '#23e07a',
+        busy:      '#ff5f72',
+        away:      '#ffb547',
+        dnd:       '#ff5f72',
+    };
 
+    const STATUS_LABELS = {
+        available: 'Available',
+        busy:      'Busy',
+        away:      'Away',
+        dnd:       'Do Not Disturb',
+    };
+
+    function statusColor(s) { return STATUS_COLORS[s] || STATUS_COLORS.available; }
+    function statusLabel(s) { return STATUS_LABELS[s] || 'Available'; }
+
+    /* ── Scroll helpers ──────────────────────────────────────────────────── */
     function scrollToBottom(smooth = false) {
         const anchor = document.getElementById('scroll-anchor');
         if (!anchor) return;
         anchor.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | LIVEWIRE COMPONENT ACCESSOR
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ── Livewire component accessor ─────────────────────────────────────── */
     function getChatComponent() {
         const root = document.querySelector('.teams-chat-root');
         if (!root) return null;
-
         const el = root.closest('[wire\\:id]') ?? root.querySelector('[wire\\:id]');
         if (!el) return null;
-
         return Livewire.find(el.getAttribute('wire:id'));
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | PENDING COUNT BADGE
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ── Pending count badge ─────────────────────────────────────────────── */
     function refreshPendingCountBadge() {
         Livewire.getByName('chat.pending-count').forEach(c => c.call('refreshCount'));
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | SIDEBAR PREVIEW CACHE
-     |
-     | Keeps the real last-message text for each conversation so we can
-     | restore it instantly when typing/draft indicators are cleared,
-     | without waiting for a Livewire server round-trip.
-     |
-     | Populated on every Livewire render from data-last-preview attributes.
-     | Also updated live when a new message arrives via WebSocket.
-     | ─────────────────────────────────────────────────────────────────────*/
-    const _sidebarPreviewCache = new Map(); // Map<convId:string, html:string>
+    /* ── Sidebar preview cache ───────────────────────────────────────────── */
+    const _sidebarPreviewCache = new Map();
 
-    /**
-     * Walk all sidebar conv-preview elements and cache their current
-     * data-last-preview attribute value.
-     * Called after every Livewire render commit.
-     */
     function cacheSidebarPreviews() {
         document.querySelectorAll('[id^="conv-preview-"]').forEach(el => {
             const convId = el.id.replace('conv-preview-', '');
-            const val    = el.dataset.lastPreview;
-            if (val !== undefined && val !== '') {
-                _sidebarPreviewCache.set(convId, val);
-            }
+            const val = el.dataset.lastPreview;
+            if (val !== undefined && val !== '') _sidebarPreviewCache.set(convId, val);
         });
     }
 
-    /**
-     * Restore a sidebar preview to its last-known real message text.
-     * Falls back to data-last-preview attribute, then empty string.
-     */
     function restoreSidebarPreview(convId) {
         const preview = document.getElementById(`conv-preview-${convId}`);
         if (!preview) return;
         const text = _sidebarPreviewCache.get(String(convId))
-                  || preview.dataset.lastPreview
-                  || '';
+                  || preview.dataset.lastPreview || '';
         preview.textContent = text;
         preview.classList.remove('conv-preview--typing');
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | CLIENT-SIDE TYPING INDICATOR
-     |
-     | All DOM manipulation — no Livewire calls, no server round-trips.
-     | ─────────────────────────────────────────────────────────────────────*/
 
-    let _remoteTypingTimer        = null;   // auto-hide timer on the receiver side (open chat window)
-    let _sidebarTypingTimer       = null;   // auto-hide timer for sidebar-only typing (non-open conv)
-    let _activeConvIdForTyping    = null;   // which conversation the indicator belongs to
+    /* ── Typing indicator ────────────────────────────────────────────────── */
+    let _remoteTypingTimer     = null;
+    let _sidebarTypingTimer    = null;
+    let _activeConvIdForTyping = null;
 
-    /**
-     * Show the typing indicator in both the chat window and the sidebar.
-     * @param {string} userName  Display name of the typer.
-     * @param {string|number} conversationId  Active conversation.
-     */
     function showTypingIndicator(userName, conversationId) {
         _activeConvIdForTyping = String(conversationId);
-
-        // ── Chat window indicator ─────────────────────────────────────────
         const row    = document.getElementById('typing-indicator-row');
         const avatar = document.getElementById('typing-indicator-avatar');
         const label  = document.getElementById('typing-indicator-label');
-
         if (row) {
             if (avatar) avatar.textContent = userName ? userName.charAt(0).toUpperCase() : '?';
             if (label)  label.textContent  = `${userName} is typing…`;
             row.style.display = '';
             row.setAttribute('aria-label', `${userName} is typing`);
         }
-
-        // ── Sidebar preview text ──────────────────────────────────────────
         const preview = document.getElementById(`conv-preview-${conversationId}`);
         if (preview) {
             preview.classList.add('conv-preview--typing');
@@ -137,45 +91,24 @@
                     `<span class="sidebar-typing-dot"></span>` +
                 `</span> ${userName} is typing…`;
         }
-
-        // Scroll so the typing bubble is visible.
         setTimeout(() => scrollToBottom(true), 80);
     }
 
-    /**
-     * Hide the typing indicator and restore the sidebar preview text.
-     * Only restores the sidebar text if it currently shows typing content
-     * (i.e. Livewire hasn't already re-rendered it with real content).
-     */
     function hideTypingIndicator() {
-        // ── Chat window indicator ─────────────────────────────────────────
         const row = document.getElementById('typing-indicator-row');
-        if (row) {
-            row.style.display = 'none';
-            row.removeAttribute('aria-label');
-        }
-
-        // ── Sidebar preview text — only clear if still showing typing UI ──
+        if (row) { row.style.display = 'none'; row.removeAttribute('aria-label'); }
         if (_activeConvIdForTyping) {
             const preview = document.getElementById(`conv-preview-${_activeConvIdForTyping}`);
             if (preview && preview.classList.contains('conv-preview--typing')) {
                 restoreSidebarPreview(_activeConvIdForTyping);
             }
         }
-
         _activeConvIdForTyping = null;
         clearTimeout(_remoteTypingTimer);
         _remoteTypingTimer = null;
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | TICK / DELIVERY STATUS DOM HELPERS
-     | ─────────────────────────────────────────────────────────────────────*/
-
-    /**
-     * Return tick SVG HTML for a given status.
-     * Matches the Blade partial logic exactly.
-     */
+    /* ── Tick / delivery status DOM helpers ──────────────────────────────── */
     function tickSVG(status) {
         if (status === 'read') {
             return `<svg class="tick tick--read" width="16" height="11" viewBox="0 0 16 11" fill="none" aria-label="Read">
@@ -189,23 +122,16 @@
                 <path d="M5 5.5L8.5 9 14 3" stroke="#9090b0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>`;
         }
-        // sent (single tick)
         return `<svg class="tick tick--sent" width="10" height="11" viewBox="0 0 10 11" fill="none" aria-label="Sent">
             <path d="M1 5.5L4.5 9 9 3" stroke="#9090b0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>`;
     }
 
-    /** Update a single message tick in the chat window. */
     function updateTickDOM(messageId, status) {
         const el = document.getElementById(`tick-${messageId}`);
         if (el) el.innerHTML = tickSVG(status);
     }
 
-    /**
-     * Update the sidebar preview tick for the latest message.
-     * The sidebar shows a tick only if the latest message is mine.
-     * We find the tick span inside the conv-preview element.
-     */
     function updateSidebarTick(conversationId, status) {
         const preview = document.getElementById(`conv-preview-${conversationId}`);
         if (!preview) return;
@@ -213,17 +139,11 @@
         if (tick) tick.outerHTML = tickSVG(status);
     }
 
-    /**
-     * Replace a message bubble with "This message was deleted" text.
-     * Mirrors what Blade renders for deleted_at !== null.
-     */
     function markDeletedInDOM(messageId) {
         const row = document.getElementById(`msg-${messageId}`);
         if (!row) return;
-
         const bubble = row.querySelector('.msg-bubble');
         if (!bubble) return;
-
         bubble.classList.add('bubble-deleted');
         bubble.innerHTML = `<span class="deleted-text">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -231,50 +151,29 @@
             </svg>
             This message was deleted
         </span>`;
-
-        // Remove action buttons
         const actions = row.querySelector('.msg-actions');
         if (actions) actions.remove();
-
-        // Remove forwarded label
         const fwd = row.querySelector('.fwd-label');
         if (fwd) fwd.remove();
-
-        // Remove timestamp/tick
         const timeWrap = row.querySelector('.msg-time-wrap');
         if (timeWrap) timeWrap.remove();
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | SIDEBAR INSTANT UPDATE FOR NEW MESSAGES
-     |
-     | Called when a message.sent event arrives for a conversation that is
-     | NOT currently open. Updates the preview text and unread badge in-place,
-     | with no Livewire server round-trip.
-     | ─────────────────────────────────────────────────────────────────────*/
 
-    /**
-     * Instantly update sidebar preview text and unread badge for a new message.
-     * @param {object} message  The message payload from the MessageSent event.
-     */
+    /* ── Sidebar instant update for new messages ─────────────────────────── */
     function updateSidebarForNewMessage(message) {
         const convId  = message.conversation_id;
         const preview = document.getElementById(`conv-preview-${convId}`);
         const badge   = document.getElementById(`unread-${convId}`);
-
-        // Update preview text — only if not currently showing a typing indicator
         if (preview && !preview.classList.contains('conv-preview--typing')) {
             let text = '';
             if (message.type === 'image')     text = '📷 Image';
             else if (message.type === 'file') text = '📎 File';
             else                              text = (message.body || '').substring(0, 30);
             preview.textContent = text;
-            // Keep cache + data attribute in sync
             preview.dataset.lastPreview = text;
             _sidebarPreviewCache.set(String(convId), text);
         }
-
-        // Increment unread badge
         if (badge) {
             const current = parseInt(badge.textContent, 10) || 0;
             const next    = current + 1;
@@ -283,69 +182,219 @@
         }
     }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | PAGE LOAD SCROLL
-     | ─────────────────────────────────────────────────────────────────────*/
+    /* ═══════════════════════════════════════════════════════════════════════
+     | AVATAR & STATUS UPDATE HELPERS
+     | Applies profile updates (avatar, status, name) to ALL matching DOM
+     | elements — topbar, sidebar dots, chat header, message avatars, etc.
+     ════════════════════════════════════════════════════════════════════════*/
 
+    /**
+     * User-status → dot color. Returns CSS hex string.
+     */
+    function getStatusDotColor(status) {
+        return statusColor(status);
+    }
+
+    /**
+     * Apply a profile update for a given userId to all relevant DOM nodes.
+     * @param {string|number} userId
+     * @param {string}        status  e.g. 'available', 'busy', 'away', 'dnd'
+     * @param {string}        name    display name (may be empty)
+     * @param {string}        avatarUrl  full URL or empty string
+     */
+    function applyProfileUpdate(userId, status, name, avatarUrl) {
+        const uid       = String(userId);
+        const myUserId  = String(document.body.dataset.userId || '');
+        const color     = statusColor(status);
+        const label     = statusLabel(status);
+        const isMe      = uid === myUserId;
+
+        /* 1. Update avatar images / initials for this user everywhere */
+        if (avatarUrl) {
+            document.querySelectorAll(`[data-user-id="${uid}"]`).forEach(el => {
+                // Only update actual avatar elements — skip status dots, presence dots, etc.
+                const isAvatarImg = el.tagName === 'IMG' && (
+                    el.classList.contains('profile-avatar-img') ||
+                    el.classList.contains('pp-avatar-img') ||
+                    el.classList.contains('msg-avatar-img') ||
+                    el.classList.contains('conv-avatar--img') ||
+                    el.id === 'topbarAvatarImg' ||
+                    el.id === 'avatarPreviewImg' ||
+                    el.closest('.msg-avatar') ||
+                    el.closest('.conv-avatar-wrap') ||
+                    el.closest('.chat-header-avatar') ||
+                    el.closest('.pp-avatar-wrap')
+                );
+
+                const isInitialsDiv = el.tagName === 'DIV' && (
+                    el.classList.contains('conv-avatar') ||
+                    el.classList.contains('pp-avatar-initials') ||
+                    el.id === 'topbarAvatarInitials' ||
+                    el.id === 'avatarPreviewImg'
+                );
+
+                // Also handle the chat-header-avatar container (has text content, no <img>)
+                const isHeaderAvatar = el.classList.contains('chat-header-avatar');
+
+                if (isAvatarImg) {
+                    el.src = avatarUrl;
+                    el.style.borderRadius = '50%';
+                    el.style.objectFit   = 'cover';
+                } else if (isHeaderAvatar) {
+                    el.innerHTML = '';
+                    const img = document.createElement('img');
+                    img.src              = avatarUrl;
+                    img.alt              = name || '';
+                    img.dataset.userId   = uid;
+                    img.style.cssText    = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    el.appendChild(img);
+                } else if (isInitialsDiv) {
+                    const img = document.createElement('img');
+                    img.src            = avatarUrl;
+                    img.alt            = name || '';
+                    img.dataset.userId = uid;
+                    img.id             = el.id || '';
+                    if (el.classList.contains('conv-avatar')) {
+                        img.className = 'conv-avatar conv-avatar--img';
+                        img.style.cssText = 'width:42px;height:42px;border-radius:50%;object-fit:cover;';
+                    } else if (el.classList.contains('pp-avatar-initials')) {
+                        img.className = 'pp-avatar-img';
+                        img.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;';
+                    } else {
+                        img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    }
+                    el.replaceWith(img);
+                }
+                // All other [data-user-id] elements (msg-avatar-mine wrapper divs, spans, etc.) — skip
+            });
+        }
+
+        /* 2. Update presence-dot colors in sidebar/conversation list */
+        document.querySelectorAll(`.presence-dot[data-presence-uid="${uid}"]`).forEach(dot => {
+            dot.dataset.userStatus = status;
+            if (dot.classList.contains('presence-online')) {
+                dot.style.background = color;
+                dot.style.boxShadow  = `0 0 5px ${color}`;
+                dot.title = label;
+            }
+        });
+
+        /* 3. Update chat-header status for the currently open conversation */
+        const headerStatus = document.getElementById('chat-header-status');
+        if (headerStatus && String(headerStatus.dataset.presenceUid) === uid) {
+            headerStatus.dataset.userStatus = status;
+            const dot  = document.getElementById('chat-header-status-dot');
+            const text = document.getElementById('chat-header-status-text');
+            // Update header status whenever the user is online (has status-online OR is in onlineUserIds).
+            // We always update — the color reflects the actual status, not just online/offline.
+            if (dot) {
+                dot.style.background = color;
+                dot.style.boxShadow  = `0 0 6px ${color}`;
+                // Ensure online class is present so the dot shows
+                dot.classList.add('status-online');
+                dot.classList.remove('status-offline');
+            }
+            if (text) {
+                text.textContent = label;
+                text.style.color = color;
+            }
+            headerStatus.style.color = color;
+        }
+
+        /* 4. If it's MY own update — update topbar elements */
+        if (isMe) {
+            // Status dot on the topbar profile button
+            const topbarDot = document.getElementById('topbarStatusDot');
+            if (topbarDot) {
+                // Remove all status classes, add the right one
+                topbarDot.className = topbarDot.className
+                    .replace(/pp-status-dot--\S+/g, '')
+                    .replace(/profile-status-dot--\S+/g, '')
+                    .trim();
+                topbarDot.style.background = color;
+                topbarDot.style.boxShadow  = `0 0 6px ${color}`;
+            }
+            // Profile name in topbar
+            if (name) {
+                const nameEl = document.getElementById('topbarProfileName');
+                if (nameEl) nameEl.textContent = name;
+            }
+            // Nav-rail profile dot (bottom of left nav)
+            document.querySelectorAll('.nav-profile .presence').forEach(dot => {
+                dot.style.background = color;
+                dot.style.boxShadow  = `0 0 4px ${color}`;
+            });
+            // Profile panel header status dot + label (if panel is open)
+            const ppDot = document.querySelector('.pp-status-dot');
+            if (ppDot) {
+                ppDot.className = ppDot.className
+                    .replace(/pp-status-dot--\S+/g, '').trim() + ` pp-status-dot--${status}`;
+            }
+        }
+    }
+
+
+    /* ── Page load scroll ────────────────────────────────────────────────── */
     document.addEventListener('DOMContentLoaded', () => scrollToBottom());
     document.addEventListener('livewire:navigated', () => scrollToBottom());
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | LIVEWIRE INIT — all realtime wiring lives inside this event
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ═══════════════════════════════════════════════════════════════════════
+     | LIVEWIRE INIT — all realtime wiring
+     ════════════════════════════════════════════════════════════════════════*/
     document.addEventListener('livewire:init', () => {
 
-        /* ------------------------------------------------------------------
-         | State: active conversation channel tracking
-         | ----------------------------------------------------------------*/
-        let currentConversationChannel = null;
-        let currentConversationId      = null;
-
-        /* ------------------------------------------------------------------
-         | ── PRESENCE SYSTEM ────────────────────────────────────────────
-         |
-         | We join a single presence channel: presence.chat
-         | Echo gives us the full member list on join, plus joining/leaving
-         | events as users come and go.
-         |
-         | onlineUserIds  — Set<string> of user IDs currently online
-         | applyPresence() — walks all [data-presence-uid] DOM nodes and
-         |                   updates their CSS class and aria labels.
-         | ----------------------------------------------------------------*/
-
+        /* -- Presence state ------------------------------------------------*/
         const onlineUserIds = new Set();
+        // Map<userId:string, status:string>  — tracks the known status per user
+        const userStatusMap = new Map();
 
-        /**
-         * Walk all DOM elements that have [data-presence-uid] and apply the
-         * correct online/offline class based on onlineUserIds.
-         * Called after any membership change.
-         */
         function applyPresence() {
             document.querySelectorAll('[data-presence-uid]').forEach(el => {
-                const uid = String(el.dataset.presenceUid);
+                const uid    = String(el.dataset.presenceUid);
+                const isOnline = onlineUserIds.has(uid);
+                // Determine color: use known status if online, else grey
+                const status  = isOnline ? (userStatusMap.get(uid) || 'available') : 'offline';
+                const color   = isOnline ? statusColor(status) : '#4e4e6e';
+                const label   = isOnline ? statusLabel(status) : 'Offline';
 
                 if (el.classList.contains('presence-dot')) {
-                    // Sidebar conversation dots
-                    el.classList.toggle('presence-online',  onlineUserIds.has(uid));
-                    el.classList.toggle('presence-offline', !onlineUserIds.has(uid));
-                    el.title = onlineUserIds.has(uid) ? 'Online' : 'Offline';
+                    el.classList.toggle('presence-online',  isOnline);
+                    el.classList.toggle('presence-offline', !isOnline);
+                    el.style.background = color;
+                    el.style.boxShadow  = isOnline ? `0 0 5px ${color}` : 'none';
+                    el.title = label;
                 }
 
                 if (el.id === 'chat-header-status') {
-                    // Chat header — update dot colour + status text
                     const dot  = document.getElementById('chat-header-status-dot');
                     const text = document.getElementById('chat-header-status-text');
-
-                    if (onlineUserIds.has(uid)) {
-                        dot?.classList.add('status-online');
-                        dot?.classList.remove('status-offline');
-                        if (text) text.textContent = 'Online';
+                    if (isOnline) {
+                        const userStatus = userStatusMap.get(uid) || el.dataset.userStatus || 'available';
+                        const c = statusColor(userStatus);
+                        if (dot) {
+                            dot.classList.add('status-online');
+                            dot.classList.remove('status-offline');
+                            dot.style.background = c;
+                            dot.style.boxShadow  = `0 0 6px ${c}`;
+                        }
+                        if (text) {
+                            text.textContent   = statusLabel(userStatus);
+                            text.style.color   = c;
+                        }
+                        // Also tint the parent wrapper
+                        el.style.color = c;
                     } else {
-                        dot?.classList.remove('status-online');
-                        dot?.classList.add('status-offline');
-                        // Fall back to the last_seen text server wrote into data-last-seen
-                        if (text) text.textContent = el.dataset.lastSeen || 'Offline';
+                        if (dot) {
+                            dot.classList.remove('status-online');
+                            dot.classList.add('status-offline');
+                            dot.style.background = '#4e4e6e';
+                            dot.style.boxShadow  = 'none';
+                        }
+                        if (text) {
+                            text.textContent = el.dataset.lastSeen || 'Offline';
+                            text.style.color = '#8a8aaa';
+                        }
+                        el.style.color = '#8a8aaa';
                     }
                 }
             });
@@ -354,46 +403,32 @@
         console.log('[Chat] Joining presence channel: presence.chat');
 
         Echo.join('presence.chat')
-
-            // Full member list on initial join
             .here((members) => {
                 console.log('[Presence] here:', members);
                 onlineUserIds.clear();
-                members.forEach(m => onlineUserIds.add(String(m.id)));
+                members.forEach(m => {
+                    onlineUserIds.add(String(m.id));
+                    if (m.status) userStatusMap.set(String(m.id), m.status);
+                });
                 applyPresence();
-                // Check delivery for any messages sent while recipient was already online.
                 setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 500);
             })
-
-            // Someone came online
             .joining((member) => {
                 console.log('[Presence] joining:', member);
                 onlineUserIds.add(String(member.id));
+                if (member.status) userStatusMap.set(String(member.id), member.status);
                 applyPresence();
-                // Recipient just came online — mark our undelivered messages to them.
                 setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 200);
             })
-
-            // Someone went offline
             .leaving((member) => {
                 console.log('[Presence] leaving:', member);
                 onlineUserIds.delete(String(member.id));
                 applyPresence();
             })
+            .error((err) => console.error('[Presence] channel error:', err));
 
-            .error((err) => {
-                console.error('[Presence] channel error:', err);
-            });
-
-        // Re-apply presence after every Livewire render (new conv items may appear)
-        // We expose applyPresence globally so the commit hook below can call it.
         window._applyPresence = applyPresence;
-
-        // Expose the live online set globally so server-side delivery checks
-        // can be triggered from the Livewire commit hook after sendMessage.
         window._onlineUserIds = onlineUserIds;
-
-        // Expose delivery check so it can be called after presence initializes.
         window._checkAndMarkDelivered = function () {
             const onlineIds = Array.from(onlineUserIds).map(Number).filter(Boolean);
             if (onlineIds.length === 0) return;
@@ -401,80 +436,99 @@
             if (component) component.call('markDeliveredForOnlineRecipients', onlineIds);
         };
 
-        /* ------------------------------------------------------------------
-         | connectToConversation(conversationId)
-         | ----------------------------------------------------------------*/
-        function connectToConversation(conversationId) {
-            if (!conversationId || String(conversationId) === String(currentConversationId)) {
-                return;
-            }
 
-            // Leave the previous channel and clear any stale typing state.
+        /* ── Profile updates channel (public) ──────────────────────────── */
+        Echo.channel('profile-updates')
+            .listen('.profile.updated', (event) => {
+                console.log('[Profile] profile.updated received:', event);
+                // Update the userStatusMap so presence re-applies correctly
+                userStatusMap.set(String(event.userId), event.status);
+                // Apply avatar, status color, name everywhere
+                applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl);
+                // Re-apply presence so dots reflect updated status color
+                applyPresence();
+            });
+
+        /* ── Livewire profile-saved event (fires on own tab only) ────────── */
+        Livewire.on('profile-saved', (params) => {
+            const status    = (params && params[0] && params[0].status)    || 'available';
+            const name      = (params && params[0] && params[0].name)      || '';
+            const avatarUrl = (params && params[0] && params[0].avatarUrl) || '';
+            const myUserId  = document.body.dataset.userId || '';
+            // Update local status map
+            if (myUserId) userStatusMap.set(String(myUserId), status);
+            applyProfileUpdate(myUserId, status, name, avatarUrl);
+            applyPresence();
+        });
+
+        /* ── Livewire status-changed event (quick status tap) ─────────── */
+        Livewire.on('status-changed', (params) => {
+            const status   = (params && params[0] && params[0].status) || 'available';
+            const myUserId = document.body.dataset.userId || '';
+            if (myUserId) userStatusMap.set(String(myUserId), status);
+            const topbarDot = document.getElementById('topbarStatusDot');
+            if (topbarDot) {
+                topbarDot.style.background = statusColor(status);
+                topbarDot.style.boxShadow  = `0 0 6px ${statusColor(status)}`;
+            }
+            document.querySelectorAll('.nav-profile .presence').forEach(dot => {
+                dot.style.background = statusColor(status);
+            });
+        });
+
+        /* ── Connect to conversation channel ──────────────────────────────*/
+        let currentConversationChannel = null;
+        let currentConversationId      = null;
+
+        function connectToConversation(conversationId) {
+            if (!conversationId || String(conversationId) === String(currentConversationId)) return;
+
             if (currentConversationChannel) {
                 Echo.leave(currentConversationChannel);
                 hideTypingIndicator();
-                stopTypingNow(); // clear our own outgoing typing state
+                stopTypingNow();
                 console.log('[Chat] Left channel:', currentConversationChannel);
             }
 
             currentConversationChannel = `chat.${conversationId}`;
             currentConversationId      = conversationId;
-
             console.log('[Chat] Joined channel:', currentConversationChannel);
 
             Echo.private(currentConversationChannel)
-
-                /* ── Incoming message ─────────────────────────────────── */
                 .listen('.message.sent', (event) => {
                     console.log('[Chat] message.sent received:', event);
-
                     hideTypingIndicator();
-
                     const incomingConvId = String(event.message.conversation_id);
-
                     if (incomingConvId === String(currentConversationId)) {
-                        // Chat is open — append message
                         const component = getChatComponent();
                         if (component) {
                             component.call('appendMessage', event.message);
                             setTimeout(() => scrollToBottom(true), 150);
                         }
                     } else {
-                        // Chat is NOT open — update sidebar instantly via DOM
                         updateSidebarForNewMessage(event.message);
                     }
                 })
-
-                /* ── Message delivered ────────────────────────────────── */
                 .listen('.message.delivered', (event) => {
                     console.log('[Chat] message.delivered:', event);
                     updateTickDOM(event.messageId, 'delivered');
                     updateSidebarTick(currentConversationId, 'delivered');
                 })
-
-                /* ── Message read ─────────────────────────────────────── */
                 .listen('.message.read', (event) => {
                     console.log('[Chat] message.read:', event);
-                    // Mark ALL my sent messages in this conversation as read
                     document.querySelectorAll(`[id^="tick-"]`).forEach(el => {
-                        const inner = el.querySelector('svg');
-                        if (inner) el.innerHTML = tickSVG('read');
+                        if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
                     });
                     updateSidebarTick(currentConversationId, 'read');
-                    // Tell Livewire to update its in-memory message array too
                     const component = getChatComponent();
                     if (component) component.call('markConversationRead', event.conversationId, event.readAt);
                 })
-
-                /* ── Message deleted ──────────────────────────────────── */
                 .listen('.message.deleted', (event) => {
                     console.log('[Chat] message.deleted:', event);
                     markDeletedInDOM(event.messageId);
                     const component = getChatComponent();
                     if (component) component.call('handleRemoteDelete', event.messageId);
                 })
-
-                /* ── Typing indicator — pure DOM, no server call ─────── */
                 .listen('.user.typing', (event) => {
                     console.log('[Chat] user.typing received:', event);
                     clearTimeout(_remoteTypingTimer);
@@ -487,15 +541,11 @@
                 });
         }
 
-        /* ------------------------------------------------------------------
-         | detectAndConnectConversation()
-         | ----------------------------------------------------------------*/
+
         function detectAndConnectConversation() {
             const root = document.querySelector('.teams-chat-root');
             if (!root) return;
-
             const conversationId = root.dataset.conversation;
-
             if (conversationId && conversationId !== '' && conversationId !== 'null') {
                 connectToConversation(conversationId);
             } else if (!conversationId || conversationId === '' || conversationId === 'null') {
@@ -511,42 +561,25 @@
 
         detectAndConnectConversation();
 
-        /* ------------------------------------------------------------------
-         | Livewire commit hook — re-check channel + scroll after every render.
-         |
-         | NOTE: we deliberately do NOT call hideTypingIndicator() here.
-         |       Re-renders (e.g. from the search input or sidebar clicks)
-         |       must not wipe a live typing indicator.
-         | ----------------------------------------------------------------*/
         Livewire.hook('commit', ({ component, commit, succeed }) => {
             succeed(() => {
                 requestAnimationFrame(() => {
                     detectAndConnectConversation();
                     attachTypingListener();
                     scrollToBottom(true);
-                    // Re-apply presence dots after any Livewire re-render
                     if (window._applyPresence) window._applyPresence();
-                    // Refresh sidebar preview cache after every Livewire render
                     cacheSidebarPreviews();
                 });
-
-                // When sendMessage or forwardTo completes, immediately check
-                // if recipients are online and mark the new message delivered.
                 const calls = commit?.calls ?? [];
-                const wasSend = calls.some(c =>
-                    c.method === 'sendMessage' || c.method === 'forwardTo'
-                );
+                const wasSend = calls.some(c => c.method === 'sendMessage' || c.method === 'forwardTo');
                 if (wasSend) {
                     setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 100);
                 }
             });
         });
 
-        /* ------------------------------------------------------------------
-         | Private user channel
-         | ----------------------------------------------------------------*/
+        /* ── Private user channel ──────────────────────────────────────── */
         const userId = document.body.dataset.userId;
-
         if (!userId) {
             console.warn('[Chat] data-user-id missing on <body> — realtime updates disabled.');
             return;
@@ -555,89 +588,47 @@
         console.log(`[Chat] Subscribing to private channel: user.${userId}`);
 
         Echo.private(`user.${userId}`)
-
             .listen('.conversation.updated', (event) => {
                 console.log('[Chat] conversation.updated:', event);
-
                 const component = getChatComponent();
                 if (component) component.call('refreshConversationData');
-
                 refreshPendingCountBadge();
             })
-
             .listen('.pending.request.updated', (event) => {
                 console.log('[Chat] pending.request.updated:', event);
-
                 const component = getChatComponent();
                 if (component) component.call('refreshPendingData');
-
                 refreshPendingCountBadge();
             })
-
-            /* ── Incoming message for a NON-open conversation ─────────────
-             | MessageSent now also broadcasts on user.{recipientId} so we
-             | receive it here regardless of which chat is open.
-             | Skip if it belongs to the currently-open conversation (already
-             | handled by the chat.{conversationId} channel listener above).
-             | ────────────────────────────────────────────────────────────*/
             .listen('.message.sent', (event) => {
                 console.log('[Chat] message.sent (user channel):', event);
-
                 const incomingConvId = String(event.message.conversation_id);
-
-                // If this conversation is already open, the chat channel
-                // handler deals with it — don't double-process.
                 if (incomingConvId === String(currentConversationId)) return;
-
-                // Update sidebar preview + unread badge instantly in DOM.
                 updateSidebarForNewMessage(event.message);
             })
-
-            /* ── Delivered tick update — fires on user channel so sender
-             | sees double grey tick even if they've switched conversations.
-             | ────────────────────────────────────────────────────────────*/
             .listen('.message.delivered', (event) => {
                 console.log('[Chat] message.delivered (user channel):', event);
-                // Update the tick in the chat window (element exists when conv is open).
                 updateTickDOM(event.messageId, 'delivered');
-                // Update the sidebar tick for this conversation.
                 updateSidebarTick(event.conversationId, 'delivered');
             })
-
-            /* ── Read tick update — fires on user channel so sender sees
-             | blue tick even if they've switched conversations.
-             | ────────────────────────────────────────────────────────────*/
             .listen('.message.read', (event) => {
                 console.log('[Chat] message.read (user channel):', event);
-                // If the read conversation is currently open, update all ticks in the window.
                 if (String(event.conversationId) === String(currentConversationId)) {
                     document.querySelectorAll('[id^="tick-"]').forEach(el => {
                         if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
                     });
                 }
-                // Always update the sidebar tick.
                 updateSidebarTick(event.conversationId, 'read');
-                // Keep Livewire in-memory state in sync.
                 const component = getChatComponent();
                 if (component) component.call('markConversationRead', event.conversationId, event.readAt);
             })
-
             .listen('.user.typing', (event) => {
                 console.log('[Chat] user.typing (user channel):', event);
-
-                // Skip if already handled by the open conversation channel
-                // (that handler shows both the chat bubble AND the sidebar).
                 if (String(event.conversationId) === String(currentConversationId)) return;
-
-                // This conversation is NOT open — update the SIDEBAR ONLY.
-                // Never touch the in-chat typing bubble (#typing-indicator-row)
-                // because that belongs to a different conversation's window.
                 const convId  = event.conversationId;
                 const preview = document.getElementById(`conv-preview-${convId}`);
                 if (!preview) return;
-
                 clearTimeout(_sidebarTypingTimer);
-
                 if (event.isTyping) {
                     preview.classList.add('conv-preview--typing');
                     preview.innerHTML =
@@ -646,15 +637,12 @@
                             `<span class="sidebar-typing-dot"></span>` +
                             `<span class="sidebar-typing-dot"></span>` +
                         `</span> ${event.userName} is typing…`;
-
-                    // Auto-restore the sidebar text if stop event is missed.
                     _sidebarTypingTimer = setTimeout(() => {
                         if (preview.classList.contains('conv-preview--typing')) {
                             restoreSidebarPreview(convId);
                         }
                     }, 4000);
                 } else {
-                    // Explicit stop — restore sidebar preview text.
                     if (preview.classList.contains('conv-preview--typing')) {
                         restoreSidebarPreview(convId);
                     }
@@ -663,37 +651,21 @@
 
     }); // end livewire:init
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | SENDER-SIDE TYPING DETECTION
-     |
-     | Attaches to the #messageInput element.
-     | Calls the Livewire broadcastTyping() method so the server fires
-     | UserTyping event — but only to change the broadcast state, not to
-     | re-render any UI on the sender's side.
-     | ─────────────────────────────────────────────────────────────────────*/
 
-    let _localTypingTimer      = null;  // stop-typing debounce (sender)
-    let _localKeepAliveTimer   = null;  // re-broadcast keepalive (sender)
-    let _isCurrentlyTyping     = false;
-
-    // How often to re-broadcast isTyping=true while keys keep coming (ms).
-    // Must be shorter than the receiver's auto-hide window (3 000 ms).
+    /* ── Sender-side typing detection ────────────────────────────────────── */
+    let _localTypingTimer    = null;
+    let _localKeepAliveTimer = null;
+    let _isCurrentlyTyping   = false;
     const KEEPALIVE_INTERVAL = 2000;
-    // How long of silence before we broadcast stop-typing (ms).
-    const STOP_DELAY = 2000;
+    const STOP_DELAY         = 2000;
 
-    /**
-     * Broadcast stop-typing and clear all sender timers.
-     */
     function stopTypingNow() {
         if (!_isCurrentlyTyping) return;
         _isCurrentlyTyping = false;
-
         clearTimeout(_localTypingTimer);
         clearInterval(_localKeepAliveTimer);
         _localTypingTimer    = null;
         _localKeepAliveTimer = null;
-
         const component = getChatComponent();
         if (component) component.call('broadcastTyping', false);
     }
@@ -701,46 +673,29 @@
     function attachTypingListener() {
         const input = document.getElementById('messageInput');
         if (!input || input._typingListenerAttached) return;
-
         input._typingListenerAttached = true;
 
-        // ── input: user is actively typing ────────────────────────────────
         input.addEventListener('input', () => {
             const component = getChatComponent();
             if (!component) return;
-
             if (!_isCurrentlyTyping) {
-                // First keystroke of a new burst — broadcast start immediately.
                 _isCurrentlyTyping = true;
                 component.call('broadcastTyping', true);
-
-                // Keep re-broadcasting isTyping=true every KEEPALIVE_INTERVAL
-                // so the receiver's 3 s auto-hide timer keeps getting reset.
                 _localKeepAliveTimer = setInterval(() => {
-                    if (_isCurrentlyTyping) {
-                        component.call('broadcastTyping', true);
-                    } else {
-                        clearInterval(_localKeepAliveTimer);
-                    }
+                    if (_isCurrentlyTyping) component.call('broadcastTyping', true);
+                    else clearInterval(_localKeepAliveTimer);
                 }, KEEPALIVE_INTERVAL);
             }
-
-            // Reset the stop-typing debounce on every keystroke.
             clearTimeout(_localTypingTimer);
             _localTypingTimer = setTimeout(() => stopTypingNow(), STOP_DELAY);
         });
 
-        // ── keydown Enter: stop before the message hits WebSocket ─────────
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                stopTypingNow();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) stopTypingNow();
         });
     }
 
-    // Attach on every Livewire update (input re-rendered) and initial load.
     document.addEventListener('livewire:update',    () => {
-        // Only auto-focus on desktop so mobile keyboards don't pop up.
         if (window.innerWidth > 768) {
             const input = document.getElementById('messageInput');
             if (input) input.focus();
@@ -750,213 +705,131 @@
     document.addEventListener('livewire:navigated', () => attachTypingListener());
     document.addEventListener('DOMContentLoaded',   () => attachTypingListener());
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | MOBILE SIDEBAR UX
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ── Mobile sidebar UX ───────────────────────────────────────────────── */
     document.addEventListener('click', (e) => {
         const layout = document.getElementById('teamsLayout');
         if (!layout) return;
-
         if (e.target.closest('.conv-item') || e.target.closest('.request-toggle')) {
             layout.classList.add('conversation-open');
         }
-
         if (e.target.closest('#mobileBackBtn')) {
             layout.classList.remove('conversation-open');
         }
     });
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | PROFILE PANEL — outside-click + Escape dismiss + real-time avatars
-     |
-     | The panel open/close state is owned by the Livewire Profile\Panel
-     | component. JS only dispatches Livewire events to trigger toggle/close.
-     | ─────────────────────────────────────────────────────────────────────*/
-
-    // Track whether a profile-open click just happened so we can skip
-    // the simultaneous outside-click handler on the same event.
+    /* ── Profile panel — outside-click + Escape dismiss ─────────────────── */
     let _profileJustToggled = false;
 
-    // Intercept the profile button click BEFORE it reaches Livewire so we
-    // can set the guard flag. The button's own onclick still fires after this.
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#profileBtn');
         if (btn) {
             _profileJustToggled = true;
-            // Clear the guard after this event has fully propagated.
             setTimeout(() => { _profileJustToggled = false; }, 0);
         }
-    }, true); // capture phase — runs before the bubbling outside-click handler
+    }, true);
 
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('profileWrap');
         if (!wrap) return;
-        // If click is inside profile-wrap, Livewire onclick handles toggling.
         if (wrap.contains(e.target)) return;
-        // Guard: if we just toggled via the button, don't also close.
         if (_profileJustToggled) return;
-        // Outside click → close the panel.
         Livewire.dispatch('close-profile-panel');
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            Livewire.dispatch('close-profile-panel');
-        }
+        if (e.key === 'Escape') Livewire.dispatch('close-profile-panel');
     });
 
-    // Real-time avatar propagation via profile-updates channel.
-    // Registered inside livewire:init so Echo is guaranteed to be available.
-    document.addEventListener('livewire:init', () => {
+    /* ── Profile avatar file-reader (JS-driven, no wire:model) ──────────── */
+    document.addEventListener('DOMContentLoaded', () => { attachAvatarInputListener(); });
+    document.addEventListener('livewire:navigated', () => { attachAvatarInputListener(); });
+    // Also re-attach after every Livewire render (panel re-renders on toggle)
+    document.addEventListener('livewire:update', () => { attachAvatarInputListener(); });
 
-        /* ── Helper: apply a status color to all status-bearing dots ──── */
-        function applyStatusColor(userId, status, name, avatarUrl) {
-            const statusColors = {
-                available: '#23e07a',
-                busy:      '#ff5f72',
-                away:      '#ffb547',
-                dnd:       '#ff5f72',
-            };
-            const color = statusColors[status] || statusColors.available;
-            const myUserId = String(document.body.dataset.userId || '');
-            const uid = String(userId);
+    function attachAvatarInputListener() {
+        const fileInput = document.getElementById('profileAvatarInput');
+        if (!fileInput || fileInput._avatarListenerAttached) return;
+        fileInput._avatarListenerAttached = true;
 
-            // ── Update avatar images for this user everywhere ──────────
-            if (avatarUrl) {
-                document.querySelectorAll(`[data-user-id="${uid}"]`).forEach(el => {
-                    if (el.tagName === 'IMG') {
-                        el.src = avatarUrl;
-                    } else if (
-                        !el.classList.contains('profile-status-dot') &&
-                        !el.classList.contains('presence-dot') &&
-                        !el.classList.contains('profile-status-dot-sm')
-                    ) {
-                        const img = document.createElement('img');
-                        img.src            = avatarUrl;
-                        img.alt            = name || '';
-                        img.className      = el.className + ' profile-avatar--img';
-                        img.dataset.userId = uid;
-                        img.style.cssText  = el.style.cssText;
-                        el.replaceWith(img);
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const loadingEl = document.getElementById('ppUploadLoading');
+            if (loadingEl) loadingEl.style.display = 'flex';
+
+            try {
+                // 1. Show local preview immediately (no network wait)
+                const localUrl = URL.createObjectURL(file);
+                const previewWrap = document.getElementById('avatarPreviewWrap');
+                if (previewWrap) {
+                    const existing = previewWrap.querySelector('img.pp-avatar-img');
+                    if (existing) {
+                        existing.src = localUrl;
+                    } else {
+                        const initials = previewWrap.querySelector('#avatarPreviewImg');
+                        if (initials) {
+                            const img = document.createElement('img');
+                            img.src            = localUrl;
+                            img.alt            = 'Preview';
+                            img.className      = 'pp-avatar-img';
+                            img.id             = 'avatarPreviewImg';
+                            img.dataset.userId = document.body.dataset.userId || '';
+                            initials.replaceWith(img);
+                        }
                     }
-                });
-            }
-
-            // ── If this is MY OWN update → update topbar status dot ───
-            if (uid === myUserId) {
-                document.querySelectorAll('.profile-status-dot').forEach(dot => {
-                    dot.style.background = color;
-                    dot.style.boxShadow  = `0 0 6px ${color}`;
-                });
-                document.querySelectorAll('.nav-profile .presence').forEach(dot => {
-                    dot.style.background = color;
-                });
-                if (name) {
-                    document.querySelectorAll('.profile-name').forEach(el => {
-                        el.textContent = name;
-                    });
-                    document.querySelectorAll('.profile-panel-display-name').forEach(el => {
-                        el.textContent = name;
-                    });
                 }
-            }
 
-            // ── Update presence-dots in sidebar/chat for this user ────
-            // (Sidebar conversation items show a dot per user)
-            document.querySelectorAll(`.presence-dot[data-presence-uid="${uid}"]`).forEach(dot => {
-                // Only color if they are online per our presence set
-                // Keep presence-online logic intact — just tint the dot color
-                if (dot.classList.contains('presence-online') && uid === myUserId) {
-                    dot.style.background = color;
-                    dot.style.boxShadow  = `0 0 5px ${color}`;
+                // 2. Upload the actual file to the server via fetch (NOT Livewire)
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const formData  = new FormData();
+                formData.append('avatar', file);
+                formData.append('_token', csrfToken);
+
+                const response = await fetch('/profile/avatar', {
+                    method:  'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                    body:    formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status}`);
                 }
-            });
-        }
 
-        // Listen on the public broadcast channel (all users see each other's updates)
-        Echo.channel('profile-updates')
-            .listen('.profile.updated', (event) => {
-                console.log('[Profile] profile.updated received:', event);
-                applyStatusColor(event.userId, event.status, event.name, event.avatarUrl);
-            });
-    });
+                const data = await response.json();
 
-    // Also listen for the Livewire dispatch 'profile-saved' event —
-    // this fires on the SENDER's own tab immediately after save()
-    // so their topbar dot updates without waiting for the broadcast round-trip.
-    document.addEventListener('livewire:init', () => {
-        Livewire.on('profile-saved', () => {
-            // Re-read the status from the currently active status button
-            const activeBtn = document.querySelector('.profile-status-btn--active');
-            if (!activeBtn) return;
-            const statusTitle = activeBtn.title?.toLowerCase() || 'available';
-            const statusMap = {
-                available: 'available',
-                busy: 'busy',
-                away: 'away',
-                'do not disturb': 'dnd',
-            };
-            const status = statusMap[statusTitle] || 'available';
-            const myUserId = document.body.dataset.userId || '';
-            const name = document.querySelector('.profile-panel-display-name')?.textContent?.trim() || '';
-            const avatarImg = document.querySelector(`#avatarPreviewWrap img`);
-            const avatarUrl = avatarImg ? avatarImg.src : null;
+                // 3. Tell the Livewire component the path (a short string, not binary)
+                const profilePanel = Livewire.getByName('profile.panel')[0];
+                if (profilePanel && data.path) {
+                    profilePanel.call('setAvatarPath', data.path);
+                }
 
-            const statusColors = {
-                available: '#23e07a',
-                busy:      '#ff5f72',
-                away:      '#ffb547',
-                dnd:       '#ff5f72',
-            };
-            const color = statusColors[status] || '#23e07a';
-
-            document.querySelectorAll('.profile-status-dot').forEach(dot => {
-                dot.style.background = color;
-                dot.style.boxShadow  = `0 0 6px ${color}`;
-            });
-            document.querySelectorAll('.nav-profile .presence').forEach(dot => {
-                dot.style.background = color;
-            });
-            if (name) {
-                document.querySelectorAll('.profile-name').forEach(el => el.textContent = name);
+            } catch (err) {
+                console.error('[Profile] Avatar upload failed:', err);
+            } finally {
+                if (loadingEl) loadingEl.style.display = 'none';
+                // Reset file input so same file can be re-selected if needed
+                fileInput.value = '';
             }
         });
-    });
+    }
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | GLOBAL SEARCH — blur on outside click
-     | ─────────────────────────────────────────────────────────────────────*/
 
+    /* ── Global search — blur on outside click ───────────────────────────── */
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('globalSearchWrap');
         if (!wrap) return;
-
         if (!wrap.contains(e.target)) {
             const input = document.getElementById('globalSearchInput');
             if (input) input.blur();
         }
     });
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | LAST SEEN PING
-     |
-     | POST /presence/ping periodically to keep last_seen fresh in the DB.
-     | This is the DB-side fallback; real presence is tracked via the
-     | presence channel above.
-     |
-     | Fires on:
-     |  - DOMContentLoaded (initial load)
-     |  - every 60 s while the tab is visible
-     |  - when the tab becomes visible again after being hidden
-     |  - before the page unloads (best-effort)
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ── Last-seen ping ──────────────────────────────────────────────────── */
     const _csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     function pingLastSeen() {
         if (!_csrfToken) return;
-        // Use sendBeacon for unload (non-blocking); fetch for regular pings.
         navigator.sendBeacon
             ? navigator.sendBeacon('/presence/ping', (() => {
                   const fd = new FormData();
@@ -970,62 +843,24 @@
     }
 
     document.addEventListener('DOMContentLoaded', pingLastSeen);
-
-    // Ping every 60 s while the tab is active
-    setInterval(() => {
-        if (document.visibilityState === 'visible') pingLastSeen();
-    }, 60_000);
-
-    // Ping when tab becomes visible (user switches back to this tab)
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') pingLastSeen();
-    });
-
-    // Best-effort ping on unload
+    setInterval(() => { if (document.visibilityState === 'visible') pingLastSeen(); }, 60_000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pingLastSeen(); });
     window.addEventListener('beforeunload', pingLastSeen);
 
-    /* ───────────────────────────────────────────────────────────────────────
-     | LIVE TIMESTAMPS
-     |
-     | Updates every [data-timestamp] element in the chat window so
-     | message times stay current without any server round-trip.
-     |
-     | Logic (mirrors WhatsApp/Telegram):
-     |   < 1 min   → "just now"
-     |   1–59 min  → "5 min ago"
-     |   same day  → "2:35 PM"          (fixed clock time, already past 1 h)
-     |   yesterday → "Yesterday 2:35 PM"
-     |   older     → "Jun 10, 2:35 PM"
-     |
-     | Re-runs every 30 s. Also triggered after each Livewire commit so
-     | freshly appended messages get the right label immediately.
-     | ─────────────────────────────────────────────────────────────────────*/
-
+    /* ── Live timestamps ─────────────────────────────────────────────────── */
     function formatLiveTime(isoString) {
         const date  = new Date(isoString);
         const now   = new Date();
         const diffS = Math.floor((now - date) / 1000);
-
-        if (diffS < 60)  return 'just now';
-        if (diffS < 3600) {
-            const m = Math.floor(diffS / 60);
-            return `${m} min ago`;
-        }
-
-        // Same calendar day — show clock time only
+        if (diffS < 60)   return 'just now';
+        if (diffS < 3600) { const m = Math.floor(diffS / 60); return `${m} min ago`; }
         const isToday = date.toDateString() === now.toDateString();
-        if (isToday) {
-            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        }
-
-        // Yesterday
+        if (isToday) return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         const yesterday = new Date(now);
         yesterday.setDate(now.getDate() - 1);
         if (date.toDateString() === yesterday.toDateString()) {
             return 'Yesterday ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
-
-        // Older — "Jun 10, 2:35 PM"
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
              + ', '
              + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -1039,11 +874,107 @@
         });
     }
 
-    // Run immediately, then every 30 s
     document.addEventListener('DOMContentLoaded', updateLiveTimestamps);
     setInterval(updateLiveTimestamps, 30_000);
-
-    // Also run after every Livewire re-render (new messages appended)
     document.addEventListener('livewire:update', updateLiveTimestamps);
+
+    /* ── User Profile Card ───────────────────────────────────────────────── */
+    const STATUS_COLORS_UPC = {
+        available: '#23e07a',
+        busy:      '#ff5f72',
+        away:      '#ffb547',
+        dnd:       '#ff5f72',
+    };
+
+    window._closeUserProfileCard = function () {
+        const overlay = document.getElementById('userProfileCardOverlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; overlay.style.opacity = ''; }, 180);
+        }
+    };
+
+    window._openUserProfileCard = async function (userId) {
+        if (!userId) return;
+
+        const overlay = document.getElementById('userProfileCardOverlay');
+        if (!overlay) return;
+
+        // Show with loading state
+        document.getElementById('upcName').textContent           = '…';
+        document.getElementById('upcStatusLabel').textContent    = '';
+        document.getElementById('upcAvatarInitials').textContent = '…';
+        document.getElementById('upcAvatarImg').style.display    = 'none';
+        document.getElementById('upcQuote').style.display        = 'none';
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '0';
+        requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            const resp = await fetch(`/user/${userId}/profile-card`, {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken }
+            });
+            if (!resp.ok) throw new Error('Failed to load profile');
+            const user = await resp.json();
+
+            const color = STATUS_COLORS_UPC[user.status] || STATUS_COLORS_UPC.available;
+
+            // Avatar
+            const avatarImg      = document.getElementById('upcAvatarImg');
+            const avatarInitials = document.getElementById('upcAvatarInitials');
+            if (user.avatar_url) {
+                avatarImg.src                = user.avatar_url;
+                avatarImg.alt                = user.name;
+                avatarImg.style.display      = 'block';
+                avatarInitials.style.display = 'none';
+            } else {
+                avatarImg.style.display      = 'none';
+                avatarInitials.style.display = 'flex';
+                avatarInitials.textContent   = user.initials;
+            }
+
+            // Status ring
+            const ring = document.getElementById('upcStatusRing');
+            if (ring) { ring.style.background = color; ring.style.boxShadow = `0 0 8px ${color}`; }
+
+            // Name
+            document.getElementById('upcName').textContent = user.name;
+
+            // Status dot + label
+            const dot = document.getElementById('upcStatusDot');
+            dot.style.background = color;
+            dot.style.boxShadow  = `0 0 5px ${color}`;
+            document.getElementById('upcStatusLabel').textContent = user.status_label;
+            document.getElementById('upcStatusLabel').style.color = color;
+
+            // Quote
+            const quoteEl = document.getElementById('upcQuote');
+            if (user.status_quote && user.status_quote.trim()) {
+                quoteEl.textContent   = user.status_quote;
+                quoteEl.style.display = 'block';
+            } else {
+                quoteEl.style.display = 'none';
+            }
+
+        } catch (err) {
+            console.error('[UserProfileCard]', err);
+            document.getElementById('upcName').textContent = 'Failed to load';
+        }
+    };
+
+    // Escape key closes card
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') window._closeUserProfileCard();
+    });
+
+    // Delegate click on .upc-trigger elements
+    document.addEventListener('click', (e) => {
+        const trigger = e.target.closest('.upc-trigger');
+        if (!trigger) return;
+        e.stopPropagation();
+        const uid = trigger.dataset.uid;
+        if (uid) window._openUserProfileCard(uid);
+    });
 
 })();

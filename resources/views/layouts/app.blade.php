@@ -245,8 +245,10 @@
             margin-right: 4px;
         }
 
-        .status-dot.status-online  { background: var(--online); }
-        .status-dot.status-offline { background: var(--text-3); }
+        /* NOTE: color is controlled entirely by JS inline style.
+           These classes only serve as online/offline state markers — no color override. */
+        .status-dot.status-online  { /* color set by JS */ }
+        .status-dot.status-offline { background: var(--text-3) !important; box-shadow: none !important; }
 
         /* ── WhatsApp message ticks ────────────────── */
         .tick { display: inline-block; vertical-align: middle; margin-left: 3px; flex-shrink: 0; }

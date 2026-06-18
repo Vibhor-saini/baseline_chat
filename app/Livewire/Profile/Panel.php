@@ -24,14 +24,19 @@ class Panel extends Component
     public string $status         = 'available';
 
     /**
-     * Base64-encoded image data URI sent from JS on save.
-     * Format: "data:image/jpeg;base64,/9j/4AAQ..."
-     * Empty string = no new avatar selected.
+     * Stores the server-side path of a pre-uploaded avatar file.
+     * Prefixed with '__path:' so save() can distinguish it from a stale
+     * base64 string (which caused Livewire's upload pipeline to fire).
+     * Set via setAvatarPath() after JS uploads the file to /profile/avatar.
+     * Empty string = no new avatar.
      */
-    public string $avatarBase64   = '';
+    public string $avatarPath     = '';
 
     public string $successMessage = '';
     public string $saveError      = '';
+
+    public bool $isSaving         = false;
+    public bool $isChangingStatus = false;
 
     /*
     |--------------------------------------------------------------------------
@@ -65,10 +70,10 @@ class Panel extends Component
     protected function rules(): array
     {
         return [
-            'name'         => ['required', 'string', 'min:2', 'max:60'],
-            'statusQuote'  => ['nullable', 'string', 'max:160'],
-            'status'       => ['required', 'in:available,busy,away,dnd'],
-            'avatarBase64' => ['nullable', 'string'],
+            'name'        => ['required', 'string', 'min:2', 'max:60'],
+            'statusQuote' => ['nullable', 'string', 'max:160'],
+            'status'      => ['required', 'in:available,busy,away,dnd'],
+            'avatarPath'  => ['nullable', 'string'],
         ];
     }
 
@@ -86,9 +91,11 @@ class Panel extends Component
         if ($this->isOpen) {
             $this->syncFromUser();
             $this->resetValidation();
-            $this->successMessage = '';
-            $this->saveError      = '';
-            $this->avatarBase64   = '';
+            $this->successMessage   = '';
+            $this->saveError        = '';
+            $this->avatarPath       = '';
+            $this->isSaving         = false;
+            $this->isChangingStatus = false;
         }
     }
 
@@ -98,8 +105,64 @@ class Panel extends Component
         $this->isOpen = false;
     }
 
+    /**
+     * Called from JS after the avatar file is successfully uploaded via
+     * fetch('/profile/avatar'). Stores only the short server-side path
+     * (e.g. "profile-images/avatar_xxx.jpg") — no binary data ever enters
+     * Livewire's request pipeline.
+     */
+    public function setAvatarPath(string $path): void
+    {
+        // Validate path is inside the expected directory
+        if (str_starts_with($path, 'profile-images/') && Storage::disk('public')->exists($path)) {
+            $this->avatarPath = $path;
+        }
+    }
+
+    /**
+     * Quick status-only change.
+     * Busy/Away/DND → status_manually_set = true (presence cannot override)
+     * Available     → status_manually_set = false (presence may reset it)
+     */
+    public function changeStatus(string $newStatus): void
+    {
+        $allowed = ['available', 'busy', 'away', 'dnd'];
+        if (! in_array($newStatus, $allowed, true)) return;
+
+        $this->isChangingStatus = true;
+        $this->status           = $newStatus;
+
+        $user     = auth()->user();
+        $isManual = $newStatus !== 'available';
+
+        try {
+            $user->update([
+                'status'              => $newStatus,
+                'status_manually_set' => $isManual,
+            ]);
+
+            auth()->setUser($user->fresh());
+
+            $avatarUrl = $user->profile_image ? Storage::url($user->profile_image) : '';
+
+            broadcast(new UserProfileUpdated($user->id, $avatarUrl, $newStatus, $user->name));
+
+            $this->dispatch('status-changed', status: $newStatus);
+
+        } catch (\Throwable $e) {
+            Log::error('[ProfilePanel] Status change failed: ' . $e->getMessage());
+        } finally {
+            $this->isChangingStatus = false;
+        }
+    }
+
+    /**
+     * Save name, status quote, status, and optionally the pre-uploaded avatar.
+     * No binary data is passed — the avatar path was set via setAvatarPath().
+     */
     public function save(): void
     {
+        $this->isSaving       = true;
         $this->saveError      = '';
         $this->successMessage = '';
 
@@ -112,29 +175,22 @@ class Panel extends Component
         try {
             DB::transaction(function () use ($user, $oldPath, &$newPath) {
 
-                // ── Process base64 avatar if provided ─────────────────
-                if ($this->avatarBase64 !== '') {
-                    // Parse "data:image/jpeg;base64,<data>"
-                    if (preg_match('/^data:(image\/\w+);base64,(.+)$/', $this->avatarBase64, $m)) {
-                        $mime      = $m[1];                          // e.g. image/jpeg
-                        $ext       = explode('/', $mime)[1] ?? 'jpg'; // jpeg → jpeg
-                        $ext       = $ext === 'jpeg' ? 'jpg' : $ext;
-                        $imageData = base64_decode($m[2]);
-
-                        $filename = 'profile-images/' . uniqid('avatar_', true) . '.' . $ext;
-                        Storage::disk('public')->put($filename, $imageData);
-                        $newPath = $filename;
-                    }
+                // Use pre-uploaded avatar path if one was set
+                if ($this->avatarPath !== '' && Storage::disk('public')->exists($this->avatarPath)) {
+                    $newPath = $this->avatarPath;
                 }
 
+                $isManual = $this->status !== 'available';
+
                 $user->update([
-                    'name'          => $this->name,
-                    'status_quote'  => $this->statusQuote,
-                    'status'        => $this->status,
-                    'profile_image' => $newPath,
+                    'name'                => $this->name,
+                    'status_quote'        => $this->statusQuote,
+                    'status'              => $this->status,
+                    'status_manually_set' => $isManual,
+                    'profile_image'       => $newPath,
                 ]);
 
-                // Delete old avatar file after a successful update
+                // Delete old file after successful DB update
                 if ($newPath !== $oldPath && $oldPath) {
                     try {
                         Storage::disk('public')->delete($oldPath);
@@ -146,27 +202,20 @@ class Panel extends Component
         } catch (\Throwable $e) {
             Log::error('[ProfilePanel] Save failed: ' . $e->getMessage());
             $this->saveError = 'Failed to save profile. Please try again.';
+            $this->isSaving  = false;
             return;
         }
 
-        // Refresh the auth user so subsequent renders see fresh DB data
         auth()->setUser($user->fresh());
 
-        // Always broadcast so name / status / avatar propagate to all tabs
         $avatarUrl = $newPath ? Storage::url($newPath) : '';
-        broadcast(new UserProfileUpdated(
-            auth()->id(),
-            $avatarUrl,
-            $this->status,
-            $this->name,
-        ));
+        broadcast(new UserProfileUpdated(auth()->id(), $avatarUrl, $this->status, $this->name));
 
-        // Clear local state
-        $this->avatarBase64   = '';
+        $this->avatarPath     = '';
         $this->successMessage = 'Profile saved!';
+        $this->isSaving       = false;
 
-        // JS listener in chat.js will update topbar dot/name immediately
-        $this->dispatch('profile-saved');
+        $this->dispatch('profile-saved', status: $this->status, name: $this->name, avatarUrl: $avatarUrl);
     }
 
     /*

@@ -78,25 +78,39 @@
                 id="profileBtn"
                 aria-haspopup="dialog"
                 aria-controls="profileDropdown"
+                aria-expanded="{{ $this->isProfileOpen ?? 'false' }}"
                 onclick="Livewire.dispatch('toggle-profile-panel')">
           {{-- Avatar: show image if set, otherwise initials --}}
           @if(auth()->user()->profile_image)
-            <img src="{{ Storage::url(auth()->user()->profile_image) }}"
-                 alt="{{ auth()->user()->name }}"
-                 class="profile-avatar profile-avatar--img"
-                 data-user-id="{{ auth()->id() }}">
+            <div class="profile-avatar profile-avatar--has-img" style="position:relative;">
+              <img src="{{ Storage::url(auth()->user()->profile_image) }}"
+                   alt="{{ auth()->user()->name }}"
+                   class="profile-avatar-img"
+                   id="topbarAvatarImg"
+                   data-user-id="{{ auth()->id() }}"
+                   style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+              <span class="profile-status-dot profile-status-dot--{{ auth()->user()->status instanceof \App\Enums\UserStatus ? auth()->user()->status->value : 'available' }}"
+                    id="topbarStatusDot"
+                    aria-hidden="true"></span>
+            </div>
           @else
             <div class="profile-avatar"
+                 id="topbarAvatarInitials"
                  data-user-id="{{ auth()->id() }}"
-                 aria-hidden="true">{{ strtoupper(substr(auth()->user()->name,0,1)) }}<span class="profile-status-dot"></span></div>
+                 aria-hidden="true">
+              {{ strtoupper(substr(auth()->user()->name,0,1)) }}
+              <span class="profile-status-dot profile-status-dot--{{ auth()->user()->status instanceof \App\Enums\UserStatus ? auth()->user()->status->value : 'available' }}"
+                    id="topbarStatusDot"
+                    aria-hidden="true"></span>
+            </div>
           @endif
           <div class="profile-meta">
-            <div class="profile-name">{{ auth()->user()->name }}</div>
+            <div class="profile-name" id="topbarProfileName">{{ auth()->user()->name }}</div>
             <div class="profile-role">{{ auth()->user()->is_admin ? 'Admin' : 'Member' }}</div>
           </div>
           <svg class="profile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        {{-- Livewire profile panel component replaces static dropdown --}}
+        {{-- Livewire profile panel component --}}
         <livewire:profile.panel />
       </div>
     </div>
@@ -181,14 +195,30 @@
              wire:key="conv-{{ $conversation->id }}">
           <div class="conv-avatar-wrap">
             @if($other->profile_image)
-              <img src="{{ Storage::url($other->profile_image) }}"
-                   alt="{{ $other->name }}"
-                   class="conv-avatar conv-avatar--img"
-                   data-user-id="{{ $other->id }}">
+              <button type="button"
+                      class="conv-avatar-btn"
+                      onclick="event.stopPropagation(); window._openUserProfileCard('{{ $other->id }}')"
+                      title="View {{ $other->name }}'s profile"
+                      aria-label="View {{ $other->name }}'s profile">
+                <img src="{{ Storage::url($other->profile_image) }}"
+                     alt="{{ $other->name }}"
+                     class="conv-avatar conv-avatar--img"
+                     data-user-id="{{ $other->id }}">
+              </button>
             @else
-              <div class="conv-avatar" data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+              <button type="button"
+                      class="conv-avatar-btn"
+                      onclick="event.stopPropagation(); window._openUserProfileCard('{{ $other->id }}')"
+                      title="View {{ $other->name }}'s profile"
+                      aria-label="View {{ $other->name }}'s profile">
+                <div class="conv-avatar"
+                     data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+              </button>
             @endif
-            <span class="presence-dot" data-presence-uid="{{ $other->id }}" aria-hidden="true"></span>
+            <span class="presence-dot"
+                  data-presence-uid="{{ $other->id }}"
+                  data-user-status="{{ $other->status instanceof \App\Enums\UserStatus ? $other->status->value : 'available' }}"
+                  aria-hidden="true"></span>
           </div>
           <div class="conv-info">
             <div class="conv-info-top">
@@ -246,7 +276,11 @@
         <button class="mobile-back-btn" id="mobileBackBtn" title="Back" aria-label="Back to conversations">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
         </button>
-        <div class="chat-header-avatar" data-user-id="{{ $selectedConversation->otherUser()->id }}">
+        <div class="chat-header-avatar upc-trigger"
+             data-user-id="{{ $selectedConversation->otherUser()->id }}"
+             data-uid="{{ $selectedConversation->otherUser()->id }}"
+             style="cursor:pointer"
+             title="View profile">
           @if($selectedConversation->otherUser()->profile_image)
             <img src="{{ Storage::url($selectedConversation->otherUser()->profile_image) }}"
                  alt="{{ $selectedConversation->otherUser()->name }}"
@@ -257,9 +291,14 @@
           @endif
         </div>
         <div class="chat-header-info">
-          <h2 class="chat-header-name">{{ $selectedConversation->otherUser()->name }}</h2>
-          <span class="chat-header-status" id="chat-header-status"
+          <h2 class="chat-header-name upc-trigger"
+              data-uid="{{ $selectedConversation->otherUser()->id }}"
+              style="cursor:pointer"
+              title="View profile">{{ $selectedConversation->otherUser()->name }}</h2>
+          <span class="chat-header-status"
+                id="chat-header-status"
                 data-presence-uid="{{ $selectedConversation->otherUser()->id }}"
+                data-user-status="{{ $selectedConversation->otherUser()->status instanceof \App\Enums\UserStatus ? $selectedConversation->otherUser()->status->value : 'available' }}"
                 data-last-seen="{{ $selectedConversation->otherUser()->lastSeenText() }}">
             <span class="status-dot" id="chat-header-status-dot"></span>
             <span id="chat-header-status-text">{{ $selectedConversation->otherUser()->lastSeenText() }}</span>
@@ -630,5 +669,43 @@
   </div>
 </div>
 @endif
+{{-- ══════════════════════════════════════════════════════
+     USER PROFILE CARD MODAL
+══════════════════════════════════════════════════════ --}}
+<div id="userProfileCardOverlay"
+     class="upc-overlay"
+     style="display:none"
+     role="dialog"
+     aria-modal="true"
+     aria-label="User Profile"
+     onclick="if(event.target===this) window._closeUserProfileCard()">
+  <div class="upc-card" id="userProfileCard">
+    <button type="button" class="upc-close" id="upcCloseBtn" onclick="window._closeUserProfileCard()" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+
+    {{-- Avatar --}}
+    <div class="upc-avatar-wrap">
+      <div class="upc-avatar" id="upcAvatar">
+        <img id="upcAvatarImg" src="" alt="" class="upc-avatar-img" style="display:none">
+        <span id="upcAvatarInitials" class="upc-avatar-initials"></span>
+      </div>
+      <span class="upc-status-ring" id="upcStatusRing"></span>
+    </div>
+
+    {{-- Name + Status --}}
+    <div class="upc-name" id="upcName"></div>
+    <div class="upc-status-row" id="upcStatusRow">
+      <span class="upc-status-dot" id="upcStatusDot"></span>
+      <span class="upc-status-label" id="upcStatusLabel"></span>
+    </div>
+
+    {{-- Status quote --}}
+    <div class="upc-quote" id="upcQuote" style="display:none"></div>
+  </div>
+</div>
 
 </div>{{-- /teams-chat-root --}}

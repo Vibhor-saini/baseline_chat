@@ -44,6 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
     Route::get('/chat', ChatIndex::class)
         ->name('chat.index');
+
+    // User profile card — read-only JSON endpoint for the profile card modal
+    Route::get('/user/{user}/profile-card', [ProfileController::class, 'cardData'])
+        ->name('user.profile-card');
 });
 
 require __DIR__ . '/auth.php';

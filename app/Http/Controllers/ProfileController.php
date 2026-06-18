@@ -56,6 +56,29 @@ class ProfileController extends Controller
     }
 
     /**
+     * Return read-only profile data for the profile card modal (JSON).
+     * Called by chat.js via fetch() when a user clicks another user's avatar.
+     */
+    public function cardData(\App\Models\User $user): JsonResponse
+    {
+        $status = $user->status instanceof \App\Enums\UserStatus
+            ? $user->status->value
+            : ($user->status ?? 'available');
+
+        return response()->json([
+            'id'           => $user->id,
+            'name'         => $user->name,
+            'status'       => $status,
+            'status_label' => \App\Enums\UserStatus::from($status)->label(),
+            'status_quote' => $user->status_quote ?? '',
+            'avatar_url'   => $user->profile_image
+                ? Storage::url($user->profile_image)
+                : null,
+            'initials'     => strtoupper(substr($user->name, 0, 1)),
+        ]);
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse

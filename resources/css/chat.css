@@ -941,7 +941,7 @@
 
 .chat-header-status {
     font-size: .73rem;
-    color: var(--online);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -953,9 +953,10 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--online);
-    box-shadow: 0 0 6px var(--online);
-    animation: onlinePulse 2.5s ease infinite;
+    /* Initial color — JS overrides this via inline style when presence is known */
+    background: #4e4e6e;
+    transition: background .3s, box-shadow .3s;
+    /* No hardcoded animation — JS sets color directly */
 }
 
 @keyframes onlinePulse {
@@ -3197,4 +3198,713 @@
 .profile-success-msg--autohide {
     animation: profile-success-fade 3.5s ease forwards;
     overflow: hidden;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TEAMS-STYLE PROFILE PANEL  (.profile-panel / pp-*)
+   Floating card that opens from the topbar profile button.
+   Does NOT push or cover the main chat area.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Container ─────────────────────────────────────────────────────────── */
+.profile-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 300px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    background: var(--bg-float, #161628);
+    border: 1px solid var(--border-dim, rgba(255,255,255,.08));
+    border-radius: 14px;
+    z-index: 400;
+    box-shadow: 0 16px 56px rgba(0,0,0,.7), 0 2px 12px rgba(0,0,0,.4);
+    opacity: 0;
+    transform: translateY(-6px) scale(.97);
+    pointer-events: none;
+    transition: opacity .18s cubic-bezier(.16,1,.3,1),
+                transform .18s cubic-bezier(.16,1,.3,1);
+}
+
+.profile-panel--open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* ── Header row ────────────────────────────────────────────────────────── */
+.pp-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 14px 14px;
+    background: linear-gradient(135deg, rgba(124,92,252,.12), rgba(56,217,192,.05));
+    border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+    position: relative;
+}
+
+/* ── Avatar section ────────────────────────────────────────────────────── */
+.pp-avatar-section {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.pp-avatar-label {
+    display: block;
+    cursor: pointer;
+    position: relative;
+    width: 52px;
+    height: 52px;
+}
+
+.pp-avatar-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+}
+
+.pp-avatar-img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid var(--border-accent, rgba(130,110,255,.35));
+    transition: border-color .2s;
+}
+
+.pp-avatar-initials {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent, #7c5cfc), #5e3de8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #fff;
+    border: 2px solid var(--border-accent, rgba(130,110,255,.35));
+    transition: border-color .2s;
+}
+
+.pp-avatar-label:hover .pp-avatar-img,
+.pp-avatar-label:hover .pp-avatar-initials {
+    border-color: var(--accent-bright, #9b7eff);
+}
+
+/* Status ring around avatar */
+.pp-avatar-status-ring {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-float, #161628);
+    transition: background .3s;
+}
+
+.pp-status-ring--available { background: #23e07a; box-shadow: 0 0 5px #23e07a; }
+.pp-status-ring--busy      { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
+.pp-status-ring--away      { background: #ffb547; box-shadow: 0 0 5px #ffb547; }
+.pp-status-ring--dnd       { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
+
+/* Camera overlay */
+.pp-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #fff;
+    font-size: .6rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity .2s;
+    pointer-events: none;
+}
+
+.pp-avatar-label:hover .pp-avatar-overlay { opacity: 1; }
+
+/* Upload loading overlay */
+.pp-upload-loading {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(0,0,0,.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* ── Header info ───────────────────────────────────────────────────────── */
+.pp-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.pp-header-name {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-primary, #eeeef5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pp-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+}
+
+.pp-status-label {
+    font-size: .72rem;
+    color: var(--text-secondary, #8a8aaa);
+}
+
+/* Close button */
+.pp-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-muted, #4e4e6e);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+}
+
+.pp-close-btn:hover {
+    background: var(--bg-hover, #212138);
+    color: var(--text-primary, #eeeef5);
+}
+
+/* ── Status dot in header ─────────────────────────────────────────────── */
+.pp-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background .3s;
+}
+
+.pp-status-dot--available { background: #23e07a; box-shadow: 0 0 5px #23e07a; }
+.pp-status-dot--busy      { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
+.pp-status-dot--away      { background: #ffb547; box-shadow: 0 0 5px #ffb547; }
+.pp-status-dot--dnd       {
+    background: #ff5f72;
+    box-shadow: 0 0 5px #ff5f72;
+    position: relative;
+}
+.pp-status-dot--dnd::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 55%;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    display: block;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+.pp-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+}
+
+.pp-section:last-child { border-bottom: none; }
+
+.pp-section-label {
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted, #4e4e6e);
+    margin-bottom: 8px;
+}
+
+.pp-divider {
+    height: 1px;
+    background: var(--border-subtle, rgba(255,255,255,.04));
+    margin: 0;
+}
+
+/* ── Status grid ──────────────────────────────────────────────────────── */
+.pp-status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.pp-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    background: var(--bg-raised, #111120);
+    border: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+    border-radius: 8px;
+    color: var(--text-secondary, #8a8aaa);
+    font-size: .77rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s, opacity .15s;
+    font-family: inherit;
+    text-align: left;
+    position: relative;
+}
+
+.pp-status-btn:hover {
+    background: var(--bg-hover, #212138);
+    border-color: var(--border-dim, rgba(255,255,255,.08));
+    color: var(--text-primary, #eeeef5);
+}
+
+.pp-status-btn--active {
+    background: var(--accent-dim, rgba(124,92,252,.12)) !important;
+    border-color: var(--border-accent, rgba(130,110,255,.35)) !important;
+    color: var(--text-primary, #eeeef5) !important;
+    font-weight: 600;
+}
+
+.pp-status-btn--loading {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.pp-status-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.pp-status-btn-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Status icon dots inside buttons */
+.pp-sicon {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    position: relative;
+}
+
+.pp-sicon--available { background: #23e07a; box-shadow: 0 0 4px #23e07a; }
+.pp-sicon--busy      { background: #ff5f72; box-shadow: 0 0 4px #ff5f72; }
+.pp-sicon--away      { background: #ffb547; box-shadow: 0 0 4px #ffb547; }
+.pp-sicon--dnd {
+    background: #ff5f72;
+    box-shadow: 0 0 4px #ff5f72;
+}
+.pp-sicon--dnd::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    display: block;
+    width: 55%;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+}
+
+/* ── Form fields ──────────────────────────────────────────────────────── */
+.pp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pp-field-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--text-secondary, #8a8aaa);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.pp-char-count {
+    font-size: .62rem;
+    color: var(--text-muted, #4e4e6e);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.pp-input {
+    background: var(--bg-raised, #111120);
+    border: 1px solid var(--border-dim, rgba(255,255,255,.08));
+    border-radius: 8px;
+    color: var(--text-primary, #eeeef5);
+    font-size: .83rem;
+    padding: 8px 11px;
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+
+.pp-input:focus {
+    border-color: var(--accent, #7c5cfc);
+    box-shadow: 0 0 0 3px var(--accent-dim, rgba(124,92,252,.12));
+}
+
+.pp-input--textarea { resize: none; line-height: 1.45; }
+
+.pp-input--error {
+    border-color: var(--danger, #ff4f6a) !important;
+    box-shadow: 0 0 0 3px var(--danger-dim, rgba(255,79,106,.12)) !important;
+}
+
+.pp-input::placeholder { color: var(--text-muted, #4e4e6e); }
+
+.pp-field-error {
+    font-size: .72rem;
+    color: var(--danger, #ff4f6a);
+    margin-top: 2px;
+}
+
+/* ── Alert messages ───────────────────────────────────────────────────── */
+.pp-alert {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    border-radius: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.pp-alert--error {
+    background: var(--danger-dim, rgba(255,79,106,.12));
+    border: 1px solid rgba(255,79,106,.25);
+    color: var(--danger, #ff4f6a);
+}
+
+.pp-alert--success {
+    background: rgba(35,224,122,.1);
+    border: 1px solid rgba(35,224,122,.3);
+    color: #23e07a;
+}
+
+@keyframes pp-success-fade {
+    0%   { opacity: 1; max-height: 50px; }
+    70%  { opacity: 1; max-height: 50px; }
+    100% { opacity: 0; max-height: 0;    overflow: hidden; }
+}
+
+.pp-alert--autohide {
+    animation: pp-success-fade 3.5s ease forwards;
+    overflow: hidden;
+}
+
+/* ── Save button ──────────────────────────────────────────────────────── */
+.pp-save-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    padding: 9px 14px;
+    background: linear-gradient(135deg, var(--accent, #7c5cfc), #5e3de8);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: .83rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    box-shadow: 0 0 16px var(--accent-glow, rgba(124,92,252,.25));
+    font-family: inherit;
+    margin-top: 2px;
+}
+
+.pp-save-btn:hover { opacity: .9; }
+.pp-save-btn:active { transform: scale(.98); }
+.pp-save-btn:disabled,
+.pp-save-btn--loading { opacity: .55; cursor: not-allowed; }
+
+.pp-save-btn-text,
+.pp-save-btn-saving { display: flex; align-items: center; gap: 6px; }
+
+/* ── Spinner ──────────────────────────────────────────────────────────── */
+.pp-spinner {
+    animation: pp-spin .8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+
+.pp-spinner--xs { width: 12px; height: 12px; }
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+.pp-footer {
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+}
+
+.pp-signout-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 11px;
+    background: none;
+    border: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+    border-radius: 8px;
+    color: var(--danger, #ff4f6a);
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+    font-family: inherit;
+}
+
+.pp-signout-btn:hover {
+    background: var(--danger-dim, rgba(255,79,106,.12));
+    border-color: rgba(255,79,106,.3);
+}
+
+/* ── Topbar status dot — color variants ───────────────────────────────── */
+.profile-status-dot--available { background: #23e07a !important; box-shadow: 0 0 6px #23e07a !important; }
+.profile-status-dot--busy      { background: #ff5f72 !important; box-shadow: 0 0 6px #ff5f72 !important; }
+.profile-status-dot--away      { background: #ffb547 !important; box-shadow: 0 0 6px #ffb547 !important; }
+.profile-status-dot--dnd       { background: #ff5f72 !important; box-shadow: 0 0 6px #ff5f72 !important; }
+
+/* ── Topbar avatar with image ─────────────────────────────────────────── */
+.profile-avatar--has-img {
+    background: none !important;
+    box-shadow: none !important;
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+/* ── Chat header status dot — dynamic color (set inline by JS) ────────── */
+.chat-header-status { color: var(--text-secondary, #8a8aaa) !important; }
+
+/* ── Responsive — profile panel on mobile ────────────────────────────── */
+@media (max-width: 768px) {
+    .profile-panel {
+        right: -8px;
+        width: calc(100vw - 24px);
+        max-width: 300px;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   USER PROFILE CARD MODAL  (.upc-*)
+   Centered read-only card shown when tapping another user's avatar.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.upc-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .18s ease;
+}
+
+.upc-card {
+    position: relative;
+    width: 320px;
+    background: #161628;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 20px;
+    padding: 36px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 4px 20px rgba(0,0,0,.4);
+    animation: upcSlideIn .2s cubic-bezier(.16,1,.3,1);
+}
+
+@keyframes upcSlideIn {
+    from { transform: translateY(12px) scale(.96); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);   opacity: 1; }
+}
+
+.upc-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255,255,255,.07);
+    border: none;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #8a8aaa;
+    transition: background .15s, color .15s;
+}
+.upc-close:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+.upc-avatar-wrap {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    margin-bottom: 6px;
+    margin-top: 4px;
+}
+
+.upc-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cfc, #5e3de8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 3px solid rgba(130,110,255,.35);
+    box-shadow: 0 0 24px rgba(124,92,252,.25);
+}
+
+.upc-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.upc-avatar-initials {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upc-status-ring {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 3px solid #161628;
+    background: #23e07a;
+    box-shadow: 0 0 8px #23e07a;
+    transition: background .3s;
+}
+
+.upc-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #eeeef5;
+    text-align: center;
+    margin-top: 4px;
+}
+
+.upc-status-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 2px;
+}
+
+.upc-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #23e07a;
+    box-shadow: 0 0 5px #23e07a;
+    flex-shrink: 0;
+    transition: background .3s;
+}
+
+.upc-status-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #23e07a;
+    transition: color .3s;
+}
+
+.upc-quote {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    font-size: .85rem;
+    color: #8a8aaa;
+    line-height: 1.5;
+    text-align: center;
+    font-style: italic;
+    width: 100%;
+}
+
+/* Clickable trigger hint */
+.upc-trigger { cursor: pointer; }
+.upc-trigger:hover { opacity: .85; }
+
+@media (max-width: 480px) {
+    .upc-card { width: calc(100vw - 32px); }
+}
+
+/* ── Sidebar avatar button wrapper ──────────────────────────────────────
+   Wraps the conv-avatar so clicking it opens the profile card without
+   triggering the parent conv-item's wire:click (selectConversation).
+   ─────────────────────────────────────────────────────────────────────*/
+.conv-avatar-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    display: block;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: transform .15s, opacity .15s;
+}
+
+.conv-avatar-btn:hover {
+    transform: scale(1.08);
+    opacity: .9;
+}
+
+.conv-avatar-btn:focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+    border-radius: 50%;
+}
+
+/* Ensure the img inside the button fills correctly */
+.conv-avatar-btn .conv-avatar,
+.conv-avatar-btn .conv-avatar--img {
+    display: block;
 }
