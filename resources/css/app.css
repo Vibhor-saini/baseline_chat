@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-teams-bg: #0f1014;
+  --color-teams-secondary: #111318;
+  --color-teams-hover: #1a1c22;
+  --color-teams-border: #1c1d22;
+  --color-teams-accent: #5b5fc7;
+  --color-teams-text-primary: #ffffff;
+  --color-teams-text-secondary: #8b8d97;
+}
+
+@layer base {
+  body {
+    @apply bg-teams-bg text-white;
+  }
+}
+
+/* Icons ko default size dene ke liye */
+svg.lucide {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Scrollbar ko Teams jaisa thin banane ke liye */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-thumb {
+    background: #1c1d22;
+    border-radius: 10px;
+}
