@@ -1,18 +1,20 @@
 {{-- resources/views/livewire/profile/panel.blade.php --}}
 {{--
     Teams-style floating profile card.
-    • Positioned absolute relative to .profile-wrap (not inside main layout flow)
-    • Does NOT cover chat content — z-index 400, floats above the topbar only
-    • Opens/closes with smooth CSS transition
-    • Click outside (handled in chat.js) dispatches close-profile-panel
-    • Escape key closes (chat.js)
+    • Alpine REMOVED — status state is owned entirely by the Livewire $status
+      property. JS (chat.js) applies status classes post-render via the
+      livewire:commit hook so there is no Alpine ↔ JS class-ownership conflict.
+    • Status buttons highlight via the Livewire $status property (class set in PHP).
+    • Instant visual feedback on click is achieved by JS calling applyPanelStatus()
+      before the Livewire round-trip completes.
 --}}
 <div class="profile-panel {{ $isOpen ? 'profile-panel--open' : '' }}"
      id="profileDropdown"
      role="dialog"
      aria-modal="true"
      aria-label="Profile settings"
-     wire:key="profile-panel">
+     wire:key="profile-panel"
+     data-current-status="{{ $status }}">
 
     {{-- ── Panel Header: avatar + name + close ────────────────────── --}}
     <div class="pp-header">
@@ -33,9 +35,11 @@
                              data-user-id="{{ auth()->id() }}"
                              aria-hidden="true">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
                     @endif
-                    {{-- Status ring color indicator --}}
-                    <span class="pp-avatar-status-ring pp-status-ring--{{ $status }}" aria-hidden="true"></span>
                 </div>
+                {{-- Status ring — class set by JS after each render --}}
+                <span class="pp-avatar-status-ring pp-status-ring--{{ $status }}"
+                      id="ppAvatarStatusRing"
+                      aria-hidden="true"></span>
                 <div class="pp-avatar-overlay" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -44,9 +48,7 @@
                 </div>
             </label>
 
-            {{-- Hidden file input — JS reads it and stores base64 in a JS variable.
-                 The base64 is passed directly to save() as a method argument
-                 when the user clicks Save, bypassing Livewire's upload pipeline. --}}
+            {{-- Hidden file input --}}
             <input type="file"
                    id="profileAvatarInput"
                    accept="image/jpeg,image/png,image/webp"
@@ -66,15 +68,15 @@
         <div class="pp-header-info">
             <div class="pp-header-name">{{ auth()->user()->name }}</div>
             <div class="pp-header-meta">
-                <span class="pp-status-dot pp-status-dot--{{ $status }}" aria-hidden="true"></span>
-                <span class="pp-status-label">
-                    @switch($status)
-                        @case('available') Available @break
-                        @case('busy')      Busy @break
-                        @case('away')      Away @break
-                        @case('dnd')       Do Not Disturb @break
-                        @default           Available
-                    @endswitch
+                {{-- Class set by PHP + kept in sync by JS after render --}}
+                <span class="pp-status-dot pp-status-dot--{{ $status }}"
+                      id="ppPanelStatusDot"
+                      aria-hidden="true"></span>
+                <span class="pp-status-label" id="ppPanelStatusLabel">
+                    @php
+                        $labels = ['available' => 'Available', 'busy' => 'Busy', 'away' => 'Away', 'dnd' => 'Do Not Disturb'];
+                        echo $labels[$status] ?? 'Available';
+                    @endphp
                 </span>
                 @if(auth()->user()->is_admin)
                     <span class="badge-admin">Admin</span>
@@ -104,11 +106,13 @@
             ] as $s)
             <button type="button"
                     wire:click="changeStatus('{{ $s['value'] }}')"
+                    onclick="window._applyPanelStatus && window._applyPanelStatus('{{ $s['value'] }}')"
                     wire:loading.attr="disabled"
                     wire:loading.class="pp-status-btn--loading"
                     wire:target="changeStatus('{{ $s['value'] }}')"
                     class="pp-status-btn {{ $status === $s['value'] ? 'pp-status-btn--active' : '' }}"
                     aria-pressed="{{ $status === $s['value'] ? 'true' : 'false' }}"
+                    data-status-value="{{ $s['value'] }}"
                     title="{{ $s['label'] }}">
                 <span class="pp-sicon {{ $s['icon_class'] }}" aria-hidden="true"></span>
                 <span class="pp-status-btn-label">{{ $s['label'] }}</span>

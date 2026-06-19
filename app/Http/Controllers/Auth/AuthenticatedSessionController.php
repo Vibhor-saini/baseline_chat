@@ -30,17 +30,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        // ── Set status to Available on login ─────────────────────────────
-        // Reset any previously persisted manual status so presence logic
-        // starts fresh. Only Busy/Away/DND manual selections persist across
-        // sessions — a fresh login always starts as Available.
+        // ── Restore / reset status on login ──────────────────────────────
+        // If the user had manually set a status (Busy/Away/DND) before their
+        // last session ended, honour it — do NOT reset to Available.
+        // Only reset when status_manually_set is false (i.e. it was never
+        // explicitly chosen, or they had previously selected Available).
         $user = Auth::user();
-        $user->update([
-            'status'              => 'available',
-            'status_manually_set' => false,
-        ]);
 
-        // Broadcast the status reset so other connected users see the change.
+        $currentStatus = $user->status instanceof \App\Enums\UserStatus
+            ? $user->status->value
+            : ($user->status ?? 'available');
+
+        if (! $user->status_manually_set) {
+            $currentStatus = 'available';
+            $user->update(['status' => 'available']);
+        }
+
+        // Broadcast the status so other connected users see the correct value.
         $avatarUrl = $user->profile_image
             ? Storage::url($user->profile_image)
             : '';
@@ -48,7 +54,7 @@ class AuthenticatedSessionController extends Controller
         broadcast(new UserProfileUpdated(
             $user->id,
             $avatarUrl,
-            'available',
+            $currentStatus,
             $user->name,
         ));
 
@@ -57,9 +63,28 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Destroy an authenticated session.
+     * Broadcasts an 'offline' status before logging out so other connected
+     * users immediately see the user go offline without waiting for the
+     * WebSocket presence-leave timeout (which can take 30–60 seconds).
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+
+        // Capture these before the session is invalidated
+        if ($user) {
+            $avatarUrl = $user->profile_image
+                ? Storage::url($user->profile_image)
+                : '';
+
+            broadcast(new UserProfileUpdated(
+                $user->id,
+                $avatarUrl,
+                'offline',   // sentinel — not a DB value, just a broadcast signal
+                $user->name,
+            ));
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

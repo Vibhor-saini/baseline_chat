@@ -209,10 +209,18 @@
         const label     = statusLabel(status);
         const isMe      = uid === myUserId;
 
+        /* ── Helper: swap status class on an element ── */
+        function setStatusClass(el, prefix, val) {
+            if (!el) return;
+            const classes = Array.from(el.classList)
+                .filter(c => !c.startsWith(prefix));
+            classes.push(prefix + val);
+            el.className = classes.join(' ');
+        }
+
         /* 1. Update avatar images / initials for this user everywhere */
         if (avatarUrl) {
             document.querySelectorAll(`[data-user-id="${uid}"]`).forEach(el => {
-                // Only update actual avatar elements — skip status dots, presence dots, etc.
                 const isAvatarImg = el.tagName === 'IMG' && (
                     el.classList.contains('profile-avatar-img') ||
                     el.classList.contains('pp-avatar-img') ||
@@ -225,15 +233,12 @@
                     el.closest('.chat-header-avatar') ||
                     el.closest('.pp-avatar-wrap')
                 );
-
                 const isInitialsDiv = el.tagName === 'DIV' && (
                     el.classList.contains('conv-avatar') ||
                     el.classList.contains('pp-avatar-initials') ||
                     el.id === 'topbarAvatarInitials' ||
                     el.id === 'avatarPreviewImg'
                 );
-
-                // Also handle the chat-header-avatar container (has text content, no <img>)
                 const isHeaderAvatar = el.classList.contains('chat-header-avatar');
 
                 if (isAvatarImg) {
@@ -243,33 +248,46 @@
                 } else if (isHeaderAvatar) {
                     el.innerHTML = '';
                     const img = document.createElement('img');
-                    img.src              = avatarUrl;
-                    img.alt              = name || '';
-                    img.dataset.userId   = uid;
-                    img.style.cssText    = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    img.src = avatarUrl; img.alt = name || '';
+                    img.dataset.userId = uid;
+                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
                     el.appendChild(img);
                 } else if (isInitialsDiv) {
-                    const img = document.createElement('img');
-                    img.src            = avatarUrl;
-                    img.alt            = name || '';
-                    img.dataset.userId = uid;
-                    img.id             = el.id || '';
-                    if (el.classList.contains('conv-avatar')) {
-                        img.className = 'conv-avatar conv-avatar--img';
-                        img.style.cssText = 'width:42px;height:42px;border-radius:50%;object-fit:cover;';
-                    } else if (el.classList.contains('pp-avatar-initials')) {
-                        img.className = 'pp-avatar-img';
-                        img.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;';
-                    } else {
+                    if (el.id === 'topbarAvatarInitials') {
+                        // Keep container (status dot inside) — inject img, fix id/class
+                        Array.from(el.childNodes).forEach(n => {
+                            if (n.nodeType === Node.TEXT_NODE) n.remove();
+                        });
+                        const img = document.createElement('img');
+                        img.src = avatarUrl; img.alt = name || '';
+                        img.id = 'topbarAvatarImg';
+                        img.className = 'profile-avatar-img';
+                        img.dataset.userId = uid;
                         img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                        el.insertBefore(img, el.firstChild);
+                        el.id = ''; el.classList.add('profile-avatar--has-img');
+                        el.removeAttribute('data-user-id');
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = avatarUrl; img.alt = name || '';
+                        img.dataset.userId = uid;
+                        img.id = el.id || '';
+                        if (el.classList.contains('conv-avatar')) {
+                            img.className = 'conv-avatar conv-avatar--img';
+                            img.style.cssText = 'width:42px;height:42px;border-radius:50%;object-fit:cover;';
+                        } else if (el.classList.contains('pp-avatar-initials')) {
+                            img.className = 'pp-avatar-img';
+                            img.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;';
+                        } else {
+                            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                        }
+                        el.replaceWith(img);
                     }
-                    el.replaceWith(img);
                 }
-                // All other [data-user-id] elements (msg-avatar-mine wrapper divs, spans, etc.) — skip
             });
         }
 
-        /* 2. Update presence-dot colors in sidebar/conversation list */
+        /* 2. Sidebar presence dots for this user */
         document.querySelectorAll(`.presence-dot[data-presence-uid="${uid}"]`).forEach(dot => {
             dot.dataset.userStatus = status;
             if (dot.classList.contains('presence-online')) {
@@ -279,59 +297,109 @@
             }
         });
 
-        /* 3. Update chat-header status for the currently open conversation */
+        /* 3. Chat-header status (other user's header) */
         const headerStatus = document.getElementById('chat-header-status');
         if (headerStatus && String(headerStatus.dataset.presenceUid) === uid) {
             headerStatus.dataset.userStatus = status;
             const dot  = document.getElementById('chat-header-status-dot');
             const text = document.getElementById('chat-header-status-text');
-            // Update header status whenever the user is online (has status-online OR is in onlineUserIds).
-            // We always update — the color reflects the actual status, not just online/offline.
             if (dot) {
                 dot.style.background = color;
                 dot.style.boxShadow  = `0 0 6px ${color}`;
-                // Ensure online class is present so the dot shows
                 dot.classList.add('status-online');
                 dot.classList.remove('status-offline');
             }
-            if (text) {
-                text.textContent = label;
-                text.style.color = color;
-            }
+            if (text) { text.textContent = label; text.style.color = color; }
             headerStatus.style.color = color;
         }
 
-        /* 4. If it's MY own update — update topbar elements */
+        /* 4. MY own topbar + panel elements */
         if (isMe) {
-            // Status dot on the topbar profile button
+            // ── Topbar avatar first-time upload ───────────────────────────
+            if (avatarUrl) {
+                const initialsDiv = document.getElementById('topbarAvatarInitials');
+                if (initialsDiv) {
+                    Array.from(initialsDiv.childNodes).forEach(n => {
+                        if (n.nodeType === Node.TEXT_NODE) n.remove();
+                    });
+                    const img = document.createElement('img');
+                    img.src = avatarUrl; img.alt = name || '';
+                    img.id = 'topbarAvatarImg'; img.className = 'profile-avatar-img';
+                    img.dataset.userId = uid;
+                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    initialsDiv.insertBefore(img, initialsDiv.firstChild);
+                    initialsDiv.id = ''; initialsDiv.classList.add('profile-avatar--has-img');
+                    initialsDiv.removeAttribute('data-user-id');
+                }
+            }
+
+            // ── Topbar status dot ─────────────────────────────────────────
             const topbarDot = document.getElementById('topbarStatusDot');
             if (topbarDot) {
-                // Remove all status classes, add the right one
-                topbarDot.className = topbarDot.className
-                    .replace(/pp-status-dot--\S+/g, '')
-                    .replace(/profile-status-dot--\S+/g, '')
-                    .trim();
-                topbarDot.style.background = color;
-                topbarDot.style.boxShadow  = `0 0 6px ${color}`;
+                setStatusClass(topbarDot, 'profile-status-dot--', status);
             }
-            // Profile name in topbar
-            if (name) {
-                const nameEl = document.getElementById('topbarProfileName');
-                if (nameEl) nameEl.textContent = name;
-            }
-            // Nav-rail profile dot (bottom of left nav)
+
+            // ── Profile panel (all panel status elements) ─────────────────
+            applyPanelStatus(status);
+
+            // ── Nav-rail self dot ─────────────────────────────────────────
             document.querySelectorAll('.nav-profile .presence').forEach(dot => {
                 dot.style.background = color;
                 dot.style.boxShadow  = `0 0 4px ${color}`;
             });
-            // Profile panel header status dot + label (if panel is open)
-            const ppDot = document.querySelector('.pp-status-dot');
-            if (ppDot) {
-                ppDot.className = ppDot.className
-                    .replace(/pp-status-dot--\S+/g, '').trim() + ` pp-status-dot--${status}`;
+
+            // ── Profile name ──────────────────────────────────────────────
+            if (name) {
+                const nameEl = document.getElementById('topbarProfileName');
+                if (nameEl) nameEl.textContent = name;
             }
         }
     }
+
+    /**
+     * Apply status to ALL profile panel elements — dot, label, ring, active button.
+     * This is the single source of truth for the panel's visual state.
+     * Called on: button click (instant), Livewire commit hook, profile.updated event.
+     *
+     * @param {string} status  'available' | 'busy' | 'away' | 'dnd'
+     */
+    function applyPanelStatus(status) {
+        const LABELS = { available: 'Available', busy: 'Busy', away: 'Away', dnd: 'Do Not Disturb' };
+        const label  = LABELS[status] || 'Available';
+
+        function swapClass(el, prefix, val) {
+            if (!el) return;
+            el.className = Array.from(el.classList)
+                .filter(c => !c.startsWith(prefix))
+                .concat(prefix + val)
+                .join(' ');
+        }
+
+        // Header dot
+        swapClass(document.getElementById('ppPanelStatusDot'),  'pp-status-dot--',  status);
+
+        // Header label
+        const labelEl = document.getElementById('ppPanelStatusLabel');
+        if (labelEl) labelEl.textContent = label;
+
+        // Avatar ring
+        swapClass(document.getElementById('ppAvatarStatusRing'), 'pp-status-ring--', status);
+
+        // Active button highlight + aria-pressed
+        document.querySelectorAll('#profileDropdown .pp-status-btn').forEach(btn => {
+            const isActive = btn.dataset.statusValue === status;
+            btn.classList.toggle('pp-status-btn--active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        // Stamp the current status onto the panel root so the commit hook
+        // can read it back without needing a separate variable.
+        const panel = document.getElementById('profileDropdown');
+        if (panel) panel.dataset.currentStatus = status;
+    }
+
+    // Expose for onclick= attribute in the Blade template (instant pre-Livewire feedback)
+    window._applyPanelStatus = applyPanelStatus;
 
 
     /* ── Page load scroll ────────────────────────────────────────────────── */
@@ -347,6 +415,30 @@
         const onlineUserIds = new Set();
         // Map<userId:string, status:string>  — tracks the known status per user
         const userStatusMap = new Map();
+
+        // Seed own status from the server-rendered panel attribute on page load.
+        // This primes userStatusMap before the first Echo 'here' fires so the
+        // commit hook always has a valid value to restore.
+        (function seedOwnStatus() {
+            const myId = String(document.body.dataset.userId || '');
+            if (!myId) return;
+
+            // Prefer data-current-status on the panel (set from PHP $status prop)
+            const panel = document.getElementById('profileDropdown');
+            const panelStatus = panel && panel.dataset.currentStatus;
+            if (panelStatus && panelStatus !== '') {
+                userStatusMap.set(myId, panelStatus);
+                return;
+            }
+
+            // Fallback: parse the CSS class on the topbar dot
+            const dot = document.getElementById('topbarStatusDot');
+            if (!dot) return;
+            const match = Array.from(dot.classList)
+                .map(c => c.match(/^profile-status-dot--(.+)$/))
+                .find(Boolean);
+            if (match) userStatusMap.set(myId, match[1]);
+        })();
 
         function applyPresence() {
             document.querySelectorAll('[data-presence-uid]').forEach(el => {
@@ -391,7 +483,13 @@
                             dot.style.boxShadow  = 'none';
                         }
                         if (text) {
-                            text.textContent = el.dataset.lastSeen || 'Offline';
+                            // Never show "Online" as the offline label — data-last-seen
+                            // may hold "Online" if the user was active when the page
+                            // rendered.  Fall back to "Offline" in that case.
+                            const lastSeen = el.dataset.lastSeen || '';
+                            text.textContent = (lastSeen && lastSeen !== 'Online')
+                                ? lastSeen
+                                : 'Offline';
                             text.style.color = '#8a8aaa';
                         }
                         el.style.color = '#8a8aaa';
@@ -409,6 +507,11 @@
                 members.forEach(m => {
                     onlineUserIds.add(String(m.id));
                     if (m.status) userStatusMap.set(String(m.id), m.status);
+                    // Apply avatar + status for every member so sidebar/header reflect
+                    // their actual stored status (not just online/offline)
+                    if (m.avatarUrl || m.status) {
+                        applyProfileUpdate(m.id, m.status || 'available', m.name || '', m.avatarUrl || '');
+                    }
                 });
                 applyPresence();
                 setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 500);
@@ -417,12 +520,21 @@
                 console.log('[Presence] joining:', member);
                 onlineUserIds.add(String(member.id));
                 if (member.status) userStatusMap.set(String(member.id), member.status);
+                // Apply the joining member's actual status + avatar everywhere
+                applyProfileUpdate(member.id, member.status || 'available', member.name || '', member.avatarUrl || '');
                 applyPresence();
                 setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 200);
             })
             .leaving((member) => {
                 console.log('[Presence] leaving:', member);
                 onlineUserIds.delete(String(member.id));
+                // Keep data-last-seen sensible so the offline label is correct
+                const headerStatus = document.getElementById('chat-header-status');
+                if (headerStatus && String(headerStatus.dataset.presenceUid) === String(member.id)) {
+                    if (headerStatus.dataset.lastSeen === 'Online' || !headerStatus.dataset.lastSeen) {
+                        headerStatus.dataset.lastSeen = 'just now';
+                    }
+                }
                 applyPresence();
             })
             .error((err) => console.error('[Presence] channel error:', err));
@@ -441,39 +553,55 @@
         Echo.channel('profile-updates')
             .listen('.profile.updated', (event) => {
                 console.log('[Profile] profile.updated received:', event);
-                // Update the userStatusMap so presence re-applies correctly
+
+                // 'offline' is a logout sentinel — remove from presence and
+                // update UI immediately without waiting for the WS leave timeout.
+                if (event.status === 'offline') {
+                    onlineUserIds.delete(String(event.userId));
+                    // Update data-last-seen so the offline label shows correctly
+                    const headerStatus = document.getElementById('chat-header-status');
+                    if (headerStatus && String(headerStatus.dataset.presenceUid) === String(event.userId)) {
+                        headerStatus.dataset.lastSeen = 'just now';
+                    }
+                    applyPresence();
+                    return;
+                }
+
                 userStatusMap.set(String(event.userId), event.status);
-                // Apply avatar, status color, name everywhere
                 applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl);
-                // Re-apply presence so dots reflect updated status color
                 applyPresence();
             });
 
         /* ── Livewire profile-saved event (fires on own tab only) ────────── */
         Livewire.on('profile-saved', (params) => {
-            const status    = (params && params[0] && params[0].status)    || 'available';
-            const name      = (params && params[0] && params[0].name)      || '';
-            const avatarUrl = (params && params[0] && params[0].avatarUrl) || '';
+            const p         = params && params[0];
+            const status    = (p && p.status)    || '';
+            const name      = (p && p.name)      || '';
+            const avatarUrl = (p && p.avatarUrl) || '';
             const myUserId  = document.body.dataset.userId || '';
-            // Update local status map
-            if (myUserId) userStatusMap.set(String(myUserId), status);
-            applyProfileUpdate(myUserId, status, name, avatarUrl);
-            applyPresence();
+            // Only update the map when we have a real status value from the server.
+            // Never fall back to 'available' here — that would override a saved
+            // Busy/Away/DND status with the wrong value.
+            if (myUserId && status) userStatusMap.set(String(myUserId), status);
+            if (myUserId) {
+                applyProfileUpdate(myUserId, status || userStatusMap.get(String(myUserId)) || 'available', name, avatarUrl);
+                applyPresence();
+            }
         });
 
-        /* ── Livewire status-changed event (quick status tap) ─────────── */
+        /* ── Livewire status-changed event — server confirmation ──────── */
         Livewire.on('status-changed', (params) => {
-            const status   = (params && params[0] && params[0].status) || 'available';
+            const p        = params && params[0];
+            const status   = (p && p.status) || '';
             const myUserId = document.body.dataset.userId || '';
-            if (myUserId) userStatusMap.set(String(myUserId), status);
-            const topbarDot = document.getElementById('topbarStatusDot');
-            if (topbarDot) {
-                topbarDot.style.background = statusColor(status);
-                topbarDot.style.boxShadow  = `0 0 6px ${statusColor(status)}`;
-            }
-            document.querySelectorAll('.nav-profile .presence').forEach(dot => {
-                dot.style.background = statusColor(status);
-            });
+            if (!myUserId || !status) return;
+            userStatusMap.set(String(myUserId), status);
+            const nameEl    = document.getElementById('topbarProfileName');
+            const name      = nameEl ? nameEl.textContent.trim() : '';
+            const imgEl     = document.getElementById('topbarAvatarImg');
+            const avatarUrl = imgEl ? imgEl.src : '';
+            applyProfileUpdate(myUserId, status, name, avatarUrl || '');
+            applyPresence();
         });
 
         /* ── Connect to conversation channel ──────────────────────────────*/
@@ -569,6 +697,42 @@
                     scrollToBottom(true);
                     if (window._applyPresence) window._applyPresence();
                     cacheSidebarPreviews();
+
+                    // After every Livewire re-render, re-apply status to the
+                    // topbar dot and profile panel.
+                    // Priority order:
+                    //   1. userStatusMap — authoritative; set by Echo 'here'/joining,
+                    //      profile.updated broadcast, status-changed & profile-saved
+                    //      Livewire events.  Always prefer this over any server-rendered
+                    //      value because Livewire re-renders auth()->user() from the
+                    //      PHP session which may be stale.
+                    //   2. data-current-status on the panel — cold-start fallback only,
+                    //      used on the very first render before Echo has fired.
+                    const myId = String(document.body.dataset.userId || '');
+
+                    // Determine authoritative status
+                    let currentStatus = userStatusMap.get(myId);
+                    if (!currentStatus) {
+                        // Cold-start only: read what the server rendered initially
+                        const panel = document.getElementById('profileDropdown');
+                        currentStatus = panel && panel.dataset.currentStatus;
+                    }
+                    if (!currentStatus) currentStatus = 'available';
+
+                    // Keep the map in sync so the next render cycle is consistent
+                    if (myId) userStatusMap.set(myId, currentStatus);
+
+                    // Topbar dot
+                    const topbarDot = document.getElementById('topbarStatusDot');
+                    if (topbarDot) {
+                        topbarDot.className = Array.from(topbarDot.classList)
+                            .filter(c => !c.startsWith('profile-status-dot--'))
+                            .concat('profile-status-dot--' + currentStatus)
+                            .join(' ');
+                    }
+
+                    // All panel elements via single helper
+                    applyPanelStatus(currentStatus);
                 });
                 const calls = commit?.calls ?? [];
                 const wasSend = calls.some(c => c.method === 'sendMessage' || c.method === 'forwardTo');

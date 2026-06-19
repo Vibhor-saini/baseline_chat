@@ -74,11 +74,16 @@
     {{-- Profile --}}
     <div class="topbar-right">
       <div class="profile-wrap" id="profileWrap">
+        {{-- wire:ignore: JS manages all DOM updates here (avatar, status dot, name).
+             Without this, any chat.Index re-render would overwrite the JS-applied
+             status class on topbarStatusDot with the server-cached value, making
+             the dot flash back to the wrong colour. --}}
+        <div wire:ignore>
         <button class="profile-btn"
                 id="profileBtn"
                 aria-haspopup="dialog"
                 aria-controls="profileDropdown"
-                aria-expanded="{{ $this->isProfileOpen ?? 'false' }}"
+                aria-expanded="false"
                 onclick="Livewire.dispatch('toggle-profile-panel')">
           {{-- Avatar: show image if set, otherwise initials --}}
           @if(auth()->user()->profile_image)
@@ -110,6 +115,7 @@
           </div>
           <svg class="profile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
+        </div>
         {{-- Livewire profile panel component --}}
         <livewire:profile.panel />
       </div>
