@@ -57,6 +57,18 @@ class Index extends Component
     public string $forwardExtraText    = '';
 
     /**
+     * Preview data for the message being forwarded, shown in the modal card.
+     * Shape: ['sender_name', 'sender_initial', 'body', 'type', 'sent_at']
+     */
+    public array $forwardingMessagePreview = [];
+
+    /**
+     * The selected recipient conversation for forwarding.
+     * Shape: ['id', 'other_name', 'other_initial', 'avatar_url'] or []
+     */
+    public array $forwardSelectedTarget = [];
+
+    /**
      * Plain array — avoids Livewire's array_merge crash.
      * Shape: [['id' => int, 'other_name' => string, 'other_initial' => string], …]
      */
@@ -614,24 +626,65 @@ class Index extends Component
 
     public function openForwardModal(int $messageId): void
     {
-        $this->forwardingMessageId = $messageId;
-        $this->showForwardModal    = true;
-        $this->forwardSearch       = '';
-        $this->forwardExtraText    = '';
-        $this->forwardTargets      = [];
-        $this->loadForwardTargets();
+        $this->forwardingMessageId    = $messageId;
+        $this->showForwardModal       = true;
+        $this->forwardSearch          = '';
+        $this->forwardExtraText       = '';
+        $this->forwardTargets         = [];
+        $this->forwardSelectedTarget  = [];
+        $this->forwardingMessagePreview = [];
+
+        $msg = Message::withTrashed()->with('sender')->find($messageId);
+        if ($msg) {
+            $this->forwardingMessagePreview = [
+                'sender_name'    => $msg->sender->name ?? 'Unknown',
+                'sender_initial' => strtoupper(substr($msg->sender->name ?? '?', 0, 1)),
+                'body'           => $msg->deleted_at ? '' : ($msg->body ?? ''),
+                'type'           => $msg->type ?? 'text',
+                'sent_at'        => $msg->created_at->format('n/j/Y g:i A'),
+            ];
+        }
+        // Do NOT call loadForwardTargets() here — list is hidden until user types
     }
 
     public function closeForwardModal(): void
     {
-        $this->showForwardModal    = false;
-        $this->forwardingMessageId = null;
-        $this->forwardExtraText    = '';
+        $this->showForwardModal         = false;
+        $this->forwardingMessageId      = null;
+        $this->forwardExtraText         = '';
+        $this->forwardingMessagePreview = [];
+        $this->forwardSelectedTarget    = [];
+        $this->forwardTargets           = [];
+        $this->forwardSearch            = '';
     }
 
     public function updatedForwardSearch(): void
     {
         $this->loadForwardTargets();
+    }
+
+    /**
+     * Select a conversation as the forward recipient — does NOT send yet.
+     */
+    public function selectForwardTarget(int $conversationId): void
+    {
+        foreach ($this->forwardTargets as $target) {
+            if ((int) $target['id'] === $conversationId) {
+                $this->forwardSelectedTarget = $target;
+                break;
+            }
+        }
+        // Clear search + results after selection
+        $this->forwardSearch  = '';
+        $this->forwardTargets = [];
+    }
+
+    /**
+     * Remove the currently selected recipient chip.
+     */
+    public function removeForwardTarget(): void
+    {
+        $this->forwardSelectedTarget = [];
     }
 
     /**
@@ -641,21 +694,25 @@ class Index extends Component
     private function loadForwardTargets(): void
     {
         $userId = auth()->id();
-        $term   = mb_strlen(trim($this->forwardSearch)) >= 1
-            ? '%' . trim($this->forwardSearch) . '%'
-            : null;
+        $trimmed = trim($this->forwardSearch);
+
+        // Don't show anything until the user has typed at least 1 character
+        if (mb_strlen($trimmed) < 1) {
+            $this->forwardTargets = [];
+            return;
+        }
+
+        $term = '%' . $trimmed . '%';
 
         $query = Conversation::query()
             ->where('status', 'accepted')
             ->where(fn($q) => $q->where('user_one_id', $userId)->orWhere('user_two_id', $userId))
             ->with(['userOne', 'userTwo']);
 
-        if ($term) {
-            $query->where(function ($q) use ($term, $userId) {
-                $q->whereHas('userOne', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term))
-                  ->orWhereHas('userTwo', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term));
-            });
-        }
+        $query->where(function ($q) use ($term, $userId) {
+            $q->whereHas('userOne', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term))
+              ->orWhereHas('userTwo', fn($sq) => $sq->where('id', '!=', $userId)->where('name', 'like', $term));
+        });
 
         $this->forwardTargets = $query->limit(10)->get()->map(function ($conv) {
             $other = $conv->otherUser();
@@ -663,6 +720,7 @@ class Index extends Component
                 'id'            => $conv->id,
                 'other_name'    => $other->name,
                 'other_initial' => strtoupper(substr($other->name, 0, 1)),
+                'avatar_url'    => $other->profile_image ? Storage::url($other->profile_image) : null,
             ];
         })->toArray();
     }
@@ -674,17 +732,19 @@ class Index extends Component
     {
         if (! $this->forwardingMessageId) return;
 
+        // Use the explicitly selected target if available, fallback to param
+        $convId = !empty($this->forwardSelectedTarget)
+            ? (int) $this->forwardSelectedTarget['id']
+            : $targetConversationId;
+
         $original  = Message::withTrashed()->findOrFail($this->forwardingMessageId);
         $extraText = trim($this->forwardExtraText);
 
-        $body = $original->deleted_at
-            ? $extraText
-            : ($extraText ? $extraText . "\n" . $original->body : $original->body);
-
+        // Single message: optional text in body, original file forwarded
         $newMessage = Message::create([
-            'conversation_id'   => $targetConversationId,
+            'conversation_id'   => $convId,
             'sender_id'         => auth()->id(),
-            'body'              => $body,
+            'body'              => $extraText ?: ($original->deleted_at ? null : $original->body),
             'type'              => $original->deleted_at ? 'text' : $original->type,
             'file_path'         => $original->deleted_at ? null : $original->file_path,
             'forwarded_from_id' => $original->id,
@@ -692,12 +752,11 @@ class Index extends Component
 
         $newMessage->load('sender', 'forwardedFrom.sender');
 
-        $conv = Conversation::findOrFail($targetConversationId);
+        $conv = Conversation::findOrFail($convId);
         $conv->update(['last_message_at' => now()]);
-
         broadcast(new MessageSent($newMessage))->toOthers();
 
-        if ((int) $targetConversationId === (int) $this->selectedConversationId) {
+        if ((int) $convId === (int) $this->selectedConversationId) {
             $this->messages[] = $newMessage;
         }
 

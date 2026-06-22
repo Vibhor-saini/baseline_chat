@@ -255,7 +255,7 @@
 
         /* ── Message bubbles ────────────────────── */
         .msg-row { display: flex; align-items: flex-end; gap: 8px; margin: 2px 16px; position: relative; }
-        .msg-row:hover .msg-actions { opacity: 1; pointer-events: auto; }
+        /* msg-actions show/hide handled by JS (bubble-only hover) */
         /* First message of group gets normal top margin; continued messages collapse */
         .msg-continued { margin-top: 1px; }
         .msg-continued .msg-avatar { visibility: hidden; }
@@ -348,30 +348,34 @@
         .msg-file-dl   { flex-shrink: 0; opacity: .7; }
         .msg-caption   { margin: 4px 0 0; font-size: .82rem; opacity: .85; }
 
-        /* ── Message actions hover menu ─────────── */
+        /* -- Message actions hover menu -- */
         .msg-actions {
             display: flex; gap: 4px;
-            position: absolute; top: -28px;
+            position: absolute; top: -44px;
             opacity: 0; pointer-events: none;
             transition: opacity .15s;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 3px 5px;
-            z-index: 10;
+            background: var(--bg-float, #161628);
+            border: 1px solid var(--border-dim, rgba(255,255,255,.08));
+            border-radius: 10px;
+            padding: 4px 6px;
+            z-index: 20;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,.35);
         }
         .msg-actions--mine   { right: 0; }
         .msg-actions--theirs { left: 0; }
+        /* Hover trigger removed from here — handled by JS mouseenter/leave */
 
         .msg-action-btn {
             background: none; border: none; cursor: pointer;
-            color: var(--text-2); padding: 3px;
-            border-radius: 4px; display: flex;
-            transition: color .15s, background .15s;
+            color: var(--text-secondary, #9090b0); padding: 4px 5px;
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            transition: color .12s, background .12s;
+            font-size: 17px; line-height: 1;
         }
-        .msg-action-btn:hover { color: var(--text-1); background: var(--surface-2); }
-        .msg-action-btn--delete:hover { color: var(--danger); }
-
+        .msg-action-btn:hover { color: var(--text-primary, #eeeef5); background: var(--bg-hover, #212138); }
+        .msg-action-btn--delete:hover { color: var(--danger, #ff5f72); background: rgba(255,95,114,.12); }
+        .msg-actions-sep { width: 1px; height: 18px; background: var(--border-dim, rgba(255,255,255,.08)); margin: 0 2px; flex-shrink: 0; }
         /* ── Attachment preview ─────────────────── */
         .attachment-preview {
             display: flex; align-items: center; gap: 10px;

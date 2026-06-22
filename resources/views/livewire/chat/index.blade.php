@@ -232,9 +232,27 @@
               <span class="conv-time">{{ $conversation->last_message_at?->diffForHumans(short:true) ?? '' }}</span>
             </div>
             <div class="conv-bottom-row">
+              @php
+                // For forwarded messages: strip the original body suffix from legacy merged data
+                $latestPreviewText = '';
+                if ($latest && !$latest->deleted_at) {
+                    if ($latest->type !== 'text') {
+                        $latestPreviewText = $latest->type === 'image' ? '📷 Image' : '📎 File';
+                    } elseif ($latest->forwarded_from_id && $latest->forwardedFrom) {
+                        $fwdBody = $latest->forwardedFrom->body ?? '';
+                        $cleaned = $fwdBody
+                            ? trim(str_replace(["\n" . $fwdBody, $fwdBody], '', $latest->body ?? ''))
+                            : trim($latest->body ?? '');
+                        $latestPreviewText = $cleaned ?: '↩ Forwarded message';
+                    } else {
+                        $latestPreviewText = $latest->body ?? '';
+                    }
+                }
+                $latestPreviewShort = \Illuminate\Support\Str::limit($latestPreviewText, 30);
+              @endphp
               <p class="conv-preview"
                  id="conv-preview-{{ $conversation->id }}"
-                 data-last-preview="@if($latest){{ $latest->deleted_at ? 'This message was deleted' : ($latest->type !== 'text' ? ($latest->type === 'image' ? '📷 Image' : '📎 File') : \Illuminate\Support\Str::limit($latest->body, 30)) }}@endif">
+                 data-last-preview="@if($latest){{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}@endif">
                 @php
                   $convDraft = $draftBodies[(string) $conversation->id] ?? null;
                 @endphp
@@ -245,9 +263,9 @@
                 @elseif($latest)
                   @if($isMineLatest)
                     @include('livewire.chat.partials.tick', ['status' => $latest->deliveryStatus()])
-                    <span>{{ $latest->deleted_at ? 'This message was deleted' : ($latest->type !== 'text' ? ($latest->type === 'image' ? '📷 Image' : '📎 File') : \Illuminate\Support\Str::limit($latest->body, 30)) }}</span>
+                    <span>{{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}</span>
                   @else
-                    <span>{{ $latest->deleted_at ? 'This message was deleted' : ($latest->type !== 'text' ? ($latest->type === 'image' ? '📷 Image' : '📎 File') : \Illuminate\Support\Str::limit($latest->body, 30)) }}</span>
+                    <span>{{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}</span>
                   @endif
                 @else
                   <span class="conv-preview-placeholder">Click to open chat</span>
@@ -378,14 +396,6 @@
                 <div class="msg-sender-name">{{ $message->sender->name }}</div>
               @endif
 
-              {{-- Forwarded label --}}
-              @if($message->forwarded_from_id && !$message->deleted_at)
-              <div class="fwd-label {{ $isMine ? 'fwd-label--mine' : '' }}">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
-                Forwarded
-              </div>
-              @endif
-
               {{-- Bubble --}}
               <div class="msg-bubble {{ $isMine ? 'bubble-mine' : 'bubble-theirs' }} {{ $message->deleted_at ? 'bubble-deleted' : '' }}">
 
@@ -418,7 +428,60 @@
                   </button>
                   @endif
 
-                  {{-- ── Message content ── --}}
+                  {{-- Forwarded card inside bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
+                  @if($message->forwarded_from_id && $message->forwardedFrom)
+                  {{-- Optional text above the forwarded card.
+                       For text messages: strip original body in case of legacy merged data.
+                       For image/file: body IS the optional text (no stripping needed). --}}
+                  @php
+                    if (in_array($message->type, ['image', 'file'])) {
+                        // body holds only the optional text
+                        $extraOnly = trim($message->body ?? '');
+                    } else {
+                        // text forward: strip original body suffix for legacy merged data
+                        $fwdOriginalBody = $message->forwardedFrom->body ?? '';
+                        $extraOnly = $message->body
+                            ? trim(str_replace(["\n" . $fwdOriginalBody, $fwdOriginalBody], '', $message->body))
+                            : '';
+                    }
+                  @endphp
+                  @if($extraOnly)
+                    <p class="fwd-extra-text">{{ $extraOnly }}</p>
+                  @endif
+                  <div class="fwd-chat-card">
+                    <div class="fwd-chat-card-header">
+                      <svg class="fwd-chat-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
+                      <div class="fwd-chat-avatar">{{ strtoupper(substr($message->forwardedFrom->sender?->name ?? '?', 0, 1)) }}</div>
+                      <span class="fwd-chat-sender">{{ $message->forwardedFrom->sender?->name ?? 'Unknown' }}</span>
+                      <span class="fwd-chat-time">{{ $message->forwardedFrom->created_at->format('n/j/Y g:i A') }}</span>
+                    </div>
+                    <div class="fwd-chat-body">
+                      @if($message->forwardedFrom->deleted_at)
+                        <em>This message was deleted</em>
+                      @elseif($message->type === 'image')
+                        {{-- Show the actual forwarded image --}}
+                        <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
+                          <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
+                        </a>
+                      @elseif($message->type === 'file')
+                        {{-- Show the actual forwarded file download --}}
+                        <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
+                          <span class="msg-file-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          </span>
+                          <span class="msg-file-name">{{ $message->fileName() }}</span>
+                          <span class="msg-file-dl">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          </span>
+                        </a>
+                      @else
+                        {{ \Illuminate\Support\Str::limit($message->forwardedFrom->body, 300) }}
+                      @endif
+                    </div>
+                  </div>
+                  @else
+
+                  {{-- Regular message content --}}
                   @if($message->type === 'image')
                     <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
                       <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
@@ -440,7 +503,7 @@
                   @else
                     <span>{{ $message->body }}</span>
                   @endif
-
+                  @endif
                 @endif
 
                 {{-- Timestamp + ticks — hidden by default, visible on hover via CSS --}}
@@ -459,30 +522,93 @@
 
               </div>{{-- /bubble --}}
 
-              {{-- Message Actions (hover menu) --}}
+              {{-- ── Teams-style message action bar (hover) ── --}}
               @if(!$message->deleted_at)
-              <div class="msg-actions {{ $isMine ? 'msg-actions--mine' : 'msg-actions--theirs' }}">
-                <button type="button" class="msg-action-btn" title="Reply"
-                        wire:click="setReply({{ $message->id }})"
-                        aria-label="Reply">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              <div class="msg-actions {{ $isMine ? 'msg-actions--mine' : 'msg-actions--theirs' }}"
+                   data-msg-id="{{ $message->id }}">
+
+                {{-- Quick-react emojis --}}
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="👍" title="👍 Thumbs up" aria-label="React with thumbs up">👍</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="❤️" title="❤️ Heart"     aria-label="React with heart">❤️</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="😆" title="😆 Haha"      aria-label="React with haha">😆</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="😮" title="😮 Wow"       aria-label="React with wow">😮</button>
+
+                {{-- Emoji picker trigger --}}
+                <button type="button" class="msg-action-btn msg-emoji-picker-btn"
+                        data-msg-id="{{ $message->id }}"
+                        title="More reactions"
+                        aria-label="Open emoji picker"
+                        aria-expanded="false">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 13s1.5 2 4 2 4-2 4-2"/>
+                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                    <line x1="15" y1="9" x2="15.01" y2="9"/>
+                  </svg>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true" style="margin-left:-2px;margin-top:4px;">
+                    <circle cx="12" cy="12" r="12"/>
+                    <line x1="12" y1="6" x2="12" y2="18" stroke="white" stroke-width="2.5"/>
+                    <line x1="6" y1="12" x2="18" y2="12" stroke="white" stroke-width="2.5"/>
+                  </svg>
                 </button>
-                <button type="button" class="msg-action-btn msg-action-btn--react" title="React"
-                        aria-label="React">
-                  <span style="font-size:13px;line-height:1;">🙂</span>
-                </button>
-                <button type="button" class="msg-action-btn" title="Forward"
-                        wire:click="openForwardModal({{ $message->id }})">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
-                </button>
-                @if($isMine)
-                <button type="button" class="msg-action-btn msg-action-btn--delete" title="Delete"
-                        wire:click="deleteMessage({{ $message->id }})"
-                        onclick="return confirm('Delete this message?')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+
+                {{-- Separator --}}
+                <span class="msg-actions-sep" aria-hidden="true"></span>
+
+                {{-- Edit (own messages, text only) --}}
+                @if($isMine && $message->type === 'text')
+                <button type="button" class="msg-action-btn" title="Edit message" aria-label="Edit message"
+                        onclick="window._startEditMessage && window._startEditMessage({{ $message->id }}, {{ json_encode($message->body) }})">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
                 </button>
                 @endif
+
+                {{-- Three-dot / More options --}}
+                <div class="msg-more-wrap">
+                  <button type="button" class="msg-action-btn msg-more-btn"
+                          title="More options"
+                          aria-label="More options"
+                          aria-expanded="false"
+                          data-msg-id="{{ $message->id }}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                      <circle cx="5"  cy="12" r="2"/>
+                      <circle cx="12" cy="12" r="2"/>
+                      <circle cx="19" cy="12" r="2"/>
+                    </svg>
+                  </button>
+
+                  {{-- Dropdown menu --}}
+                  <div class="msg-more-menu" role="menu" aria-hidden="true">
+                    <button type="button" class="msg-more-item" role="menuitem"
+                            wire:click="setReply({{ $message->id }})"
+                            onclick="window._closeAllMsgMenus()">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      Reply
+                    </button>
+                    <button type="button" class="msg-more-item" role="menuitem"
+                            wire:click="openForwardModal({{ $message->id }})"
+                            onclick="window._closeAllMsgMenus()">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 9l5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
+                      Forward
+                    </button>
+                    @if($isMine)
+                    <div class="msg-more-divider" role="separator"></div>
+                    <button type="button" class="msg-more-item msg-more-item--danger" role="menuitem"
+                            wire:click="deleteMessage({{ $message->id }})"
+                            onclick="if(!confirm('Delete this message?'))event.stopImmediatePropagation(); window._closeAllMsgMenus()">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      Delete
+                    </button>
+                    @endif
+                  </div>
+                </div>
+
               </div>
+
+              {{-- Emoji picker panel (one shared, positioned by JS) --}}
               @endif
 
             </div>{{-- /msg-body-wrap --}}
@@ -521,6 +647,7 @@
         </div>
 
         <div id="scroll-anchor" aria-hidden="true"></div>
+
       </div>
 
       {{-- Input Area --}}
@@ -635,49 +762,157 @@
 </div>
 
 {{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      FORWARD MODAL
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 @if($showForwardModal)
 <div class="modal-backdrop" wire:click.self="closeForwardModal" role="dialog" aria-modal="true" aria-label="Forward message">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 class="modal-title">Forward message</h3>
+  <div class="fwd-modal-box">
+
+    {{-- Header --}}
+    <div class="fwd-modal-header">
+      <div>
+        <h3 class="fwd-modal-title">Forward this message</h3>
+        <p class="fwd-modal-subtitle">You can forward to any conversation.</p>
+      </div>
       <button type="button" class="modal-close" wire:click="closeForwardModal" aria-label="Close">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
     </div>
 
-    {{-- Optional extra text --}}
-    <div class="modal-extra-text">
-      <input type="text" wire:model="forwardExtraText"
-             placeholder="Add a message… (optional)"
-             class="modal-search-input">
+    {{-- Recipient section --}}
+    <div class="fwd-modal-section">
+      <label class="fwd-modal-label">
+        Add recipients <span class="fwd-modal-required" aria-hidden="true">*</span>
+      </label>
+
+      @if(!empty($forwardSelectedTarget))
+        {{-- Selected chip --}}
+        <div class="fwd-recipients-box">
+          <div class="fwd-chip">
+            <div class="fwd-chip-avatar">
+              @if(!empty($forwardSelectedTarget['avatar_url']))
+                <img src="{{ $forwardSelectedTarget['avatar_url'] }}" alt="{{ $forwardSelectedTarget['other_name'] }}" class="fwd-chip-avatar-img">
+              @else
+                {{ $forwardSelectedTarget['other_initial'] }}
+              @endif
+            </div>
+            <span class="fwd-chip-name">{{ $forwardSelectedTarget['other_name'] }}</span>
+            <button type="button" class="fwd-chip-remove" wire:click="removeForwardTarget" aria-label="Remove {{ $forwardSelectedTarget['other_name'] }}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      @else
+        {{-- Search input --}}
+        <div class="fwd-modal-search-wrap">
+          <svg class="fwd-modal-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text"
+                 wire:model.live.debounce.200ms="forwardSearch"
+                 placeholder="Search by name&hellip;"
+                 class="fwd-modal-search-input"
+                 autofocus
+                 autocomplete="off"
+                 aria-label="Search conversations">
+        </div>
+
+        @if(strlen(trim($forwardSearch)) > 0)
+        <div class="fwd-modal-list" role="listbox" aria-label="Conversation list">
+          @forelse($forwardTargets as $target)
+            <button type="button"
+                    class="fwd-modal-conv-item"
+                    wire:click="selectForwardTarget({{ $target['id'] }})"
+                    role="option"
+                    aria-label="Select {{ $target['other_name'] }}">
+              <div class="fwd-modal-conv-avatar">
+                @if(!empty($target['avatar_url']))
+                  <img src="{{ $target['avatar_url'] }}" alt="{{ $target['other_name'] }}" class="fwd-modal-conv-avatar-img">
+                @else
+                  {{ $target['other_initial'] }}
+                @endif
+              </div>
+              <span class="fwd-modal-conv-name">{{ $target['other_name'] }}</span>
+              <svg class="fwd-modal-conv-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+          @empty
+            <p class="fwd-modal-empty">No conversations match &ldquo;{{ $forwardSearch }}&rdquo;</p>
+          @endforelse
+        </div>
+        @endif
+      @endif
     </div>
 
-    <div class="modal-search">
-      <input type="text" wire:model.live.debounce.200ms="forwardSearch"
-             placeholder="Search conversations…"
-             class="modal-search-input" autofocus>
-    </div>
+    {{-- Message preview --}}
+    @if(!empty($forwardingMessagePreview))
+    <div class="fwd-modal-preview-section">
+      <div class="fwd-modal-label">Message preview</div>
+      <div class="fwd-modal-preview-wrap">
+        <input type="text"
+               wire:model.defer="forwardExtraText"
+               placeholder="Add a message (optional)"
+               class="fwd-modal-extra-input"
+               autocomplete="off">
 
-    <div class="modal-list">
-      {{-- $forwardTargets is a plain array: ['id', 'other_name', 'other_initial'] --}}
-      @forelse($forwardTargets as $target)
-        <button type="button" class="modal-conv-item" wire:click="forwardTo({{ $target['id'] }})">
-          <div class="modal-conv-avatar">{{ $target['other_initial'] }}</div>
-          <div class="modal-conv-name">{{ $target['other_name'] }}</div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
+        <div class="fwd-modal-msg-card">
+          <div class="fwd-modal-msg-card-header">
+            <svg class="fwd-msg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/>
+            </svg>
+            <div class="fwd-modal-msg-avatar">{{ $forwardingMessagePreview['sender_initial'] }}</div>
+            <span class="fwd-modal-msg-sender">{{ $forwardingMessagePreview['sender_name'] }}</span>
+            <span class="fwd-modal-msg-time">{{ $forwardingMessagePreview['sent_at'] }}</span>
+          </div>
+          <div class="fwd-modal-msg-body">
+            @if($forwardingMessagePreview['type'] === 'image')
+              <span class="fwd-modal-msg-media">&#128247; Image</span>
+            @elseif($forwardingMessagePreview['type'] === 'file')
+              <span class="fwd-modal-msg-media">&#128206; File</span>
+            @elseif($forwardingMessagePreview['body'])
+              {{ \Illuminate\Support\Str::limit($forwardingMessagePreview['body'], 120) }}
+            @else
+              <em class="fwd-modal-msg-deleted">This message was deleted</em>
+            @endif
+          </div>
+        </div>
+      </div>
+    </div>
+    @endif
+
+    {{-- Footer --}}
+    <div class="fwd-modal-footer">
+      <button type="button" class="fwd-modal-btn fwd-modal-btn--cancel" wire:click="closeForwardModal">
+        Cancel
+      </button>
+      @if(!empty($forwardSelectedTarget))
+        <button type="button"
+                class="fwd-modal-btn fwd-modal-btn--forward fwd-modal-btn--active"
+                wire:click="forwardTo({{ $forwardSelectedTarget['id'] }})"
+                wire:loading.attr="disabled"
+                wire:loading.class="fwd-modal-btn--loading">
+          <span wire:loading.remove wire:target="forwardTo({{ $forwardSelectedTarget['id'] }})">Forward</span>
+          <span wire:loading wire:target="forwardTo({{ $forwardSelectedTarget['id'] }})">Sending&hellip;</span>
         </button>
-      @empty
-        <p class="modal-empty">No conversations found.</p>
-      @endforelse
+      @else
+        <button type="button" class="fwd-modal-btn fwd-modal-btn--forward" disabled aria-disabled="true">
+          Forward
+        </button>
+      @endif
     </div>
+
   </div>
 </div>
 @endif
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      USER PROFILE CARD MODAL
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="userProfileCardOverlay"
      class="upc-overlay"
      style="display:none"

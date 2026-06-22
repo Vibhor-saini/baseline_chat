@@ -1141,4 +1141,267 @@
         if (uid) window._openUserProfileCard(uid);
     });
 
+    /* ═══════════════════════════════════════════════════════════════════════
+     | TEAMS-STYLE MESSAGE ACTION BAR
+     | Three-dot dropdown + emoji picker + quick-react
+     ════════════════════════════════════════════════════════════════════════*/
+
+    /* ── Emoji data by category ──────────────────────────────────────── */
+    const EMOJI_CATS = {
+        recent:  [],   // populated from localStorage
+        smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','🤡','👹','👺','💩','👻','💀','☠️'],
+        hand:    ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃'],
+        nature:  ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🐊','🐙','🦑','🦐','🦞','🦀','🐡','🐟','🐠','🐬','🐳','🐋','🦈','🐊','🌸','🌺','🌻','🌹','🌷','🌼','🌾','🍀','🌿','🍃','🍂','🍁','🌱','🌲','🌳','🌴','🌵','🌾','🍄'],
+        food:    ['🍎','🍊','🍋','🍇','🍓','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🍆','🥦','🥒','🌽','🥕','🧄','🧅','🥔','🍠','🌮','🌯','🥙','🧆','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🥨','🧀','🥗','🥘','🍲','🍜','🍝','🍛','🍣','🍱','🍤','🦐','🦞','🦀','🦑','🍙','🍚','🍘','🍥','🥮','🍡','🧁','🎂','🍰','🍦','🍧','🍨','🍩','🍪','🍫','🍬','🍭','🍮','☕','🧃','🥤','🧋','🍵','🍺','🥂','🍷'],
+        objects: ['⌚','📱','💻','🖥','⌨️','🖨','🖱','💾','💿','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🧭','⏱','⏲','⏰','🕰','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯','💰','💳','💎','🔧','🔨','⚒️','🛠','⛏','🔩','🔗','🧰','🗡','⚔️','🛡','🔒','🔓','🔑','🗝','🔐','🔏','📜','📋','📄','📃','📊','📈','📉','🗒','📅','📆','🗑','📂','🗂','✂️','📌','📍','✒️','🖊','🖋','✏️','📝','📏','📐','📦','📫','📬','📭','📮','📯','📣','🔔','🔕'],
+        symbols: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☯️','🕉','☪️','🔯','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📵','🚳','🚭','🚯','🚱','🚷','💯','✅','❎','🆗','🆙','🆒','🆕','🆓','🔟','🔠','🔡','🔢','🔣','🔤','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','✨','💥','❗','❓'],
+    };
+
+    const MEP_RECENT_KEY = 'mep_recent_emojis';
+    const MEP_RECENT_MAX = 32;
+
+    function mepGetRecent() {
+        try { return JSON.parse(localStorage.getItem(MEP_RECENT_KEY) || '[]'); } catch { return []; }
+    }
+
+    function mepAddRecent(emoji) {
+        let r = mepGetRecent().filter(e => e !== emoji);
+        r.unshift(emoji);
+        if (r.length > MEP_RECENT_MAX) r = r.slice(0, MEP_RECENT_MAX);
+        try { localStorage.setItem(MEP_RECENT_KEY, JSON.stringify(r)); } catch {}
+    }
+
+    let _mepCurrentMsgId = null;
+    let _mepCurrentCat   = 'recent';
+
+    function mepRenderGrid(cat, filter) {
+        const grid  = document.getElementById('msgEmojiGrid');
+        const label = document.querySelector('.mep-section-label');
+        if (!grid) return;
+
+        let emojis;
+        if (filter && filter.trim()) {
+            // Simple text search across all categories
+            emojis = Object.values(EMOJI_CATS).flat().filter((e, i, a) => a.indexOf(e) === i);
+            // No name data — just show all when filtering (user sees all emojis to pick)
+        } else if (cat === 'recent') {
+            emojis = mepGetRecent();
+            if (!emojis.length) {
+                emojis = ['👍','❤️','😆','😮','😢','😡','🎉','👏'];
+            }
+        } else {
+            emojis = EMOJI_CATS[cat] || [];
+        }
+
+        if (label) label.textContent = filter ? 'Search results' : (cat === 'recent' ? 'Recent' : cat.charAt(0).toUpperCase() + cat.slice(1));
+
+        grid.innerHTML = emojis.map(e =>
+            `<button type="button" class="mep-emoji-btn" data-emoji="${e}" title="${e}" aria-label="${e}">${e}</button>`
+        ).join('');
+    }
+
+    function mepOpen(triggerBtn) {
+        const picker = document.getElementById('msgEmojiPicker');
+        if (!picker) return;
+
+        _mepCurrentMsgId = triggerBtn.dataset.msgId || null;
+
+        // Position picker above the trigger button
+        const rect = triggerBtn.getBoundingClientRect();
+        picker.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+        picker.style.top  = (rect.top - 360 + window.scrollY) + 'px';
+        if (parseFloat(picker.style.top) < 8) picker.style.top = '8px';
+
+        picker.classList.add('is-open');
+        picker.removeAttribute('aria-hidden');
+        triggerBtn.setAttribute('aria-expanded', 'true');
+
+        _mepCurrentCat = 'recent';
+        mepRenderGrid('recent', '');
+        const search = document.getElementById('msgEmojiSearch');
+        if (search) { search.value = ''; search.focus(); }
+
+        // Highlight active cat
+        document.querySelectorAll('.mep-cat').forEach(b => b.classList.toggle('mep-cat--active', b.dataset.cat === 'recent'));
+    }
+
+    function mepClose() {
+        const picker = document.getElementById('msgEmojiPicker');
+        if (!picker) return;
+        picker.classList.remove('is-open');
+        picker.setAttribute('aria-hidden', 'true');
+        document.querySelectorAll('.msg-emoji-picker-btn[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+        _mepCurrentMsgId = null;
+    }
+
+    /* ── Three-dot menu ──────────────────────────────────────────────── */
+    window._closeAllMsgMenus = function () {
+        document.querySelectorAll('.msg-more-menu.is-open').forEach(m => {
+            m.classList.remove('is-open');
+            const btn = m.closest('.msg-more-wrap')?.querySelector('.msg-more-btn');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
+    };
+
+    /* ── Bubble hover → show/hide action bar (Teams behaviour) ────── */
+    // Use mouseenter/mouseleave on both bubble and bar with a shared delay timer
+    // so moving the mouse from the bubble into the bar doesn't cause a flash-hide.
+    let _msgActionsHideTimer = null;
+
+    function showMsgActions(actionsEl) {
+        clearTimeout(_msgActionsHideTimer);
+        // Hide all other bars first
+        document.querySelectorAll('.msg-actions.is-visible').forEach(el => {
+            if (el !== actionsEl) el.classList.remove('is-visible');
+        });
+        actionsEl.classList.add('is-visible');
+    }
+
+    function hideMsgActions(actionsEl, immediate) {
+        if (immediate) {
+            actionsEl.classList.remove('is-visible');
+            return;
+        }
+        clearTimeout(_msgActionsHideTimer);
+        _msgActionsHideTimer = setTimeout(() => {
+            actionsEl.classList.remove('is-visible');
+        }, 300);  // 300 ms grace period — enough to move mouse from bubble to bar
+    }
+
+    // Use event delegation on the messages container
+    const _msgContainer = document.getElementById('messages-container') || document.body;
+
+    _msgContainer.addEventListener('mouseenter', (e) => {
+        // Entering the bubble
+        const bubble = e.target.closest('.msg-bubble');
+        if (!bubble) return;
+        const wrap    = bubble.closest('.msg-body-wrap');
+        const actions = wrap?.querySelector('.msg-actions');
+        if (actions) showMsgActions(actions);
+    }, true);
+
+    _msgContainer.addEventListener('mouseleave', (e) => {
+        // Leaving the bubble — start hide timer
+        const bubble = e.target.closest('.msg-bubble');
+        if (!bubble) return;
+        const wrap    = bubble.closest('.msg-body-wrap');
+        const actions = wrap?.querySelector('.msg-actions');
+        if (actions) hideMsgActions(actions);
+    }, true);
+
+    _msgContainer.addEventListener('mouseenter', (e) => {
+        // Entering the action bar — cancel hide timer
+        const actions = e.target.closest('.msg-actions');
+        if (!actions) return;
+        clearTimeout(_msgActionsHideTimer);
+        actions.classList.add('is-visible');
+    }, true);
+
+    _msgContainer.addEventListener('mouseleave', (e) => {
+        // Leaving the action bar — start hide timer
+        const actions = e.target.closest('.msg-actions');
+        if (!actions) return;
+        hideMsgActions(actions);
+    }, true);
+
+    // Also hide all bars when a menu or picker closes
+    function hideAllMsgActions() {
+        clearTimeout(_msgActionsHideTimer);
+        document.querySelectorAll('.msg-actions.is-visible').forEach(el => {
+            el.classList.remove('is-visible');
+        });
+    }
+
+    window._hideAllMsgActions = hideAllMsgActions;
+    document.addEventListener('click', (e) => {
+        // Three-dot toggle
+        const moreBtn = e.target.closest('.msg-more-btn');
+        if (moreBtn) {
+            e.stopPropagation();
+            const menu    = moreBtn.closest('.msg-more-wrap')?.querySelector('.msg-more-menu');
+            const isOpen  = menu?.classList.contains('is-open');
+            window._closeAllMsgMenus();
+            mepClose();
+            if (menu && !isOpen) {
+                menu.classList.add('is-open');
+                moreBtn.setAttribute('aria-expanded', 'true');
+            }
+            return;
+        }
+
+        // Emoji picker open
+        const emojiBtn = e.target.closest('.msg-emoji-picker-btn');
+        if (emojiBtn) {
+            e.stopPropagation();
+            const picker = document.getElementById('msgEmojiPicker');
+            const isOpen = picker?.classList.contains('is-open') && _mepCurrentMsgId === emojiBtn.dataset.msgId;
+            window._closeAllMsgMenus();
+            if (isOpen) { mepClose(); } else { mepOpen(emojiBtn); }
+            return;
+        }
+
+        // Emoji selected from picker
+        const emojiPickerBtn = e.target.closest('.mep-emoji-btn');
+        if (emojiPickerBtn) {
+            e.stopPropagation();
+            const emoji = emojiPickerBtn.dataset.emoji;
+            if (emoji) {
+                mepAddRecent(emoji);
+                // TODO: wire up actual reaction when backend supports it
+                console.log('[Emoji] Selected:', emoji, 'for message:', _mepCurrentMsgId);
+            }
+            mepClose();
+            return;
+        }
+
+        // Quick-react emoji click
+        const quickReact = e.target.closest('.msg-quick-react');
+        if (quickReact) {
+            e.stopPropagation();
+            const emoji = quickReact.dataset.emoji;
+            const msgId = quickReact.closest('.msg-actions')?.dataset.msgId;
+            if (emoji) mepAddRecent(emoji);
+            console.log('[Emoji] Quick-react:', emoji, 'for message:', msgId);
+            return;
+        }
+
+        // Emoji picker category
+        const catBtn = e.target.closest('.mep-cat');
+        if (catBtn) {
+            e.stopPropagation();
+            _mepCurrentCat = catBtn.dataset.cat;
+            document.querySelectorAll('.mep-cat').forEach(b => b.classList.toggle('mep-cat--active', b === catBtn));
+            mepRenderGrid(_mepCurrentCat, '');
+            const search = document.getElementById('msgEmojiSearch');
+            if (search) search.value = '';
+            return;
+        }
+
+        // Click outside — close everything
+        const insidePicker = e.target.closest('#msgEmojiPicker');
+        const insideMenu   = e.target.closest('.msg-more-menu');
+        const insideBar    = e.target.closest('.msg-actions');
+        if (!insidePicker) mepClose();
+        if (!insideMenu)   window._closeAllMsgMenus();
+        if (!insideBar && !insidePicker && !insideMenu) window._hideAllMsgActions && window._hideAllMsgActions();
+    });
+
+    // Emoji search
+    document.addEventListener('input', (e) => {
+        if (e.target.id === 'msgEmojiSearch') {
+            mepRenderGrid(_mepCurrentCat, e.target.value);
+        }
+    });
+
+    // Close picker on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { mepClose(); window._closeAllMsgMenus(); }
+    });
+
+    /* ── Edit message stub ───────────────────────────────────────────── */
+    window._startEditMessage = function (msgId, currentBody) {
+        // Placeholder — full edit feature to be added later
+        console.log('[Edit] Message', msgId, ':', currentBody);
+    };
+
 })();
