@@ -18,6 +18,7 @@ class Message extends Model
         'is_read',
         'delivered_at',
         'read_at',
+        'edited_at',
         'forwarded_from_id',
         'reply_to_id',
     ];
@@ -25,6 +26,7 @@ class Message extends Model
     protected $casts = [
         'delivered_at' => 'datetime',
         'read_at'      => 'datetime',
+        'edited_at'    => 'datetime',
         'deleted_at'   => 'datetime',
         'is_read'      => 'boolean',
     ];

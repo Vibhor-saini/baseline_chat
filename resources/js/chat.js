@@ -1398,10 +1398,46 @@
         if (e.key === 'Escape') { mepClose(); window._closeAllMsgMenus(); }
     });
 
-    /* ── Edit message stub ───────────────────────────────────────────── */
+    /* ── Edit message ────────────────────────────────────────────────── */
     window._startEditMessage = function (msgId, currentBody) {
-        // Placeholder — full edit feature to be added later
-        console.log('[Edit] Message', msgId, ':', currentBody);
+        const $wire = getChatComponent();
+        if (!$wire) return;
+        $wire.call('startEdit', msgId);
+
+        // Auto-focus the textarea after Livewire re-renders
+        setTimeout(() => {
+            const ta = document.getElementById(`msg-edit-input-${msgId}`);
+            if (ta) {
+                ta.focus();
+                // Move cursor to end
+                ta.setSelectionRange(ta.value.length, ta.value.length);
+                // Auto-resize
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+            }
+        }, 80);
     };
+
+    // Auto-resize edit textarea on input + submit on Enter (Shift+Enter = newline)
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('msg-edit-input')) {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.classList.contains('msg-edit-input')) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const $wire = getChatComponent();
+                if ($wire) $wire.call('updateMessage');
+            }
+            if (e.key === 'Escape') {
+                const $wire = getChatComponent();
+                if ($wire) $wire.call('cancelEdit');
+            }
+        }
+    });
 
 })();

@@ -86,6 +86,10 @@ class Index extends Component
     /** Per-conversation draft bodies — keyed by conversation ID */
     public array $draftBodies = [];
 
+    /** Edit message state ─────────────────── */
+    public ?int   $editingMessageId = null;
+    public string $editBody         = '';
+
     public string $search       = '';
     public bool   $showRequests = false;
 
@@ -620,9 +624,62 @@ class Index extends Component
 
     /*
     |--------------------------------------------------------------------------
-    | FORWARD MESSAGE
+    | EDIT MESSAGE
     |--------------------------------------------------------------------------
     */
+
+    /** Called from JS to enter edit mode for a message. */
+    public function startEdit(int $messageId): void
+    {
+        $message = Message::where('id', $messageId)
+            ->where('sender_id', auth()->id())
+            ->where('type', 'text')
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (! $message) return;
+
+        $this->editingMessageId = $messageId;
+        $this->editBody         = $message->body ?? '';
+    }
+
+    /** Save the edited message body. */
+    public function updateMessage(): void
+    {
+        if (! $this->editingMessageId) return;
+
+        $message = Message::where('id', $this->editingMessageId)
+            ->where('sender_id', auth()->id())
+            ->where('type', 'text')
+            ->whereNull('deleted_at')
+            ->firstOrFail();
+
+        $newBody = trim($this->editBody);
+        if ($newBody === '') return; // don't allow empty
+
+        $message->update([
+            'body'      => $newBody,
+            'edited_at' => now(),
+        ]);
+
+        // Update in-memory array so the UI reflects changes immediately
+        foreach ($this->messages as $i => $msg) {
+            if ($msg->id === $this->editingMessageId) {
+                $this->messages[$i]->body      = $newBody;
+                $this->messages[$i]->edited_at = now();
+                break;
+            }
+        }
+
+        $this->cancelEdit();
+    }
+
+    /** Cancel edit mode without saving. */
+    public function cancelEdit(): void
+    {
+        $this->editingMessageId = null;
+        $this->editBody         = '';
+    }
 
     public function openForwardModal(int $messageId): void
     {
