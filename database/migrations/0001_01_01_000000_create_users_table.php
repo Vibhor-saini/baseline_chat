@@ -27,17 +27,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('messages', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('sender_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('receiver_id')->constrained('users')->onDelete('cascade');
-            $table->text('message')->nullable();
-            $table->string('file_path')->nullable();
-            $table->string('file_type')->nullable(); // image, file, etc.
-            $table->boolean('is_read')->default(false);
-            $table->timestamps();
-        });
-
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
