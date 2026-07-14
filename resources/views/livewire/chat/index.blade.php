@@ -670,8 +670,7 @@
                     @if($isMine)
                     <div class="msg-more-divider" role="separator"></div>
                     <button type="button" class="msg-more-item msg-more-item--danger" role="menuitem"
-                            wire:click="deleteMessage({{ $message->id }})"
-                            onclick="if(!confirm('Delete this message?'))event.stopImmediatePropagation(); window._closeAllMsgMenus()">
+                            onclick="window._openDeleteConfirm({{ $message->id }}); window._closeAllMsgMenus()">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                       Delete
                     </button>
@@ -1019,6 +1018,44 @@
 
     {{-- Status quote --}}
     <div class="upc-quote" id="upcQuote" style="display:none"></div>
+  </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════
+     DELETE CONFIRMATION MODAL
+══════════════════════════════════════════════════════ --}}
+<div id="deleteConfirmOverlay"
+     class="del-confirm-overlay"
+     style="display:none"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="delConfirmTitle"
+     onclick="if(event.target===this) window._closeDeleteConfirm()">
+  <div class="del-confirm-box">
+    <div class="del-confirm-icon" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6"/><path d="M14 11v6"/>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+    </div>
+    <h3 class="del-confirm-title" id="delConfirmTitle">Delete message?</h3>
+    <p class="del-confirm-body">This message will be deleted for everyone. This action cannot be undone.</p>
+    <div class="del-confirm-actions">
+      <button type="button" class="del-confirm-btn del-confirm-btn--cancel" onclick="window._closeDeleteConfirm()">
+        Cancel
+      </button>
+      <button type="button" class="del-confirm-btn del-confirm-btn--delete" id="delConfirmDeleteBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+        Delete
+      </button>
+    </div>
   </div>
 </div>
 

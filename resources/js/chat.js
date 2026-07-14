@@ -70,13 +70,19 @@
     let _sidebarTypingTimer    = null;
     let _activeConvIdForTyping = null;
 
-    function showTypingIndicator(userName, conversationId) {
+    function showTypingIndicator(userName, conversationId, avatarUrl) {
         _activeConvIdForTyping = String(conversationId);
         const row    = document.getElementById('typing-indicator-row');
         const avatar = document.getElementById('typing-indicator-avatar');
         const label  = document.getElementById('typing-indicator-label');
         if (row) {
-            if (avatar) avatar.textContent = userName ? userName.charAt(0).toUpperCase() : '?';
+            if (avatar) {
+                if (avatarUrl) {
+                    avatar.innerHTML = `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                } else {
+                    avatar.textContent = userName ? userName.charAt(0).toUpperCase() : '?';
+                }
+            }
             if (label)  label.textContent  = `${userName} is typing…`;
             row.style.display = '';
             row.setAttribute('aria-label', `${userName} is typing`);
@@ -330,6 +336,20 @@
                     initialsDiv.insertBefore(img, initialsDiv.firstChild);
                     initialsDiv.id = ''; initialsDiv.classList.add('profile-avatar--has-img');
                     initialsDiv.removeAttribute('data-user-id');
+                }
+
+                // ── Nav-rail bottom-left avatar ───────────────────────────
+                const navRailImg = document.getElementById('navRailAvatarImg');
+                const navRailInitials = document.getElementById('navRailAvatarInitials');
+                if (navRailImg) {
+                    navRailImg.src = avatarUrl;
+                } else if (navRailInitials) {
+                    // First upload — replace initials span with img
+                    const img = document.createElement('img');
+                    img.src = avatarUrl; img.alt = name || '';
+                    img.id = 'navRailAvatarImg';
+                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
+                    navRailInitials.replaceWith(img);
                 }
             }
 
@@ -661,7 +681,7 @@
                     console.log('[Chat] user.typing received:', event);
                     clearTimeout(_remoteTypingTimer);
                     if (event.isTyping) {
-                        showTypingIndicator(event.userName, currentConversationId);
+                        showTypingIndicator(event.userName, currentConversationId, event.avatarUrl || '');
                         _remoteTypingTimer = setTimeout(() => hideTypingIndicator(), 4000);
                     } else {
                         hideTypingIndicator();
@@ -691,10 +711,46 @@
 
         Livewire.hook('commit', ({ component, commit, succeed }) => {
             succeed(() => {
+                const calls = commit?.calls ?? [];
+
+                // Only scroll to bottom for commits that genuinely need it.
+                // Destructive/neutral actions (delete, edit, reactions, status
+                // changes, sidebar refreshes) should never steal the scroll position.
+                const SCROLL_METHODS = new Set([
+                    'sendMessage',
+                    'forwardTo',
+                    'appendMessage',
+                    'selectConversation',
+                    'acceptRequest',
+                ]);
+                const NO_SCROLL_METHODS = new Set([
+                    'deleteMessage',
+                    'handleRemoteDelete',
+                    'updateMessage',
+                    'startEdit',
+                    'cancelEdit',
+                    'reactToMessage',
+                    'loadConversations',
+                    'refreshConversationData',
+                    'refreshPendingData',
+                    'broadcastTyping',
+                    'markConversationRead',
+                    'cancelReply',
+                    'openForwardModal',
+                    'closeForwardModal',
+                    'removeForwardTarget',
+                    'selectForwardTarget',
+                ]);
+
+                const shouldScroll = calls.length === 0
+                    ? false  // internal/reactive update — don't scroll
+                    : calls.some(c => SCROLL_METHODS.has(c.method)) &&
+                      !calls.some(c => NO_SCROLL_METHODS.has(c.method));
+
                 requestAnimationFrame(() => {
                     detectAndConnectConversation();
                     attachTypingListener();
-                    scrollToBottom(true);
+                    if (shouldScroll) scrollToBottom(true);
                     if (window._applyPresence) window._applyPresence();
                     cacheSidebarPreviews();
 
@@ -734,7 +790,7 @@
                     // All panel elements via single helper
                     applyPanelStatus(currentStatus);
                 });
-                const calls = commit?.calls ?? [];
+
                 const wasSend = calls.some(c => c.method === 'sendMessage' || c.method === 'forwardTo');
                 if (wasSend) {
                     setTimeout(() => window._checkAndMarkDelivered && window._checkAndMarkDelivered(), 100);
@@ -1049,6 +1105,50 @@
         away:      '#ffb547',
         dnd:       '#ff5f72',
     };
+
+    /* ── Delete confirmation modal ───────────────────────────────────────── */
+    let _pendingDeleteId = null;
+
+    window._openDeleteConfirm = function (messageId) {
+        _pendingDeleteId = messageId;
+        const overlay = document.getElementById('deleteConfirmOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        // Focus the cancel button for keyboard accessibility
+        setTimeout(() => {
+            const cancelBtn = overlay.querySelector('.del-confirm-btn--cancel');
+            if (cancelBtn) cancelBtn.focus();
+        }, 50);
+    };
+
+    window._closeDeleteConfirm = function () {
+        _pendingDeleteId = null;
+        const overlay = document.getElementById('deleteConfirmOverlay');
+        if (!overlay) return;
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.style.display = 'none'; overlay.style.opacity = ''; }, 160);
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const deleteBtn = document.getElementById('delConfirmDeleteBtn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                if (_pendingDeleteId === null) return;
+                const component = getChatComponent();
+                if (component) {
+                    component.call('deleteMessage', _pendingDeleteId);
+                }
+                window._closeDeleteConfirm();
+            });
+        }
+
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('deleteConfirmOverlay')?.style.display !== 'none') {
+                window._closeDeleteConfirm();
+            }
+        });
+    });
 
     window._closeUserProfileCard = function () {
         const overlay = document.getElementById('userProfileCardOverlay');

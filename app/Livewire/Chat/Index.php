@@ -935,6 +935,9 @@ class Index extends Component
             $this->selectedConversation->id,
             auth()->id(),
             auth()->user()->name,
+            auth()->user()->profile_image
+                ? \Illuminate\Support\Facades\Storage::url(auth()->user()->profile_image)
+                : '',
             $isTyping,
             $recipientId,
         ))->toOthers();

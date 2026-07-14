@@ -875,8 +875,16 @@
                 </button>
             </form>
 
-            <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}"
+                 id="navRailProfile">
+                @if(auth()->user()->profile_image)
+                    <img src="{{ Storage::url(auth()->user()->profile_image) }}"
+                         alt="{{ auth()->user()->name }}"
+                         id="navRailAvatarImg"
+                         style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">
+                @else
+                    <span id="navRailAvatarInitials">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                @endif
                 {{-- Self dot — always online while logged in --}}
                 <span class="presence presence-online" aria-hidden="true"></span>
             </div>
