@@ -1345,10 +1345,10 @@
         if (emojiPickerBtn) {
             e.stopPropagation();
             const emoji = emojiPickerBtn.dataset.emoji;
-            if (emoji) {
+            if (emoji && _mepCurrentMsgId) {
                 mepAddRecent(emoji);
-                // TODO: wire up actual reaction when backend supports it
-                console.log('[Emoji] Selected:', emoji, 'for message:', _mepCurrentMsgId);
+                const $wire = getChatComponent();
+                if ($wire) $wire.call('toggleReaction', parseInt(_mepCurrentMsgId), emoji);
             }
             mepClose();
             return;
@@ -1360,8 +1360,11 @@
             e.stopPropagation();
             const emoji = quickReact.dataset.emoji;
             const msgId = quickReact.closest('.msg-actions')?.dataset.msgId;
-            if (emoji) mepAddRecent(emoji);
-            console.log('[Emoji] Quick-react:', emoji, 'for message:', msgId);
+            if (emoji && msgId) {
+                mepAddRecent(emoji);
+                const $wire = getChatComponent();
+                if ($wire) $wire.call('toggleReaction', parseInt(msgId), emoji);
+            }
             return;
         }
 

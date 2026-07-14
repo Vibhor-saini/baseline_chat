@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Message;
 use App\Models\Conversation;
+use App\Models\MessageReaction;
 use App\Events\MessageSent;
 use App\Events\MessageDelivered;
 use App\Events\MessageRead;
@@ -295,7 +296,7 @@ class Index extends Component
 
         $this->messages = Message::withTrashed()
             ->where('conversation_id', $conversationId)
-            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender'])
+            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender', 'reactions.user'])
             ->latest()
             ->take(50)
             ->get()
@@ -679,6 +680,55 @@ class Index extends Component
     {
         $this->editingMessageId = null;
         $this->editBody         = '';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | EMOJI REACTIONS
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Toggle a reaction on a message.
+     * If the user already reacted with this emoji → remove it.
+     * If not → add it.
+     * Then reload the reactions for that message in the in-memory array.
+     */
+    public function toggleReaction(int $messageId, string $emoji): void
+    {
+        if (! $this->selectedConversationId) return;
+
+        $emoji = mb_substr(trim($emoji), 0, 10); // sanitise length
+        if ($emoji === '') return;
+
+        $userId   = auth()->id();
+        $existing = MessageReaction::where('message_id', $messageId)
+            ->where('user_id', $userId)
+            ->where('emoji', $emoji)
+            ->first();
+
+        if ($existing) {
+            $existing->delete();
+        } else {
+            MessageReaction::create([
+                'message_id' => $messageId,
+                'user_id'    => $userId,
+                'emoji'      => $emoji,
+            ]);
+        }
+
+        // Refresh the reactions on the in-memory message so the blade re-renders
+        foreach ($this->messages as $i => $msg) {
+            if ($msg->id === $messageId) {
+                $this->messages[$i]->setRelation(
+                    'reactions',
+                    MessageReaction::where('message_id', $messageId)
+                        ->with('user:id,name')
+                        ->get()
+                );
+                break;
+            }
+        }
     }
 
     public function openForwardModal(int $messageId): void

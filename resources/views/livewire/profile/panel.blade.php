@@ -139,7 +139,7 @@
             <label class="pp-field-label" for="profileNameInput">Display Name</label>
             <input type="text"
                    id="profileNameInput"
-                   wire:model.defer="name"
+                   wire:model="name"
                    class="pp-input {{ $errors->has('name') ? 'pp-input--error' : '' }}"
                    placeholder="Your name"
                    maxlength="60"

@@ -3802,31 +3802,56 @@
 }
 
 /* ════════════════════════════════════════════════════════
-   EMOJI REACTION STUB (placeholder for future reactions)
+   EMOJI REACTION PILLS (below message bubble)
    ════════════════════════════════════════════════════════ */
 
 .msg-reactions {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    padding: 2px 4px 0;
+    padding: 4px 2px 0;
 }
 
 .reaction-pill {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    padding: 2px 7px;
+    padding: 2px 8px 2px 6px;
     background: var(--bg-overlay);
     border: 1px solid var(--border-dim);
     border-radius: 999px;
-    font-size: .75rem;
+    font-size: .8rem;
     cursor: pointer;
-    transition: background .12s;
+    transition: background .12s, border-color .12s, transform .1s;
+    line-height: 1.4;
+    user-select: none;
 }
 
-.reaction-pill:hover { background: var(--bg-hover); border-color: var(--border-accent); }
-.reaction-pill.mine  { background: var(--accent-dim); border-color: var(--border-accent); }
+.reaction-pill:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-accent);
+    transform: scale(1.08);
+}
+
+.reaction-pill.mine {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+}
+
+.reaction-pill.mine:hover {
+    background: rgba(124,92,252,.2);
+}
+
+.reaction-count {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 10px;
+}
+
+.reaction-pill.mine .reaction-count {
+    color: var(--accent-bright);
+}
 
 
 /* ════════════════════════════════════════════════════════

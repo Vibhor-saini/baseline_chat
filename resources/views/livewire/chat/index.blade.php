@@ -570,6 +570,31 @@
 
               </div>{{-- /bubble --}}
 
+              {{-- ── Reaction pills ── --}}
+              @if(!$message->deleted_at && $message->reactions && count($message->reactions) > 0)
+              @php
+                $reactionGroups = [];
+                foreach ($message->reactions as $r) {
+                    $reactionGroups[$r->emoji] = $reactionGroups[$r->emoji] ?? ['count' => 0, 'mine' => false, 'users' => []];
+                    $reactionGroups[$r->emoji]['count']++;
+                    $reactionGroups[$r->emoji]['users'][] = $r->user->name ?? '';
+                    if ($r->user_id === auth()->id()) $reactionGroups[$r->emoji]['mine'] = true;
+                }
+              @endphp
+              <div class="msg-reactions" id="reactions-{{ $message->id }}">
+                @foreach($reactionGroups as $emoji => $data)
+                <button type="button"
+                        class="reaction-pill {{ $data['mine'] ? 'mine' : '' }}"
+                        wire:click="toggleReaction({{ $message->id }}, '{{ $emoji }}')"
+                        title="{{ implode(', ', $data['users']) }}"
+                        aria-label="{{ $emoji }} {{ $data['count'] }} reaction{{ $data['count'] !== 1 ? 's' : '' }}">
+                  <span>{{ $emoji }}</span>
+                  <span class="reaction-count">{{ $data['count'] }}</span>
+                </button>
+                @endforeach
+              </div>
+              @endif
+
               {{-- ── Teams-style message action bar (hover) ── --}}
               @if(!$message->deleted_at && $editingMessageId !== $message->id)
               <div class="msg-actions {{ $isMine ? 'msg-actions--mine' : 'msg-actions--theirs' }}"

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\MessageReaction;
 
 class Message extends Model
 {
@@ -59,6 +60,11 @@ class Message extends Model
     public function replyTo()
     {
         return $this->belongsTo(Message::class, 'reply_to_id')->withTrashed();
+    }
+
+    public function reactions()
+    {
+        return $this->hasMany(MessageReaction::class);
     }
 
     /*
