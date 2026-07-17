@@ -48,7 +48,21 @@ class Index extends Component
         session()->flash('success', 'User deleted successfully.');
     }
 
-    // ── Open reset modal ─────────────────────────────────
+    // ── Toggle active/inactive ───────────────────────────
+    public function toggleActive(int $userId): void
+    {
+        $user = User::findOrFail($userId);
+
+        if ($user->id === auth()->id()) {
+            session()->flash('error', 'You cannot disable your own account.');
+            return;
+        }
+
+        $user->update(['is_active' => ! $user->is_active]);
+
+        $status = $user->is_active ? 'enabled' : 'disabled';
+        session()->flash('success', "{$user->name}'s account has been {$status}.");
+    }
     public function openResetModal(int $userId): void
     {
         $user = User::findOrFail($userId);

@@ -237,6 +237,33 @@
 
         .act-btn-reset:hover { background: rgba(255,179,71,.22); }
 
+        .act-btn-enable {
+            background: rgba(87,199,90,.1);
+            color: #57c75a;
+        }
+
+        .act-btn-enable:hover { background: rgba(87,199,90,.22); }
+
+        .act-btn-disable {
+            background: rgba(224,91,91,.08);
+            color: #e05b5b;
+        }
+
+        .act-btn-disable:hover { background: rgba(224,91,91,.2); }
+
+        /* Status badge */
+        .badge-active {
+            background: rgba(87,199,90,.12);
+            color: #57c75a;
+            border: 1px solid rgba(87,199,90,.3);
+        }
+
+        .badge-inactive {
+            background: rgba(224,91,91,.1);
+            color: #e05b5b;
+            border: 1px solid rgba(224,91,91,.3);
+        }
+
         /* ── Reset Password Modal ─────────────────── */
         .rp-backdrop {
             position: fixed; inset: 0;
@@ -438,13 +465,15 @@
                             <th>User</th>
                             <th class="col-email">Email</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th class="col-joined">Joined</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($users as $user)
-                        <tr>
+                        <tr style="{{ ! $user->is_active ? 'opacity:.55;' : '' }}"
+                            wire:key="user-{{ $user->id }}">
                             <td>
                                 <div class="user-cell">
                                     <div class="user-avatar"
@@ -465,6 +494,19 @@
                                     <span class="badge badge-user">User</span>
                                 @endif
                             </td>
+                            <td>
+                                @if($user->is_active)
+                                    <span class="badge badge-active">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="12"/></svg>
+                                        Active
+                                    </span>
+                                @else
+                                    <span class="badge badge-inactive">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="12"/></svg>
+                                        Disabled
+                                    </span>
+                                @endif
+                            </td>
                             <td class="td-muted col-joined">{{ $user->created_at->diffForHumans() }}</td>
                             <td>
                                 <div class="actions-cell">
@@ -479,6 +521,21 @@
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                         Reset PW
                                     </button>
+                                    @if($user->id !== auth()->id())
+                                    <button
+                                        wire:click="toggleActive({{ $user->id }})"
+                                        wire:confirm="{{ $user->is_active ? 'Disable ' . $user->name . '\'s account? They will be logged out immediately.' : 'Enable ' . $user->name . '\'s account?' }}"
+                                        class="act-btn {{ $user->is_active ? 'act-btn-disable' : 'act-btn-enable' }}"
+                                        title="{{ $user->is_active ? 'Disable account' : 'Enable account' }}">
+                                        @if($user->is_active)
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            Disable
+                                        @else
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Enable
+                                        @endif
+                                    </button>
+                                    @endif
                                     <button
                                         wire:click="delete({{ $user->id }})"
                                         wire:confirm="Are you sure you want to delete {{ $user->name }}?"
