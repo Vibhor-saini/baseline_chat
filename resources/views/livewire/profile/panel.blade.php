@@ -217,6 +217,92 @@
 
     </div>
 
+    {{-- ── Divider ─────────────────────────────────────────────────── --}}
+    <div class="pp-divider" aria-hidden="true"></div>
+
+    {{-- ── Change Password ────────────────────────────────────────── --}}
+    <div class="pp-section pp-section--password">
+
+        <button type="button" class="pp-pw-toggle" wire:click="togglePasswordSection" aria-expanded="{{ $showPasswordSection ? 'true' : 'false' }}">
+            <span class="pp-pw-toggle-left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                Change Password
+            </span>
+            <svg class="pp-pw-chevron {{ $showPasswordSection ? 'pp-pw-chevron--open' : '' }}"
+                 width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M6 9l6 6 6-6"/>
+            </svg>
+        </button>
+
+        @if($showPasswordSection)
+        <div class="pp-pw-form" wire:key="pw-form">
+
+            {{-- Password changed success --}}
+            @if($passwordSuccess)
+            <div class="pp-alert pp-alert--success" role="status" aria-live="polite">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                {{ $passwordSuccess }}
+            </div>
+            @endif
+
+            <div class="pp-field">
+                <label class="pp-field-label" for="ppCurrentPw">Current Password</label>
+                <input type="password"
+                       id="ppCurrentPw"
+                       wire:model="currentPassword"
+                       class="pp-input {{ $errors->has('currentPassword') ? 'pp-input--error' : '' }}"
+                       placeholder="Your current password"
+                       autocomplete="current-password">
+                @error('currentPassword')
+                    <p class="pp-field-error" role="alert">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="pp-field">
+                <label class="pp-field-label" for="ppNewPw">New Password</label>
+                <input type="password"
+                       id="ppNewPw"
+                       wire:model="newPasswordField"
+                       class="pp-input {{ $errors->has('newPasswordField') ? 'pp-input--error' : '' }}"
+                       placeholder="Min. 8 characters"
+                       autocomplete="new-password">
+                @error('newPasswordField')
+                    <p class="pp-field-error" role="alert">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div class="pp-field">
+                <label class="pp-field-label" for="ppConfirmPw">Confirm New Password</label>
+                <input type="password"
+                       id="ppConfirmPw"
+                       wire:model="confirmPasswordField"
+                       class="pp-input {{ $errors->has('confirmPasswordField') ? 'pp-input--error' : '' }}"
+                       placeholder="Repeat new password"
+                       autocomplete="new-password">
+                @error('confirmPasswordField')
+                    <p class="pp-field-error" role="alert">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <button type="button"
+                    wire:click="changePassword"
+                    wire:loading.attr="disabled"
+                    class="pp-pw-submit-btn">
+                <span wire:loading.remove wire:target="changePassword">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                    Update Password
+                </span>
+                <span wire:loading wire:target="changePassword">Updating…</span>
+            </button>
+
+        </div>
+        @endif
+
+    </div>
+
     {{-- ── Footer: Sign out ────────────────────────────────────────── --}}
     <div class="pp-footer">
         <form method="POST" action="{{ route('logout') }}">
