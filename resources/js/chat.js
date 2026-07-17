@@ -426,6 +426,20 @@
     document.addEventListener('DOMContentLoaded', () => scrollToBottom());
     document.addEventListener('livewire:navigated', () => scrollToBottom());
 
+    /* ── Livewire dispatch events → guaranteed scroll ─────────────────────── */
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('scroll-to-bottom', () => setTimeout(() => scrollToBottom(true), 80));
+        Livewire.on('message-sent',     () => {
+            setTimeout(() => scrollToBottom(true), 80);
+            // Reset textarea height after message sends
+            const input = document.getElementById('messageInput');
+            if (input) {
+                input.style.removeProperty('height');
+                input.style.overflowY = 'hidden';
+            }
+        });
+    });
+
     /* ═══════════════════════════════════════════════════════════════════════
      | LIVEWIRE INIT — all realtime wiring
      ════════════════════════════════════════════════════════════════════════*/
@@ -895,6 +909,45 @@
         if (!input || input._typingListenerAttached) return;
         input._typingListenerAttached = true;
 
+        /* ── Auto-resize textarea (JS fallback for browsers without field-sizing:content) ── */
+        function autoResize(el) {
+            // Remove height constraint momentarily so scrollHeight is accurate
+            el.style.removeProperty('height');
+            el.style.removeProperty('overflow-y');
+            const natural = el.scrollHeight;
+            const max     = 200;
+            if (natural <= max) {
+                el.style.height    = natural + 'px';
+                el.style.overflowY = 'hidden';
+            } else {
+                el.style.height    = max + 'px';
+                el.style.overflowY = 'auto';
+            }
+        }
+
+        // Run once on attach so initial height is correct
+        autoResize(input);
+
+        // Resize on every input event
+        input.addEventListener('input', () => autoResize(input));
+
+        // Reset height after send — called by Livewire message-sent event
+        input._resetHeight = () => {
+            input.style.removeProperty('height');
+            input.style.removeProperty('overflow-y');
+            // Let it settle to natural single-line height
+            requestAnimationFrame(() => autoResize(input));
+        };
+
+        // Livewire clears value after send; re-run resize
+        document.addEventListener('livewire:update', () => {
+            const ta = document.getElementById('messageInput');
+            if (ta && (!ta.value || ta.value === '')) {
+                ta.style.removeProperty('height');
+                ta.style.overflowY = 'hidden';
+            }
+        });
+
         input.addEventListener('input', () => {
             const component = getChatComponent();
             if (!component) return;
@@ -911,7 +964,15 @@
         });
 
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) stopTypingNow();
+            // Enter (without Shift) → submit the form / send message
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                stopTypingNow();
+                const component = getChatComponent();
+                if (component) component.call('sendMessage');
+                return;
+            }
+            // Shift+Enter → allow default (new line in textarea)
         });
     }
 
@@ -921,9 +982,40 @@
             if (input) input.focus();
         }
         attachTypingListener();
+        attachInputEmojiBtnListener();
     });
-    document.addEventListener('livewire:navigated', () => attachTypingListener());
-    document.addEventListener('DOMContentLoaded',   () => attachTypingListener());
+    document.addEventListener('livewire:navigated', () => { attachTypingListener(); attachInputEmojiBtnListener(); });
+    document.addEventListener('DOMContentLoaded',   () => { attachTypingListener(); attachInputEmojiBtnListener(); });
+
+    function attachInputEmojiBtnListener() {
+        const btn = document.getElementById('inputEmojiBtn');
+        if (!btn || btn._emojiListenerAttached) return;
+        btn._emojiListenerAttached = true;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const picker = document.getElementById('msgEmojiPicker');
+            const isOpen = picker?.classList.contains('is-open') && _mepCurrentMsgId === null;
+            mepClose();
+            window._closeAllMsgMenus();
+            if (!isOpen) {
+                // Open picker anchored to the button, null msgId = input mode
+                _mepCurrentMsgId = null;
+                const rect = btn.getBoundingClientRect();
+                if (picker) {
+                    picker.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+                    picker.style.top  = (rect.top - 360 + window.scrollY) + 'px';
+                    if (parseFloat(picker.style.top) < 8) picker.style.top = '8px';
+                    picker.classList.add('is-open');
+                    picker.removeAttribute('aria-hidden');
+                    _mepCurrentCat = 'recent';
+                    mepRenderGrid('recent', '');
+                    const search = document.getElementById('msgEmojiSearch');
+                    if (search) { search.value = ''; search.focus(); }
+                    document.querySelectorAll('.mep-cat').forEach(b => b.classList.toggle('mep-cat--active', b.dataset.cat === 'recent'));
+                }
+            }
+        });
+    }
 
     /* ── Mobile sidebar UX ───────────────────────────────────────────────── */
     document.addEventListener('click', (e) => {
@@ -1104,6 +1196,15 @@
         busy:      '#ff5f72',
         away:      '#ffb547',
         dnd:       '#ff5f72',
+        offline:   '#4e4e6e',
+    };
+
+    const STATUS_LABELS_UPC = {
+        available: 'Available',
+        busy:      'Busy',
+        away:      'Away',
+        dnd:       'Do Not Disturb',
+        offline:   'Offline',
     };
 
     /* ── Delete confirmation modal ───────────────────────────────────────── */
@@ -1182,7 +1283,23 @@
             if (!resp.ok) throw new Error('Failed to load profile');
             const user = await resp.json();
 
-            const color = STATUS_COLORS_UPC[user.status] || STATUS_COLORS_UPC.available;
+            // ── Online check ─────────────────────────────────────────────
+            // Authoritative source: live presence Set (window._onlineUserIds).
+            // DB fallback (user.is_online_db) used only if presence Set not yet
+            // populated (e.g. Echo hasn't fired 'here' yet on first load).
+            const presenceSet   = window._onlineUserIds;
+            const isOnlineNow   = presenceSet
+                ? presenceSet.has(String(userId))
+                : user.is_online_db;
+
+            // If user is online, show their real saved status.
+            // If offline, always show 'offline' regardless of saved status.
+            const resolvedStatus = isOnlineNow
+                ? (user.db_status || user.status || 'available')
+                : 'offline';
+
+            const color = STATUS_COLORS_UPC[resolvedStatus] || STATUS_COLORS_UPC.offline;
+            const label = STATUS_LABELS_UPC[resolvedStatus] || 'Offline';
 
             // Avatar
             const avatarImg      = document.getElementById('upcAvatarImg');
@@ -1200,7 +1317,10 @@
 
             // Status ring
             const ring = document.getElementById('upcStatusRing');
-            if (ring) { ring.style.background = color; ring.style.boxShadow = `0 0 8px ${color}`; }
+            if (ring) {
+                ring.style.background = color;
+                ring.style.boxShadow  = isOnlineNow ? `0 0 8px ${color}` : 'none';
+            }
 
             // Name
             document.getElementById('upcName').textContent = user.name;
@@ -1208,13 +1328,13 @@
             // Status dot + label
             const dot = document.getElementById('upcStatusDot');
             dot.style.background = color;
-            dot.style.boxShadow  = `0 0 5px ${color}`;
-            document.getElementById('upcStatusLabel').textContent = user.status_label;
+            dot.style.boxShadow  = isOnlineNow ? `0 0 5px ${color}` : 'none';
+            document.getElementById('upcStatusLabel').textContent = label;
             document.getElementById('upcStatusLabel').style.color = color;
 
-            // Quote
+            // Quote — only show when user is online (offline users show no active status)
             const quoteEl = document.getElementById('upcQuote');
-            if (user.status_quote && user.status_quote.trim()) {
+            if (isOnlineNow && user.status_quote && user.status_quote.trim()) {
                 quoteEl.textContent   = user.status_quote;
                 quoteEl.style.display = 'block';
             } else {
@@ -1446,9 +1566,24 @@
             e.stopPropagation();
             const emoji = emojiPickerBtn.dataset.emoji;
             if (emoji && _mepCurrentMsgId) {
+                // Reaction mode — send reaction to message
                 mepAddRecent(emoji);
                 const $wire = getChatComponent();
                 if ($wire) $wire.call('toggleReaction', parseInt(_mepCurrentMsgId), emoji);
+            } else if (emoji && !_mepCurrentMsgId) {
+                // Input mode — insert emoji into message input
+                mepAddRecent(emoji);
+                const input = document.getElementById('messageInput');
+                if (input) {
+                    const start = input.selectionStart ?? input.value.length;
+                    const end   = input.selectionEnd   ?? input.value.length;
+                    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+                    // Sync to Livewire
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    // Restore cursor after emoji
+                    const newPos = start + emoji.length;
+                    requestAnimationFrame(() => { input.setSelectionRange(newPos, newPos); input.focus(); });
+                }
             }
             mepClose();
             return;
@@ -1542,5 +1677,337 @@
             }
         }
     });
+
+    /* ════════════════════════════════════════════════════════
+       LINK POPUP MENU
+       ════════════════════════════════════════════════════════ */
+    (function () {
+        let _popup     = null;
+        let _currentHref = '';
+
+        function getPopup() {
+            if (!_popup) _popup = document.getElementById('linkPopupMenu');
+            return _popup;
+        }
+
+        function closePopup() {
+            const p = getPopup();
+            if (p) p.style.display = 'none';
+            _currentHref = '';
+        }
+
+        window._openLinkMenu = function (e, anchor) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const p = getPopup();
+            if (!p) return;
+
+            _currentHref = anchor.dataset.href || anchor.href || '';
+
+            // Populate URL label
+            const urlEl = document.getElementById('linkPopupUrl');
+            if (urlEl) urlEl.textContent = _currentHref;
+
+            // Position near click, keep within viewport
+            p.style.display = 'block';
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const pw = p.offsetWidth  || 240;
+            const ph = p.offsetHeight || 120;
+            let x = e.clientX, y = e.clientY + 8;
+            if (x + pw > vw - 12) x = vw - pw - 12;
+            if (y + ph > vh - 12) y = e.clientY - ph - 8;
+            p.style.left = `${Math.max(8, x)}px`;
+            p.style.top  = `${Math.max(8, y)}px`;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const popup = getPopup();
+            if (!popup) return;
+
+            document.getElementById('linkPopupOpen')?.addEventListener('click', () => {
+                if (_currentHref) window.open(_currentHref, '_blank', 'noopener,noreferrer');
+                closePopup();
+            });
+
+            document.getElementById('linkPopupCopy')?.addEventListener('click', () => {
+                if (!_currentHref) return;
+                navigator.clipboard.writeText(_currentHref).then(() => {
+                    const btn = document.getElementById('linkPopupCopy');
+                    const origHTML = btn.innerHTML;
+                    btn.classList.add('link-popup-item--copied');
+                    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+                    setTimeout(() => {
+                        btn.classList.remove('link-popup-item--copied');
+                        btn.innerHTML = origHTML;
+                        closePopup();
+                    }, 1200);
+                }).catch(() => closePopup());
+            });
+
+            // Close on outside click or Escape
+            document.addEventListener('click', (e) => {
+                if (popup.style.display !== 'none' && !popup.contains(e.target)) closePopup();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && popup.style.display !== 'none') closePopup();
+            });
+        });
+    })();
+
+    /* ════════════════════════════════════════════════════════
+       IMAGE LIGHTBOX  — Teams-style
+       ════════════════════════════════════════════════════════ */
+    (function () {
+        let _images  = [];
+        let _current = 0;
+        let _zoom    = 1;
+        const ZOOM_STEP = 0.25, ZOOM_MAX = 4, ZOOM_MIN = 0.25;
+
+        function collectImages() {
+            _images = [];
+            document.querySelectorAll('.msg-img-wrap[data-lightbox-src]').forEach(a => {
+                _images.push({
+                    src:    a.dataset.lightboxSrc,
+                    sender: a.dataset.lightboxSender || '',
+                    time:   a.dataset.lightboxTime   || '',
+                    msgId:  a.dataset.lightboxMsgid  || '',
+                });
+            });
+        }
+
+        function setZoom(z) {
+            _zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+            const img = document.getElementById('ilbMainImg');
+            if (img) img.style.transform = `scale(${_zoom})`;
+        }
+
+        function loadImage(index) {
+            if (!_images.length) return;
+            _current = ((index % _images.length) + _images.length) % _images.length;
+            const item = _images[_current];
+
+            const img = document.getElementById('ilbMainImg');
+            if (img) { img.src = item.src; img.alt = item.sender; }
+            setZoom(1);
+
+            const senderEl = document.getElementById('ilbSender');
+            const metaEl   = document.getElementById('ilbMeta');
+            if (senderEl) senderEl.textContent = item.sender;
+            if (metaEl)   metaEl.textContent   = `Image · ${item.time}`;
+
+            const dlBtn = document.getElementById('ilbDownload');
+            if (dlBtn) { dlBtn.href = item.src; dlBtn.download = `image_${item.msgId || 'download'}`; }
+
+            const showMsgBtn = document.getElementById('ilbShowMsg');
+            if (showMsgBtn) showMsgBtn.dataset.msgId = item.msgId || '';
+
+            const prev = document.getElementById('ilbPrev');
+            const next = document.getElementById('ilbNext');
+            if (prev) prev.disabled = _images.length <= 1;
+            if (next) next.disabled = _images.length <= 1;
+
+            document.querySelectorAll('.ilb-thumb').forEach((th, i) => {
+                th.classList.toggle('ilb-thumb-active', i === _current);
+            });
+            const activeThumb = document.querySelector('.ilb-thumb.ilb-thumb-active');
+            if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        function buildStrip() {
+            const strip = document.getElementById('ilbStrip');
+            if (!strip) return;
+            strip.innerHTML = '';
+            _images.forEach((item, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'ilb-thumb';
+                btn.setAttribute('aria-label', `Image ${i + 1}`);
+                btn.innerHTML = `<img src="${item.src}" alt="" loading="lazy">`;
+                btn.addEventListener('click', () => loadImage(i));
+                strip.appendChild(btn);
+            });
+        }
+
+        window._openLightbox = function (src, msgId) {
+            collectImages();
+            const idx = _images.findIndex(im => im.msgId == msgId);
+            buildStrip();
+            const overlay = document.getElementById('imgLightboxOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loadImage(idx >= 0 ? idx : 0);
+        };
+
+        function closeLightbox() {
+            const overlay = document.getElementById('imgLightboxOverlay');
+            if (!overlay) return;
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display  = 'none';
+                overlay.style.opacity  = '';
+                document.body.style.overflow = '';
+                setZoom(1);
+            }, 160);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('imgLightboxOverlay');
+            if (!overlay) return;
+
+            document.getElementById('ilbBack')?.addEventListener('click', closeLightbox);
+            document.getElementById('ilbPrev')?.addEventListener('click', () => loadImage(_current - 1));
+            document.getElementById('ilbNext')?.addEventListener('click', () => loadImage(_current + 1));
+            document.getElementById('ilbZoomIn')?.addEventListener('click',  () => setZoom(_zoom + ZOOM_STEP));
+            document.getElementById('ilbZoomOut')?.addEventListener('click', () => setZoom(_zoom - ZOOM_STEP));
+
+            document.getElementById('ilbShowMsg')?.addEventListener('click', () => {
+                const msgId = document.getElementById('ilbShowMsg').dataset.msgId;
+                closeLightbox();
+                if (msgId) {
+                    setTimeout(() => {
+                        const el = document.getElementById(`msg-${msgId}`);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            el.classList.add('msg-highlight');
+                            setTimeout(() => el.classList.remove('msg-highlight'), 1800);
+                        }
+                    }, 220);
+                }
+            });
+
+            overlay.addEventListener('wheel', (e) => {
+                if (overlay.style.display === 'none') return;
+                e.preventDefault();
+                setZoom(_zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+            }, { passive: false });
+
+            document.addEventListener('keydown', (e) => {
+                if (!overlay || overlay.style.display === 'none') return;
+                if (e.key === 'ArrowLeft')  { e.preventDefault(); loadImage(_current - 1); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); loadImage(_current + 1); }
+                if (e.key === 'Escape')     { e.preventDefault(); closeLightbox(); }
+                if (e.key === '+' || e.key === '=') setZoom(_zoom + ZOOM_STEP);
+                if (e.key === '-')                  setZoom(_zoom - ZOOM_STEP);
+            });
+        });
+    })();
+
+    /* ════════════════════════════════════════════════════════
+       TEAMS-STYLE UPLOAD CARD
+       Shows an animated progress card while Livewire uploads
+       an attachment, then hides once Livewire re-renders the
+       server-side @if($attachment) card.
+       ════════════════════════════════════════════════════════ */
+    (function () {
+        const IMAGE_MIMES = /^image\//i;
+
+        function getCard()    { return document.getElementById('teamsUploadCard'); }
+        function getBar()     { return document.getElementById('teamsUploadBar'); }
+        function getNameEl()  { return document.getElementById('teamsUploadName'); }
+        function getSubEl()   { return document.getElementById('teamsUploadSub'); }
+        function getIconImg() { return document.querySelector('#teamsUploadCard .tuc-icon-img'); }
+        function getIconDoc() { return document.querySelector('#teamsUploadCard .tuc-icon-doc'); }
+
+        function showCard(fileName, isImage) {
+            const card   = getCard();
+            const nameEl = getNameEl();
+            const subEl  = getSubEl();
+            const bar    = getBar();
+            if (!card) return;
+
+            // Set filename
+            if (nameEl) nameEl.textContent = fileName || 'Uploading…';
+            if (subEl)  subEl.textContent  = 'Uploading…';
+
+            // Show correct icon
+            const iconImg = getIconImg();
+            const iconDoc = getIconDoc();
+            if (iconImg) iconImg.style.display = isImage ? '' : 'none';
+            if (iconDoc) iconDoc.style.display = isImage ? 'none' : '';
+
+            // Start indeterminate shimmer
+            if (bar) {
+                bar.style.width = '';
+                bar.classList.add('teams-upload-bar--indeterminate');
+            }
+
+            card.style.display = 'flex';
+        }
+
+        function setProgress(pct) {
+            const bar = getBar();
+            if (!bar) return;
+            bar.classList.remove('teams-upload-bar--indeterminate');
+            bar.style.width = Math.min(100, pct) + '%';
+        }
+
+        function hideCard() {
+            const card = getCard();
+            if (card) card.style.display = 'none';
+            // Reset bar
+            const bar = getBar();
+            if (bar) {
+                bar.classList.remove('teams-upload-bar--indeterminate');
+                bar.style.width = '0%';
+            }
+        }
+
+        // Wire up Livewire upload lifecycle events (Livewire v3 style)
+        document.addEventListener('livewire:init', () => {
+            Livewire.hook('upload.start', ({ component, name, file }) => {
+                if (name !== 'attachment') return;
+                const isImage = IMAGE_MIMES.test(file.type);
+                showCard(file.name, isImage);
+            });
+
+            Livewire.hook('upload.progress', ({ component, name, progress }) => {
+                if (name !== 'attachment') return;
+                setProgress(progress);
+            });
+
+            Livewire.hook('upload.finish', ({ component, name }) => {
+                if (name !== 'attachment') return;
+                // Fill to 100% briefly, then hide — Livewire will re-render
+                // the server-side card which takes over visually.
+                setProgress(100);
+                const subEl = getSubEl();
+                if (subEl) subEl.textContent = 'Processing…';
+                // Livewire's re-render will show the @if($attachment) card;
+                // hide the JS card shortly after so there's no flash.
+                setTimeout(hideCard, 400);
+            });
+
+            Livewire.hook('upload.error', ({ component, name }) => {
+                if (name !== 'attachment') return;
+                hideCard();
+            });
+        });
+
+        // Also handle cancel click on the uploading card
+        document.addEventListener('DOMContentLoaded', () => {
+            const cancelBtn = document.getElementById('teamsUploadRemoveUploading');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    // Cancel the Livewire upload
+                    const $wire = getChatComponent();
+                    if ($wire) {
+                        try { $wire.cancelUpload('attachment'); } catch (_) {}
+                        $wire.$set('attachment', null);
+                    }
+                    hideCard();
+                });
+            }
+        });
+
+        // Hide the JS card whenever Livewire re-renders (attachment state changes)
+        document.addEventListener('livewire:update', () => {
+            // If the server-side @if($attachment) card is now visible, we no
+            // longer need the JS uploading card.
+            const doneCard = document.querySelector('.teams-upload-card--done');
+            if (doneCard) hideCard();
+        });
+    })();
 
 })();

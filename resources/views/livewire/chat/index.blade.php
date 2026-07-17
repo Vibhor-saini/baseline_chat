@@ -460,7 +460,9 @@
                         <em>This message was deleted</em>
                       @elseif($message->type === 'image')
                         {{-- Show the actual forwarded image --}}
-                        <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
+                        <a href="javascript:void(0)"
+                           class="msg-img-wrap"
+                           onclick="window._openLightbox('{{ $message->fileUrl() }}', {{ $message->id }})">
                           <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
                         </a>
                       @elseif($message->type === 'file')
@@ -483,7 +485,13 @@
 
                   {{-- Regular message content --}}
                   @if($message->type === 'image')
-                    <a href="{{ $message->fileUrl() }}" target="_blank" class="msg-img-wrap">
+                    <a href="javascript:void(0)"
+                       class="msg-img-wrap"
+                       onclick="window._openLightbox('{{ $message->fileUrl() }}', {{ $message->id }})"
+                       data-lightbox-src="{{ $message->fileUrl() }}"
+                       data-lightbox-sender="{{ $isMine ? auth()->user()->name : $message->sender->name }}"
+                       data-lightbox-time="{{ $message->created_at->format('M j, Y g:i A') }}"
+                       data-lightbox-msgid="{{ $message->id }}">
                       <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
                     </a>
                     @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
@@ -545,7 +553,11 @@
                         </div>
                       </div>
                     @else
-                      <span>{{ $message->body }}</span>
+                      <span class="msg-text">{!! preg_replace_callback(
+                          '/https?:\/\/[^\s<>"\']+/i',
+                          fn($m) => '<a class="msg-link" href="' . e($m[0]) . '" data-href="' . e($m[0]) . '" onclick="window._openLinkMenu(event, this)" aria-label="Link: ' . e($m[0]) . '">' . e($m[0]) . '</a>',
+                          e($message->body)
+                      ) !!}</span>
                     @endif
                   @endif
                 @endif
@@ -738,31 +750,114 @@
         </div>
         @endif
 
-        {{-- Attachment preview --}}
+        {{-- Uploading spinner (shown while Livewire is uploading, before $attachment is set) --}}
+        <div class="teams-upload-card" id="teamsUploadCard" style="display:none" aria-live="polite">
+          <div class="teams-upload-icon" id="teamsUploadIcon">
+            {{-- icon swapped by JS based on file type --}}
+            <svg class="tuc-icon-img" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <svg class="tuc-icon-doc" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="display:none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div class="teams-upload-info">
+            <span class="teams-upload-name" id="teamsUploadName">…</span>
+            <span class="teams-upload-sub" id="teamsUploadSub">Uploading…</span>
+          </div>
+          <button type="button" class="teams-upload-remove" id="teamsUploadRemoveUploading" title="Cancel" aria-label="Cancel upload">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div class="teams-upload-bar-wrap">
+            <div class="teams-upload-bar" id="teamsUploadBar"></div>
+          </div>
+        </div>
+
+        {{-- Attachment preview (Teams-style card, shown after upload completes) --}}
         @if($attachment)
-        <div class="attachment-preview">
-          @if(str_starts_with($attachment->getMimeType(), 'image/'))
-            <img src="{{ $attachment->temporaryUrl() }}" alt="Preview" class="attachment-thumb">
-          @else
-            <span class="attachment-file-icon">📎</span>
-            <span class="attachment-file-name">{{ $attachment->getClientOriginalName() }}</span>
-          @endif
-          <button type="button" wire:click="$set('attachment', null)" class="attachment-remove" title="Remove">✕</button>
+        <div class="teams-upload-card teams-upload-card--done" wire:key="attachment-preview">
+          <div class="teams-upload-icon">
+            @if(str_starts_with($attachment->getMimeType(), 'image/'))
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            @else
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            @endif
+          </div>
+          <div class="teams-upload-info">
+            <span class="teams-upload-name">{{ $attachment->getClientOriginalName() }}</span>
+            <span class="teams-upload-sub">Ready to send</span>
+          </div>
+          <button type="button" wire:click="$set('attachment', null)" class="teams-upload-remove" title="Remove" aria-label="Remove attachment">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         @endif
 
         <form wire:submit="sendMessage" class="input-form" enctype="multipart/form-data">
-          {{-- File attach button --}}
-          <label for="fileInput" class="attach-btn" title="Attach file" aria-label="Attach file">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          </label>
-          <input type="file" id="fileInput" wire:model="attachment"
-                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
-                 class="file-input-hidden" aria-label="Attach file">
 
-          <input type="text" wire:model="body" placeholder="Type a message…"
-                 class="message-input" id="messageInput" autocomplete="off" aria-label="Message input">
+          {{-- Text input (textarea for multiline: Shift+Enter = newline, Enter = send) --}}
+          <textarea wire:model="body"
+                    placeholder="Type a message…"
+                    class="message-input"
+                    id="messageInput"
+                    autocomplete="off"
+                    aria-label="Message input"
+                    rows="1"></textarea>
 
+          {{-- Right-side action buttons --}}
+          <div class="input-actions">
+
+            {{-- Emoji --}}
+            <button type="button" class="input-action-btn" id="inputEmojiBtn" title="Emoji" aria-label="Add emoji">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 13s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="15" y1="9" x2="15.01" y2="9" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+
+            {{-- Attach file (PDF / DOC etc.) --}}
+            <label for="fileInputDoc" class="input-action-btn" title="Attach file" aria-label="Attach file">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </label>
+            <input type="file" id="fileInputDoc" wire:model="attachment"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                   class="file-input-hidden" aria-label="Attach document">
+
+            {{-- Attach image --}}
+            <label for="fileInputImg" class="input-action-btn" title="Send image" aria-label="Send image">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </label>
+            <input type="file" id="fileInputImg" wire:model="attachment"
+                   accept="image/*"
+                   class="file-input-hidden" aria-label="Attach image">
+
+          </div>
+
+          {{-- Send --}}
           <button type="submit" class="send-btn" title="Send" aria-label="Send message">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -1019,6 +1114,74 @@
     {{-- Status quote --}}
     <div class="upc-quote" id="upcQuote" style="display:none"></div>
   </div>
+</div>
+
+{{-- ══════════════════════════════════════════════════════
+     IMAGE LIGHTBOX  (Teams-style)
+══════════════════════════════════════════════════════ --}}
+<div id="imgLightboxOverlay" class="ilb-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Image viewer">
+
+  {{-- Top bar --}}
+  <div class="ilb-topbar">
+    <button class="ilb-back" id="ilbBack" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="ilb-topbar-info">
+      <span class="ilb-sender" id="ilbSender"></span>
+      <span class="ilb-meta" id="ilbMeta"></span>
+      <button class="ilb-show-msg" id="ilbShowMsg" aria-label="Show message">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Show message
+      </button>
+    </div>
+    <div class="ilb-topbar-actions">
+      <button class="ilb-action-btn" id="ilbZoomOut" aria-label="Zoom out" title="Zoom out">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </button>
+      <button class="ilb-action-btn" id="ilbZoomIn" aria-label="Zoom in" title="Zoom in">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </button>
+      <div class="ilb-action-sep"></div>
+      <a class="ilb-action-btn" id="ilbDownload" aria-label="Download" title="Download" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+    </div>
+  </div>
+
+  {{-- Main image area --}}
+  <div class="ilb-stage" id="ilbStage">
+    <button class="ilb-nav ilb-prev" id="ilbPrev" aria-label="Previous image">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="ilb-img-wrap" id="ilbImgWrap">
+      <img id="ilbMainImg" src="" alt="" class="ilb-main-img" draggable="false">
+    </div>
+    <button class="ilb-nav ilb-next" id="ilbNext" aria-label="Next image">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+  {{-- Thumbnail strip --}}
+  <div class="ilb-strip-wrap">
+    <div class="ilb-strip" id="ilbStrip"></div>
+  </div>
+
+</div>
+
+{{-- ══════════════════════════════════════════════════════
+     LINK POPUP MENU
+══════════════════════════════════════════════════════ --}}
+<div id="linkPopupMenu" class="link-popup" style="display:none" role="menu" aria-label="Link options">
+  <div class="link-popup-url" id="linkPopupUrl"></div>
+  <div class="link-popup-divider"></div>
+  <button type="button" class="link-popup-item" id="linkPopupOpen" role="menuitem">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Open Link
+  </button>
+  <button type="button" class="link-popup-item" id="linkPopupCopy" role="menuitem">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    Copy Link
+  </button>
 </div>
 
 {{-- ══════════════════════════════════════════════════════

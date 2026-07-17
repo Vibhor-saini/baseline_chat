@@ -376,21 +376,73 @@
         .msg-action-btn:hover { color: var(--text-primary, #eeeef5); background: var(--bg-hover, #212138); }
         .msg-action-btn--delete:hover { color: var(--danger, #ff5f72); background: rgba(255,95,114,.12); }
         .msg-actions-sep { width: 1px; height: 18px; background: var(--border-dim, rgba(255,255,255,.08)); margin: 0 2px; flex-shrink: 0; }
-        /* ── Attachment preview ─────────────────── */
-        .attachment-preview {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 16px;
-            background: var(--surface-2);
-            border-top: 1px solid var(--border);
+        /* ── Teams-style attachment upload card ───── */
+        .teams-upload-card {
+            position: relative;
+            display: flex; align-items: center; gap: 12px;
+            margin: 8px 12px 4px;
+            padding: 10px 12px 14px;
+            background: var(--surface-2, #f3f2f1);
+            border: 1px solid var(--border, #e1dfdd);
+            border-radius: 8px;
+            overflow: hidden;
+            animation: tucFadeIn .18s ease;
         }
-        .attachment-thumb { height: 48px; width: 48px; object-fit: cover; border-radius: 6px; }
-        .attachment-file-name { font-size: .82rem; color: var(--text-2); flex: 1; }
-        .attachment-remove {
-            background: none; border: none; color: var(--text-3);
-            cursor: pointer; font-size: 1rem; padding: 2px 6px;
-            border-radius: 4px; transition: color .15s;
+        @keyframes tucFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .attachment-remove:hover { color: var(--danger); }
+        .teams-upload-icon {
+            flex-shrink: 0;
+            width: 38px; height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface-3, #edebe9);
+            border-radius: 6px;
+            color: var(--text-2, #605e5c);
+        }
+        .teams-upload-info {
+            flex: 1; min-width: 0;
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .teams-upload-name {
+            font-size: .875rem; font-weight: 600;
+            color: var(--text-1, #323130);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .teams-upload-sub {
+            font-size: .78rem; color: var(--text-3, #8a8886);
+        }
+        .teams-upload-remove {
+            flex-shrink: 0;
+            background: none; border: none;
+            color: var(--text-3, #8a8886);
+            cursor: pointer; padding: 4px;
+            border-radius: 4px; display: flex;
+            transition: color .15s, background .15s;
+        }
+        .teams-upload-remove:hover { color: var(--danger, #c4314b); background: rgba(196,49,75,.08); }
+        /* progress bar sits at the very bottom of the card */
+        .teams-upload-bar-wrap {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 3px; background: transparent;
+        }
+        .teams-upload-bar {
+            height: 100%; width: 0%;
+            background: #5b5fc7;
+            border-radius: 0 2px 2px 0;
+            transition: width .2s ease;
+        }
+        /* indeterminate shimmer when progress is unknown */
+        .teams-upload-bar--indeterminate {
+            width: 40% !important;
+            animation: tucShimmer 1.4s ease-in-out infinite;
+        }
+        @keyframes tucShimmer {
+            0%   { transform: translateX(-150%); }
+            100% { transform: translateX(350%); }
+        }
+        /* done state — no bar shown */
+        .teams-upload-card--done .teams-upload-bar-wrap { display: none; }
 
         /* ── File input hidden ──────────────────── */
         .file-input-hidden { display: none; }

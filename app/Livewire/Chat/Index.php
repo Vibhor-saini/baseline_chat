@@ -311,6 +311,7 @@ class Index extends Component
         $this->markMessagesDelivered($conversationId);
         $this->markMessagesRead($conversationId);
         $this->loadConversations();
+        $this->dispatch('scroll-to-bottom');
     }
 
     /**
@@ -541,6 +542,8 @@ class Index extends Component
 
         // Draft sent — remove from store
         unset($this->draftBodies[(string) $this->selectedConversation->id]);
+
+        $this->dispatch('message-sent');
     }
 
     /**
@@ -578,6 +581,7 @@ class Index extends Component
         broadcast(new MessageRead($message->conversation_id, auth()->id(), $now->toISOString(), $message->sender_id));
 
         $this->loadConversations();
+        $this->dispatch('scroll-to-bottom');
     }
 
     /*
