@@ -230,6 +230,148 @@
 
         .act-btn-del:hover { background: rgba(224,91,91,.22); }
 
+        .act-btn-reset {
+            background: rgba(255,179,71,.1);
+            color: #ffb347;
+        }
+
+        .act-btn-reset:hover { background: rgba(255,179,71,.22); }
+
+        /* ── Reset Password Modal ─────────────────── */
+        .rp-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.65);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            animation: rpFadeIn .15s ease;
+        }
+
+        @keyframes rpFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .rp-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 420px;
+            padding: 28px;
+            box-shadow: 0 24px 64px rgba(0,0,0,.5);
+            animation: rpSlideIn .2s cubic-bezier(.16,1,.3,1);
+        }
+
+        @keyframes rpSlideIn {
+            from { opacity: 0; transform: translateY(-12px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .rp-header {
+            display: flex; align-items: flex-start;
+            justify-content: space-between; gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .rp-header-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(255,179,71,.12);
+            border: 1px solid rgba(255,179,71,.25);
+            display: flex; align-items: center; justify-content: center;
+            color: #ffb347; flex-shrink: 0;
+        }
+
+        .rp-header-text h3 {
+            font-size: 1rem; font-weight: 700;
+            color: var(--text-1); margin: 0 0 4px;
+        }
+
+        .rp-header-text p {
+            font-size: .8rem; color: var(--text-2); margin: 0;
+        }
+
+        .rp-close {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-3); padding: 4px;
+            border-radius: 6px; transition: color .15s;
+            flex-shrink: 0;
+        }
+
+        .rp-close:hover { color: var(--danger); }
+
+        .rp-field { margin-bottom: 16px; }
+
+        .rp-field label {
+            display: block;
+            font-size: .75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .06em;
+            color: var(--text-2); margin-bottom: 6px;
+        }
+
+        .rp-field input {
+            width: 100%;
+            background: var(--content-bg);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 10px 13px;
+            color: var(--text-1);
+            font-size: .875rem;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .rp-field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        .rp-field input::placeholder { color: var(--text-3); }
+
+        .rp-field-error {
+            font-size: .76rem; color: #e05b5b;
+            margin-top: 4px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        .rp-actions {
+            display: flex; gap: 10px;
+            margin-top: 24px;
+        }
+
+        .rp-btn-confirm {
+            flex: 1;
+            display: inline-flex; align-items: center;
+            justify-content: center; gap: 7px;
+            background: #ffb347;
+            color: #1a1200;
+            padding: 11px 20px;
+            border-radius: 9px;
+            font-size: .875rem; font-weight: 700;
+            border: none; cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+
+        .rp-btn-confirm:hover {
+            background: #ffc266;
+            transform: translateY(-1px);
+        }
+
+        .rp-btn-cancel {
+            padding: 11px 18px;
+            border-radius: 9px;
+            font-size: .875rem; font-weight: 600;
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            color: var(--text-2); cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .rp-btn-cancel:hover {
+            background: rgba(255,255,255,.09);
+            color: var(--text-1);
+        }
+
         /* Muted text */
         .td-muted { color: var(--text-2); font-size: .8125rem; }
 
@@ -331,6 +473,13 @@
                                         Edit
                                     </a>
                                     <button
+                                        wire:click="openResetModal({{ $user->id }})"
+                                        class="act-btn act-btn-reset"
+                                        title="Reset password for {{ $user->name }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        Reset PW
+                                    </button>
+                                    <button
                                         wire:click="delete({{ $user->id }})"
                                         wire:confirm="Are you sure you want to delete {{ $user->name }}?"
                                         class="act-btn act-btn-del">
@@ -358,5 +507,70 @@
         </div>
 
     </div>
+
+    {{-- ── Reset Password Modal ─────────────────────────── --}}
+    @if($showResetModal)
+    <div class="rp-backdrop" wire:click.self="closeResetModal" role="dialog" aria-modal="true" aria-labelledby="rpModalTitle">
+        <div class="rp-modal">
+
+            <div class="rp-header">
+                <div class="rp-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="rp-header-text">
+                    <h3 id="rpModalTitle">Reset Password</h3>
+                    <p>Set a new password for <strong style="color:var(--text-1)">{{ $resetUserName }}</strong></p>
+                </div>
+                <button type="button" class="rp-close" wire:click="closeResetModal" aria-label="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="rp-field">
+                <label for="rpNewPassword">New Password</label>
+                <input type="password"
+                       id="rpNewPassword"
+                       wire:model="newPassword"
+                       placeholder="Min. 8 characters"
+                       autocomplete="new-password">
+                @error('newPassword')
+                    <p class="rp-field-error">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ $message }}
+                    </p>
+                @enderror
+            </div>
+
+            <div class="rp-field">
+                <label for="rpConfirmPassword">Confirm Password</label>
+                <input type="password"
+                       id="rpConfirmPassword"
+                       wire:model="newPasswordConfirm"
+                       placeholder="Repeat new password"
+                       autocomplete="new-password">
+                @error('newPasswordConfirm')
+                    <p class="rp-field-error">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ $message }}
+                    </p>
+                @enderror
+            </div>
+
+            <div class="rp-actions">
+                <button type="button" class="rp-btn-cancel" wire:click="closeResetModal">
+                    Cancel
+                </button>
+                <button type="button" class="rp-btn-confirm" wire:click="confirmResetPassword" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="confirmResetPassword">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                        Reset Password
+                    </span>
+                    <span wire:loading wire:target="confirmResetPassword">Resetting…</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
 
 </div>
