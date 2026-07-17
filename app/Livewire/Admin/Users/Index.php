@@ -114,12 +114,16 @@ class Index extends Component
     {
         if (! $this->confirmUserId) return;
 
-        if ($this->confirmAction === 'delete') {
-            $this->closeConfirm();
-            $this->delete($this->confirmUserId ?? 0);
-        } elseif ($this->confirmAction === 'toggle') {
-            $this->closeConfirm();
-            $this->toggleActive($this->confirmUserId ?? 0);
+        // Capture before closeConfirm() nulls them
+        $action = $this->confirmAction;
+        $userId = $this->confirmUserId;
+
+        $this->closeConfirm();
+
+        if ($action === 'delete') {
+            $this->delete($userId);
+        } elseif ($action === 'toggle') {
+            $this->toggleActive($userId);
         }
     }
     public function openResetModal(int $userId): void

@@ -1163,8 +1163,8 @@
             document.querySelectorAll('.flash-toast:not([data-toast-init])').forEach(function (el) {
                 el.setAttribute('data-toast-init', '1');
 
-                // Auto-hide after 3 s
-                var timer = setTimeout(function () { dismissToast(el); }, 3000);
+                // Auto-hide after 2 s
+                var timer = setTimeout(function () { dismissToast(el); }, 2000);
 
                 // Close button
                 var btn = el.querySelector('.flash-toast-close');
@@ -1178,14 +1178,24 @@
         }
 
         function dismissToast(el) {
+            el.style.transition = 'opacity .28s ease, transform .28s ease';
             el.style.opacity    = '0';
             el.style.transform  = 'translateY(-6px)';
-            setTimeout(function () { el.style.display = 'none'; }, 280);
+            setTimeout(function () {
+                el.style.display = 'none';
+            }, 300);
         }
 
-        // Run on load and after every Livewire re-render
+        // Run on initial load
         document.addEventListener('DOMContentLoaded', initToasts);
-        document.addEventListener('livewire:update',  initToasts);
+
+        // Run after every Livewire re-render — use requestAnimationFrame
+        // so DOM is fully painted before we look for new toasts
+        document.addEventListener('livewire:update', function () {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(initToasts);
+            });
+        });
     })();
     </script>
 </body>
