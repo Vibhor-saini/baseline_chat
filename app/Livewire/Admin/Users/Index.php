@@ -20,6 +20,15 @@ class Index extends Component
     public string $newPassword      = '';
     public string $newPasswordConfirm = '';
 
+    // ── Custom Confirm Modal ─────────────────────────────
+    public bool   $showConfirm    = false;
+    public string $confirmAction  = '';   // 'delete' | 'toggle'
+    public string $confirmType    = '';   // 'delete' | 'disable' | 'enable'
+    public ?int   $confirmUserId  = null;
+    public string $confirmTitle   = '';
+    public string $confirmMessage = '';
+    public string $confirmBtnLabel = '';
+
     public function render()
     {
         $users = User::query()
@@ -62,6 +71,56 @@ class Index extends Component
 
         $status = $user->is_active ? 'enabled' : 'disabled';
         session()->flash('success', "{$user->name}'s account has been {$status}.");
+    }
+
+    // ── Custom confirm modal ─────────────────────────────
+    public function openConfirm(string $action, int $userId, string $type): void
+    {
+        $user = User::findOrFail($userId);
+
+        $this->confirmAction  = $action;
+        $this->confirmType    = $type;
+        $this->confirmUserId  = $userId;
+
+        if ($action === 'delete') {
+            $this->confirmTitle    = 'Delete User?';
+            $this->confirmMessage  = "This will permanently delete {$user->name}'s account and all their data. This cannot be undone.";
+            $this->confirmBtnLabel = 'Delete';
+        } elseif ($type === 'disable') {
+            $this->confirmTitle    = 'Disable Account?';
+            $this->confirmMessage  = "{$user->name} will be logged out immediately and won't be able to sign in until re-enabled.";
+            $this->confirmBtnLabel = 'Disable';
+        } else {
+            $this->confirmTitle    = 'Enable Account?';
+            $this->confirmMessage  = "{$user->name} will be able to sign in again.";
+            $this->confirmBtnLabel = 'Enable';
+        }
+
+        $this->showConfirm = true;
+    }
+
+    public function closeConfirm(): void
+    {
+        $this->showConfirm    = false;
+        $this->confirmAction  = '';
+        $this->confirmType    = '';
+        $this->confirmUserId  = null;
+        $this->confirmTitle   = '';
+        $this->confirmMessage = '';
+        $this->confirmBtnLabel = '';
+    }
+
+    public function executeConfirm(): void
+    {
+        if (! $this->confirmUserId) return;
+
+        if ($this->confirmAction === 'delete') {
+            $this->closeConfirm();
+            $this->delete($this->confirmUserId ?? 0);
+        } elseif ($this->confirmAction === 'toggle') {
+            $this->closeConfirm();
+            $this->toggleActive($this->confirmUserId ?? 0);
+        }
     }
     public function openResetModal(int $userId): void
     {

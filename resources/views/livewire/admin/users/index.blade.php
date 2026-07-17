@@ -421,11 +421,23 @@
     <div class="users-page">
 
         @if(session()->has('success'))
-            <div class="alert alert-success">✓ {{ session('success') }}</div>
+            <div class="flash-toast flash-toast--success" role="alert" aria-live="polite">
+                <span class="flash-toast-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span class="flash-toast-msg">{{ session('success') }}</span>
+                <button class="flash-toast-close" aria-label="Dismiss">✕</button>
+            </div>
         @endif
 
         @if(session()->has('error'))
-            <div class="alert alert-error">✗ {{ session('error') }}</div>
+            <div class="flash-toast flash-toast--error" role="alert" aria-live="assertive">
+                <span class="flash-toast-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </span>
+                <span class="flash-toast-msg">{{ session('error') }}</span>
+                <button class="flash-toast-close" aria-label="Dismiss">✕</button>
+            </div>
         @endif
 
         {{-- Header --}}
@@ -523,8 +535,7 @@
                                     </button>
                                     @if($user->id !== auth()->id())
                                     <button
-                                        wire:click="toggleActive({{ $user->id }})"
-                                        wire:confirm="{{ $user->is_active ? 'Disable ' . $user->name . '\'s account? They will be logged out immediately.' : 'Enable ' . $user->name . '\'s account?' }}"
+                                        wire:click="openConfirm('toggle', {{ $user->id }}, '{{ $user->is_active ? 'disable' : 'enable' }}')"
                                         class="act-btn {{ $user->is_active ? 'act-btn-disable' : 'act-btn-enable' }}"
                                         title="{{ $user->is_active ? 'Disable account' : 'Enable account' }}">
                                         @if($user->is_active)
@@ -537,8 +548,7 @@
                                     </button>
                                     @endif
                                     <button
-                                        wire:click="delete({{ $user->id }})"
-                                        wire:confirm="Are you sure you want to delete {{ $user->name }}?"
+                                        wire:click="openConfirm('delete', {{ $user->id }}, 'delete')"
                                         class="act-btn act-btn-del">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                         Delete
@@ -564,6 +574,41 @@
         </div>
 
     </div>
+
+    {{-- ── Custom Confirm Modal ────────────────────────────── --}}
+    @if($showConfirm)
+    <div class="confirm-backdrop" wire:click.self="closeConfirm" role="dialog" aria-modal="true">
+        <div class="confirm-box">
+
+            <div class="confirm-icon confirm-icon--{{ $confirmType === 'delete' ? 'danger' : ($confirmType === 'disable' ? 'warning' : 'info') }}">
+                @if($confirmType === 'delete')
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                @elseif($confirmType === 'disable')
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                @else
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                @endif
+            </div>
+
+            <div class="confirm-title">{{ $confirmTitle }}</div>
+            <div class="confirm-body">{{ $confirmMessage }}</div>
+
+            <div class="confirm-actions">
+                <button type="button" class="confirm-btn confirm-btn--cancel" wire:click="closeConfirm">
+                    Cancel
+                </button>
+                <button type="button"
+                        class="confirm-btn confirm-btn--{{ $confirmType === 'delete' ? 'danger' : ($confirmType === 'disable' ? 'warning' : 'primary') }}"
+                        wire:click="executeConfirm"
+                        wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="executeConfirm">{{ $confirmBtnLabel }}</span>
+                    <span wire:loading wire:target="executeConfirm">Please wait…</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
 
     {{-- ── Reset Password Modal ─────────────────────────── --}}
     @if($showResetModal)
