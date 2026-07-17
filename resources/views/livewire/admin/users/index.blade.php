@@ -534,8 +534,9 @@
                                         Reset PW
                                     </button>
                                     @if($user->id !== auth()->id())
+                                    @php $toggleType = $user->is_active ? 'disable' : 'enable'; @endphp
                                     <button
-                                        wire:click="openConfirm('toggle', {{ $user->id }}, '{{ $user->is_active ? 'disable' : 'enable' }}')"
+                                        wire:click="openConfirm('toggle', {{ $user->id }}, '{{ $toggleType }}')"
                                         class="act-btn {{ $user->is_active ? 'act-btn-disable' : 'act-btn-enable' }}"
                                         title="{{ $user->is_active ? 'Disable account' : 'Enable account' }}">
                                         @if($user->is_active)
