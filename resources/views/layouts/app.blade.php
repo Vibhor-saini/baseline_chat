@@ -1159,6 +1159,13 @@
     {{-- ── Global flash toast (auto-hide + close btn) ──────────────── --}}
     <script>
     (function () {
+        function dismissToast(el) {
+            el.style.transition = 'opacity .28s ease, transform .28s ease';
+            el.style.opacity    = '0';
+            el.style.transform  = 'translateY(-6px)';
+            setTimeout(function () { el.remove(); }, 300);
+        }
+
         function initToasts() {
             document.querySelectorAll('.flash-toast:not([data-toast-init])').forEach(function (el) {
                 el.setAttribute('data-toast-init', '1');
@@ -1166,7 +1173,7 @@
                 // Auto-hide after 2 s
                 var timer = setTimeout(function () { dismissToast(el); }, 2000);
 
-                // Close button
+                // ✕ close button
                 var btn = el.querySelector('.flash-toast-close');
                 if (btn) {
                     btn.addEventListener('click', function () {
@@ -1177,23 +1184,19 @@
             });
         }
 
-        function dismissToast(el) {
-            el.style.transition = 'opacity .28s ease, transform .28s ease';
-            el.style.opacity    = '0';
-            el.style.transform  = 'translateY(-6px)';
-            setTimeout(function () {
-                el.style.display = 'none';
-            }, 300);
-        }
-
-        // Run on initial load
+        // On hard page load
         document.addEventListener('DOMContentLoaded', initToasts);
 
-        // Run after every Livewire re-render — use requestAnimationFrame
-        // so DOM is fully painted before we look for new toasts
-        document.addEventListener('livewire:update', function () {
-            requestAnimationFrame(function () {
-                requestAnimationFrame(initToasts);
+        // After every Livewire component re-render (fires after DOM patch)
+        document.addEventListener('livewire:init', function () {
+            Livewire.hook('commit', function (_ref) {
+                var succeed = _ref.succeed;
+                succeed(function () {
+                    // Two rAF frames = DOM is guaranteed painted
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(initToasts);
+                    });
+                });
             });
         });
     })();
