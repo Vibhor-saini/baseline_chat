@@ -39,9 +39,7 @@
         }
 
         .brand-logo {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            display: inline-block;
             width: 52px;
             height: 52px;
             background: linear-gradient(135deg, #6264a7 0%, #7b7dd6 100%);
@@ -51,6 +49,8 @@
             color: #ffffff;
             text-decoration: none;
             margin-bottom: 14px;
+            text-align: center;
+            line-height: 52px;
         }
 
         .brand-name {
