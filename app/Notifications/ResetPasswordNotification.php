@@ -8,6 +8,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 
 class ResetPasswordNotification extends Notification implements ShouldQueue
 {
+    /**
+     * The queue connection to use.
+     */
+    public $connection = 'database';
 
     /**
      * The password reset token.
