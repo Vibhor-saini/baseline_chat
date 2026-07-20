@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -134,5 +135,19 @@ class User extends Authenticatable
     public function hasConversationWith(int $otherUserId): bool
     {
         return $this->getConversationWith($otherUserId) !== null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASSWORD RESET
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Override the default reset notification with our branded one.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }
