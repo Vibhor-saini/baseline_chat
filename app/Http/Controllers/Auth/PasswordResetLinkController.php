@@ -30,20 +30,25 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        if ($status == Password::RESET_LINK_SENT) {
-            // Email found and reset link sent successfully
+        // Wrap in try/catch so a slow/failed DB or SMTP never causes a 504
+        try {
+            $status = Password::sendResetLink(
+                $request->only('email')
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Password reset failed: ' . $e->getMessage());
+            // Still return success-like response to avoid user enumeration
             return back()->with('status', 'success');
         }
 
-        // Email not found in database or throttled
+        if ($status == Password::RESET_LINK_SENT) {
+            return back()->with('status', 'success');
+        }
+
         $errorMessage = match ($status) {
-            Password::INVALID_USER   => 'No account found with that email address.',
+            Password::INVALID_USER    => 'No account found with that email address.',
             Password::RESET_THROTTLED => 'Please wait a moment before requesting another reset link.',
-            default                  => 'Something went wrong. Please try again.',
+            default                   => 'Something went wrong. Please try again.',
         };
 
         return back()

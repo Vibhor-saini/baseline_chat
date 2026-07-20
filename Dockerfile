@@ -23,7 +23,8 @@ WORKDIR /var/www/html
 COPY . .
 
 # ── PHP dependencies (no dev) ─────────────────────────────────────────────────
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader && \
+    php artisan vendor:publish --provider="Resend\Laravel\ResendServiceProvider" || true
 
 
 # ── Frontend assets ───────────────────────────────────────────────────────────
@@ -54,4 +55,4 @@ EXPOSE 80
 
 # ── Start: migrate → cache → reverb → php-fpm → nginx ───────────────────────
 # CMD ["sh", "-c", "php artisan migrate --force; php artisan config:cache; php artisan route:cache; php artisan view:cache; php artisan reverb:start --host=0.0.0.0 --port=8080 & php-fpm -D; nginx -g 'daemon off;'"]
-CMD ["sh", "-c", "php artisan migrate --force; php artisan storage:link || true; php artisan config:cache; php artisan route:cache; php artisan view:cache; php artisan reverb:start --host=0.0.0.0 --port=8080 & php-fpm -D; nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "php artisan migrate --force; php artisan storage:link || true; php artisan view:cache; php artisan reverb:start --host=0.0.0.0 --port=8080 & php artisan queue:work --sleep=3 --tries=3 --max-time=3600 & php-fpm -D; nginx -g 'daemon off;'"]
