@@ -376,21 +376,73 @@
         .msg-action-btn:hover { color: var(--text-primary, #eeeef5); background: var(--bg-hover, #212138); }
         .msg-action-btn--delete:hover { color: var(--danger, #ff5f72); background: rgba(255,95,114,.12); }
         .msg-actions-sep { width: 1px; height: 18px; background: var(--border-dim, rgba(255,255,255,.08)); margin: 0 2px; flex-shrink: 0; }
-        /* ── Attachment preview ─────────────────── */
-        .attachment-preview {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 16px;
-            background: var(--surface-2);
-            border-top: 1px solid var(--border);
+        /* ── Teams-style attachment upload card ───── */
+        .teams-upload-card {
+            position: relative;
+            display: flex; align-items: center; gap: 12px;
+            margin: 8px 12px 4px;
+            padding: 10px 12px 14px;
+            background: var(--surface-2, #f3f2f1);
+            border: 1px solid var(--border, #e1dfdd);
+            border-radius: 8px;
+            overflow: hidden;
+            animation: tucFadeIn .18s ease;
         }
-        .attachment-thumb { height: 48px; width: 48px; object-fit: cover; border-radius: 6px; }
-        .attachment-file-name { font-size: .82rem; color: var(--text-2); flex: 1; }
-        .attachment-remove {
-            background: none; border: none; color: var(--text-3);
-            cursor: pointer; font-size: 1rem; padding: 2px 6px;
-            border-radius: 4px; transition: color .15s;
+        @keyframes tucFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        .attachment-remove:hover { color: var(--danger); }
+        .teams-upload-icon {
+            flex-shrink: 0;
+            width: 38px; height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface-3, #edebe9);
+            border-radius: 6px;
+            color: var(--text-2, #605e5c);
+        }
+        .teams-upload-info {
+            flex: 1; min-width: 0;
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .teams-upload-name {
+            font-size: .875rem; font-weight: 600;
+            color: var(--text-1, #323130);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .teams-upload-sub {
+            font-size: .78rem; color: var(--text-3, #8a8886);
+        }
+        .teams-upload-remove {
+            flex-shrink: 0;
+            background: none; border: none;
+            color: var(--text-3, #8a8886);
+            cursor: pointer; padding: 4px;
+            border-radius: 4px; display: flex;
+            transition: color .15s, background .15s;
+        }
+        .teams-upload-remove:hover { color: var(--danger, #c4314b); background: rgba(196,49,75,.08); }
+        /* progress bar sits at the very bottom of the card */
+        .teams-upload-bar-wrap {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 3px; background: transparent;
+        }
+        .teams-upload-bar {
+            height: 100%; width: 0%;
+            background: #5b5fc7;
+            border-radius: 0 2px 2px 0;
+            transition: width .2s ease;
+        }
+        /* indeterminate shimmer when progress is unknown */
+        .teams-upload-bar--indeterminate {
+            width: 40% !important;
+            animation: tucShimmer 1.4s ease-in-out infinite;
+        }
+        @keyframes tucShimmer {
+            0%   { transform: translateX(-150%); }
+            100% { transform: translateX(350%); }
+        }
+        /* done state — no bar shown */
+        .teams-upload-card--done .teams-upload-bar-wrap { display: none; }
 
         /* ── File input hidden ──────────────────── */
         .file-input-hidden { display: none; }
@@ -777,6 +829,143 @@
         /* ── Profile dropdown — visibility is controlled by chat.css via .dropdown-open ── */
         /* Do NOT override it here; the .dropdown-open class in chat.css handles opacity/transform */
 
+        /* ── Flash Toast ────────────────────────── */
+        .flash-toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: .875rem;
+            font-weight: 500;
+            margin-bottom: 14px;
+            border: 1px solid;
+            transition: opacity .28s ease, transform .28s ease;
+        }
+
+        .flash-toast-icon { flex-shrink: 0; }
+
+        .flash-toast-msg  { flex: 1; }
+
+        .flash-toast-close {
+            flex-shrink: 0;
+            background: none; border: none;
+            cursor: pointer;
+            color: inherit; opacity: .55;
+            padding: 2px 4px;
+            border-radius: 4px;
+            line-height: 1;
+            transition: opacity .15s;
+            font-size: 1rem;
+        }
+
+        .flash-toast-close:hover { opacity: 1; }
+
+        .flash-toast--success {
+            background: rgba(87,199,90,.1);
+            border-color: rgba(87,199,90,.4);
+            color: #57c75a;
+        }
+
+        .flash-toast--error {
+            background: rgba(224,91,91,.1);
+            border-color: rgba(224,91,91,.4);
+            color: #e05b5b;
+        }
+
+        /* ── Custom Confirm Modal ───────────────── */
+        .confirm-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            animation: cfFadeIn .15s ease;
+        }
+
+        @keyframes cfFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .confirm-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%; max-width: 380px;
+            padding: 28px 24px 22px;
+            box-shadow: 0 24px 60px rgba(0,0,0,.5);
+            animation: cfSlideIn .2s cubic-bezier(.16,1,.3,1);
+        }
+
+        @keyframes cfSlideIn {
+            from { opacity: 0; transform: translateY(-10px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .confirm-icon {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .confirm-icon--danger  { background: rgba(224,91,91,.12); color: #e05b5b; border: 1px solid rgba(224,91,91,.25); }
+        .confirm-icon--warning { background: rgba(255,181,71,.1);  color: #ffb347; border: 1px solid rgba(255,181,71,.25); }
+        .confirm-icon--info    { background: rgba(98,100,167,.12); color: #7b7dd6; border: 1px solid rgba(98,100,167,.25); }
+
+        .confirm-title {
+            font-size: 1rem; font-weight: 700;
+            color: var(--text-1); text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .confirm-body {
+            font-size: .85rem; color: var(--text-2);
+            text-align: center; line-height: 1.6;
+            margin-bottom: 22px;
+        }
+
+        .confirm-actions {
+            display: flex; gap: 10px;
+        }
+
+        .confirm-btn {
+            flex: 1; padding: 10px;
+            border-radius: 8px;
+            font-size: .875rem; font-weight: 700;
+            border: none; cursor: pointer;
+            transition: background .15s, transform .1s;
+            font-family: inherit;
+        }
+
+        .confirm-btn:active { transform: scale(.97); }
+
+        .confirm-btn--cancel {
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+        }
+
+        .confirm-btn--cancel:hover { background: rgba(255,255,255,.1); color: var(--text-1); }
+
+        .confirm-btn--danger {
+            background: #e05b5b; color: #fff;
+        }
+
+        .confirm-btn--danger:hover { background: #d44; }
+
+        .confirm-btn--warning {
+            background: #ffb347; color: #1a1000;
+        }
+
+        .confirm-btn--warning:hover { background: #ffc266; }
+
+        .confirm-btn--primary {
+            background: var(--accent); color: #fff;
+        }
+
+        .confirm-btn--primary:hover { background: var(--accent-h); }
+
         /* ── Responsive ─────────────────────────── */
         @media (max-width: 768px) {
             .nav-rail { display: none; }
@@ -875,8 +1064,16 @@
                 </button>
             </form>
 
-            <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}">
-                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            <div class="nav-profile" title="{{ auth()->user()->name }}" aria-label="{{ auth()->user()->name }}"
+                 id="navRailProfile">
+                @if(auth()->user()->profile_image)
+                    <img src="{{ Storage::url(auth()->user()->profile_image) }}"
+                         alt="{{ auth()->user()->name }}"
+                         id="navRailAvatarImg"
+                         style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">
+                @else
+                    <span id="navRailAvatarInitials">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                @endif
                 {{-- Self dot — always online while logged in --}}
                 <span class="presence presence-online" aria-hidden="true"></span>
             </div>
@@ -958,5 +1155,51 @@
     </div>
 
     @livewireScripts
+
+    {{-- ── Global flash toast (auto-hide + close btn) ──────────────── --}}
+    <script>
+    (function () {
+        function dismissToast(el) {
+            el.style.transition = 'opacity .28s ease, transform .28s ease';
+            el.style.opacity    = '0';
+            el.style.transform  = 'translateY(-6px)';
+            setTimeout(function () { el.remove(); }, 300);
+        }
+
+        function initToasts() {
+            document.querySelectorAll('.flash-toast:not([data-toast-init])').forEach(function (el) {
+                el.setAttribute('data-toast-init', '1');
+
+                // Auto-hide after 2 s
+                var timer = setTimeout(function () { dismissToast(el); }, 2000);
+
+                // ✕ close button
+                var btn = el.querySelector('.flash-toast-close');
+                if (btn) {
+                    btn.addEventListener('click', function () {
+                        clearTimeout(timer);
+                        dismissToast(el);
+                    });
+                }
+            });
+        }
+
+        // On hard page load
+        document.addEventListener('DOMContentLoaded', initToasts);
+
+        // After every Livewire component re-render (fires after DOM patch)
+        document.addEventListener('livewire:init', function () {
+            Livewire.hook('commit', function (_ref) {
+                var succeed = _ref.succeed;
+                succeed(function () {
+                    // Two rAF frames = DOM is guaranteed painted
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(initToasts);
+                    });
+                });
+            });
+        });
+    })();
+    </script>
 </body>
 </html>

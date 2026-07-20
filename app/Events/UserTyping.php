@@ -15,6 +15,7 @@ class UserTyping implements ShouldBroadcastNow
     public int    $conversationId;
     public int    $userId;
     public string $userName;
+    public string $avatarUrl;
     public bool   $isTyping;
     public int    $recipientUserId;
 
@@ -22,12 +23,14 @@ class UserTyping implements ShouldBroadcastNow
         int    $conversationId,
         int    $userId,
         string $userName,
+        string $avatarUrl,
         bool   $isTyping,
         int    $recipientUserId,
     ) {
         $this->conversationId  = $conversationId;
         $this->userId          = $userId;
         $this->userName        = $userName;
+        $this->avatarUrl       = $avatarUrl;
         $this->isTyping        = $isTyping;
         $this->recipientUserId = $recipientUserId;
     }
@@ -51,6 +54,7 @@ class UserTyping implements ShouldBroadcastNow
             'conversationId' => $this->conversationId,
             'userId'         => $this->userId,
             'userName'       => $this->userName,
+            'avatarUrl'      => $this->avatarUrl,
             'isTyping'       => $this->isTyping,
         ];
     }

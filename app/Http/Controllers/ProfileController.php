@@ -58,6 +58,10 @@ class ProfileController extends Controller
     /**
      * Return read-only profile data for the profile card modal (JSON).
      * Called by chat.js via fetch() when a user clicks another user's avatar.
+     *
+     * NOTE: `is_online` is a DB-level fallback (last_seen < 2 min).
+     * The JS layer overrides this using the live presence Set so the card
+     * always reflects the real-time online state.
      */
     public function cardData(\App\Models\User $user): JsonResponse
     {
@@ -65,16 +69,28 @@ class ProfileController extends Controller
             ? $user->status->value
             : ($user->status ?? 'available');
 
+        $isOnline = $user->isOnline();
+
         return response()->json([
             'id'           => $user->id,
             'name'         => $user->name,
-            'status'       => $status,
-            'status_label' => \App\Enums\UserStatus::from($status)->label(),
+            // Only expose the real status when the user is actually online.
+            // If offline, send 'offline' so the card shows the correct state
+            // even before the JS presence check runs.
+            'status'       => $isOnline ? $status : 'offline',
+            'status_label' => $isOnline
+                ? \App\Enums\UserStatus::from($status)->label()
+                : 'Offline',
             'status_quote' => $user->status_quote ?? '',
             'avatar_url'   => $user->profile_image
                 ? Storage::url($user->profile_image)
                 : null,
             'initials'     => strtoupper(substr($user->name, 0, 1)),
+            // Raw DB status — JS uses this to restore the real status
+            // once it confirms the user IS in the presence channel.
+            'db_status'       => $status,
+            'db_status_label' => \App\Enums\UserStatus::from($status)->label(),
+            'is_online_db'    => $isOnline,
         ]);
     }
 

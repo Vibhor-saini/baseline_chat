@@ -18,7 +18,7 @@ class Panel extends Component
     |--------------------------------------------------------------------------
     */
 
-    public bool   $isOpen         = false;
+    public bool $isOpen         = false;
     public string $name           = '';
     public string $statusQuote    = '';
     public string $status         = 'available';
@@ -37,6 +37,14 @@ class Panel extends Component
 
     public bool $isSaving         = false;
     public bool $isChangingStatus = false;
+
+    // ── Change Password state ────────────────────────────
+    public bool   $showPasswordSection  = false;
+    public string $currentPassword      = '';
+    public string $newPasswordField     = '';
+    public string $confirmPasswordField = '';
+    public string $passwordSuccess      = '';
+    public string $passwordError        = '';
 
     /*
     |--------------------------------------------------------------------------
@@ -91,11 +99,17 @@ class Panel extends Component
         if ($this->isOpen) {
             $this->syncFromUser();
             $this->resetValidation();
-            $this->successMessage   = '';
-            $this->saveError        = '';
-            $this->avatarPath       = '';
-            $this->isSaving         = false;
-            $this->isChangingStatus = false;
+            $this->successMessage       = '';
+            $this->saveError            = '';
+            $this->avatarPath           = '';
+            $this->isSaving             = false;
+            $this->isChangingStatus     = false;
+            $this->showPasswordSection  = false;
+            $this->currentPassword      = '';
+            $this->newPasswordField     = '';
+            $this->confirmPasswordField = '';
+            $this->passwordSuccess      = '';
+            $this->passwordError        = '';
         }
     }
 
@@ -216,6 +230,58 @@ class Panel extends Component
         $this->isSaving       = false;
 
         $this->dispatch('profile-saved', status: $this->status, name: $this->name, avatarUrl: $avatarUrl);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHANGE PASSWORD
+    |--------------------------------------------------------------------------
+    */
+
+    public function togglePasswordSection(): void
+    {
+        $this->showPasswordSection  = ! $this->showPasswordSection;
+        $this->currentPassword      = '';
+        $this->newPasswordField     = '';
+        $this->confirmPasswordField = '';
+        $this->passwordSuccess      = '';
+        $this->passwordError        = '';
+        $this->resetErrorBag(['currentPassword', 'newPasswordField', 'confirmPasswordField']);
+    }
+
+    public function changePassword(): void
+    {
+        $this->passwordError   = '';
+        $this->passwordSuccess = '';
+
+        $this->validate([
+            'currentPassword'      => ['required'],
+            'newPasswordField'     => ['required', 'min:8', 'same:confirmPasswordField'],
+            'confirmPasswordField' => ['required'],
+        ], [
+            'currentPassword.required'      => 'Current password is required.',
+            'newPasswordField.required'     => 'New password is required.',
+            'newPasswordField.min'          => 'New password must be at least 8 characters.',
+            'newPasswordField.same'         => 'Passwords do not match.',
+            'confirmPasswordField.required' => 'Please confirm your new password.',
+        ]);
+
+        $user = auth()->user();
+
+        if (! \Illuminate\Support\Facades\Hash::check($this->currentPassword, $user->password)) {
+            $this->addError('currentPassword', 'Current password is incorrect.');
+            return;
+        }
+
+        $user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($this->newPasswordField),
+        ]);
+
+        $this->currentPassword      = '';
+        $this->newPasswordField     = '';
+        $this->confirmPasswordField = '';
+        $this->showPasswordSection  = false;
+        $this->passwordSuccess      = 'Password changed successfully!';
     }
 
     /*

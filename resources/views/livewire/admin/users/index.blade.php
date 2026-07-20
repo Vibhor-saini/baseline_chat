@@ -230,6 +230,175 @@
 
         .act-btn-del:hover { background: rgba(224,91,91,.22); }
 
+        .act-btn-reset {
+            background: rgba(255,179,71,.1);
+            color: #ffb347;
+        }
+
+        .act-btn-reset:hover { background: rgba(255,179,71,.22); }
+
+        .act-btn-enable {
+            background: rgba(87,199,90,.1);
+            color: #57c75a;
+        }
+
+        .act-btn-enable:hover { background: rgba(87,199,90,.22); }
+
+        .act-btn-disable {
+            background: rgba(224,91,91,.08);
+            color: #e05b5b;
+        }
+
+        .act-btn-disable:hover { background: rgba(224,91,91,.2); }
+
+        /* Status badge */
+        .badge-active {
+            background: rgba(87,199,90,.12);
+            color: #57c75a;
+            border: 1px solid rgba(87,199,90,.3);
+        }
+
+        .badge-inactive {
+            background: rgba(224,91,91,.1);
+            color: #e05b5b;
+            border: 1px solid rgba(224,91,91,.3);
+        }
+
+        /* ── Reset Password Modal ─────────────────── */
+        .rp-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.65);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            animation: rpFadeIn .15s ease;
+        }
+
+        @keyframes rpFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .rp-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 420px;
+            padding: 28px;
+            box-shadow: 0 24px 64px rgba(0,0,0,.5);
+            animation: rpSlideIn .2s cubic-bezier(.16,1,.3,1);
+        }
+
+        @keyframes rpSlideIn {
+            from { opacity: 0; transform: translateY(-12px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .rp-header {
+            display: flex; align-items: flex-start;
+            justify-content: space-between; gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .rp-header-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            background: rgba(255,179,71,.12);
+            border: 1px solid rgba(255,179,71,.25);
+            display: flex; align-items: center; justify-content: center;
+            color: #ffb347; flex-shrink: 0;
+        }
+
+        .rp-header-text h3 {
+            font-size: 1rem; font-weight: 700;
+            color: var(--text-1); margin: 0 0 4px;
+        }
+
+        .rp-header-text p {
+            font-size: .8rem; color: var(--text-2); margin: 0;
+        }
+
+        .rp-close {
+            background: none; border: none; cursor: pointer;
+            color: var(--text-3); padding: 4px;
+            border-radius: 6px; transition: color .15s;
+            flex-shrink: 0;
+        }
+
+        .rp-close:hover { color: var(--danger); }
+
+        .rp-field { margin-bottom: 16px; }
+
+        .rp-field label {
+            display: block;
+            font-size: .75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .06em;
+            color: var(--text-2); margin-bottom: 6px;
+        }
+
+        .rp-field input {
+            width: 100%;
+            background: var(--content-bg);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 10px 13px;
+            color: var(--text-1);
+            font-size: .875rem;
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .rp-field input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        .rp-field input::placeholder { color: var(--text-3); }
+
+        .rp-field-error {
+            font-size: .76rem; color: #e05b5b;
+            margin-top: 4px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        .rp-actions {
+            display: flex; gap: 10px;
+            margin-top: 24px;
+        }
+
+        .rp-btn-confirm {
+            flex: 1;
+            display: inline-flex; align-items: center;
+            justify-content: center; gap: 7px;
+            background: #ffb347;
+            color: #1a1200;
+            padding: 11px 20px;
+            border-radius: 9px;
+            font-size: .875rem; font-weight: 700;
+            border: none; cursor: pointer;
+            transition: background .15s, transform .1s;
+        }
+
+        .rp-btn-confirm:hover {
+            background: #ffc266;
+            transform: translateY(-1px);
+        }
+
+        .rp-btn-cancel {
+            padding: 11px 18px;
+            border-radius: 9px;
+            font-size: .875rem; font-weight: 600;
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--border);
+            color: var(--text-2); cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .rp-btn-cancel:hover {
+            background: rgba(255,255,255,.09);
+            color: var(--text-1);
+        }
+
         /* Muted text */
         .td-muted { color: var(--text-2); font-size: .8125rem; }
 
@@ -252,11 +421,23 @@
     <div class="users-page">
 
         @if(session()->has('success'))
-            <div class="alert alert-success">✓ {{ session('success') }}</div>
+            <div class="flash-toast flash-toast--success" role="alert" aria-live="polite">
+                <span class="flash-toast-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                <span class="flash-toast-msg">{{ session('success') }}</span>
+                <button class="flash-toast-close" aria-label="Dismiss">✕</button>
+            </div>
         @endif
 
         @if(session()->has('error'))
-            <div class="alert alert-error">✗ {{ session('error') }}</div>
+            <div class="flash-toast flash-toast--error" role="alert" aria-live="assertive">
+                <span class="flash-toast-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </span>
+                <span class="flash-toast-msg">{{ session('error') }}</span>
+                <button class="flash-toast-close" aria-label="Dismiss">✕</button>
+            </div>
         @endif
 
         {{-- Header --}}
@@ -296,13 +477,15 @@
                             <th>User</th>
                             <th class="col-email">Email</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th class="col-joined">Joined</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($users as $user)
-                        <tr>
+                        <tr style="{{ ! $user->is_active ? 'opacity:.55;' : '' }}"
+                            wire:key="user-{{ $user->id }}">
                             <td>
                                 <div class="user-cell">
                                     <div class="user-avatar"
@@ -323,6 +506,19 @@
                                     <span class="badge badge-user">User</span>
                                 @endif
                             </td>
+                            <td>
+                                @if($user->is_active)
+                                    <span class="badge badge-active">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="12"/></svg>
+                                        Active
+                                    </span>
+                                @else
+                                    <span class="badge badge-inactive">
+                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="12"/></svg>
+                                        Disabled
+                                    </span>
+                                @endif
+                            </td>
                             <td class="td-muted col-joined">{{ $user->created_at->diffForHumans() }}</td>
                             <td>
                                 <div class="actions-cell">
@@ -331,8 +527,29 @@
                                         Edit
                                     </a>
                                     <button
-                                        wire:click="delete({{ $user->id }})"
-                                        wire:confirm="Are you sure you want to delete {{ $user->name }}?"
+                                        wire:click="openResetModal({{ $user->id }})"
+                                        class="act-btn act-btn-reset"
+                                        title="Reset password for {{ $user->name }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        Reset PW
+                                    </button>
+                                    @if($user->id !== auth()->id())
+                                    @php $toggleType = $user->is_active ? 'disable' : 'enable'; @endphp
+                                    <button
+                                        wire:click="openConfirm('toggle', {{ $user->id }}, '{{ $toggleType }}')"
+                                        class="act-btn {{ $user->is_active ? 'act-btn-disable' : 'act-btn-enable' }}"
+                                        title="{{ $user->is_active ? 'Disable account' : 'Enable account' }}">
+                                        @if($user->is_active)
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                            Disable
+                                        @else
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                            Enable
+                                        @endif
+                                    </button>
+                                    @endif
+                                    <button
+                                        wire:click="openConfirm('delete', {{ $user->id }}, 'delete')"
                                         class="act-btn act-btn-del">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                                         Delete
@@ -358,5 +575,105 @@
         </div>
 
     </div>
+
+    {{-- ── Custom Confirm Modal ────────────────────────────── --}}
+    @if($showConfirm)
+    <div class="confirm-backdrop" wire:click.self="closeConfirm" role="dialog" aria-modal="true">
+        <div class="confirm-box">
+
+            <div class="confirm-icon confirm-icon--{{ $confirmType === 'delete' ? 'danger' : ($confirmType === 'disable' ? 'warning' : 'info') }}">
+                @if($confirmType === 'delete')
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                @elseif($confirmType === 'disable')
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                @else
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                @endif
+            </div>
+
+            <div class="confirm-title">{{ $confirmTitle }}</div>
+            <div class="confirm-body">{{ $confirmMessage }}</div>
+
+            <div class="confirm-actions">
+                <button type="button" class="confirm-btn confirm-btn--cancel" wire:click="closeConfirm">
+                    Cancel
+                </button>
+                <button type="button"
+                        class="confirm-btn confirm-btn--{{ $confirmType === 'delete' ? 'danger' : ($confirmType === 'disable' ? 'warning' : 'primary') }}"
+                        wire:click="executeConfirm"
+                        wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="executeConfirm">{{ $confirmBtnLabel }}</span>
+                    <span wire:loading wire:target="executeConfirm">Please wait…</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
+
+    {{-- ── Reset Password Modal ─────────────────────────── --}}
+    @if($showResetModal)
+    <div class="rp-backdrop" wire:click.self="closeResetModal" role="dialog" aria-modal="true" aria-labelledby="rpModalTitle">
+        <div class="rp-modal">
+
+            <div class="rp-header">
+                <div class="rp-header-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="rp-header-text">
+                    <h3 id="rpModalTitle">Reset Password</h3>
+                    <p>Set a new password for <strong style="color:var(--text-1)">{{ $resetUserName }}</strong></p>
+                </div>
+                <button type="button" class="rp-close" wire:click="closeResetModal" aria-label="Close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="rp-field">
+                <label for="rpNewPassword">New Password</label>
+                <input type="password"
+                       id="rpNewPassword"
+                       wire:model="newPassword"
+                       placeholder="Min. 8 characters"
+                       autocomplete="new-password">
+                @error('newPassword')
+                    <p class="rp-field-error">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ $message }}
+                    </p>
+                @enderror
+            </div>
+
+            <div class="rp-field">
+                <label for="rpConfirmPassword">Confirm Password</label>
+                <input type="password"
+                       id="rpConfirmPassword"
+                       wire:model="newPasswordConfirm"
+                       placeholder="Repeat new password"
+                       autocomplete="new-password">
+                @error('newPasswordConfirm')
+                    <p class="rp-field-error">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        {{ $message }}
+                    </p>
+                @enderror
+            </div>
+
+            <div class="rp-actions">
+                <button type="button" class="rp-btn-cancel" wire:click="closeResetModal">
+                    Cancel
+                </button>
+                <button type="button" class="rp-btn-confirm" wire:click="confirmResetPassword" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="confirmResetPassword">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                        Reset Password
+                    </span>
+                    <span wire:loading wire:target="confirmResetPassword">Resetting…</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+    @endif
 
 </div>

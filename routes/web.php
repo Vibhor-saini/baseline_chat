@@ -14,38 +14,41 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
-Route::middleware('auth')->group(function () {
+// ── Account disabled page (no auth required — user is logged out already) ──
+Route::get('/account-disabled', function () {
+    return view('auth.account-disabled');
+})->name('account.disabled');
+
+// ── Authenticated routes — check user is active on every request ──────────
+Route::middleware(['auth', 'active'])->group(function () {
+
     // Presence ping — updates last_seen, called by chat.js
     Route::post('/presence/ping', [PresenceController::class, 'ping'])->name('presence.ping');
-});
 
-Route::middleware(['auth', 'admin'])->group(function () {
+    // ── Admin routes ──────────────────────────────────────────────────────
+    Route::middleware('admin')->group(function () {
 
-    Route::get('/dashboard', Dashboard::class)
-        ->name('dashboard');
+        Route::get('/dashboard', Dashboard::class)
+            ->name('dashboard');
 
-    Route::get('/users', UsersIndex::class)
-        ->name('users.index');
+        Route::get('/users', UsersIndex::class)
+            ->name('users.index');
 
-    Route::get('/users/create', UsersCreate::class)
-        ->name('users.create');
+        Route::get('/users/create', UsersCreate::class)
+            ->name('users.create');
 
-    Route::get('/users/{user}/edit', UsersEdit::class)
-        ->name('users.edit');
+        Route::get('/users/{user}/edit', UsersEdit::class)
+            ->name('users.edit');
+    });
 
-    Route::middleware(['auth'])->group(function () {});
-});
-
-Route::middleware('auth')->group(function () {
+    // ── Regular user routes ───────────────────────────────────────────────
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    // Avatar upload endpoint — called by chat.js fetch() before Livewire save()
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
-    Route::get('/chat', ChatIndex::class)
-        ->name('chat.index');
 
-    // User profile card — read-only JSON endpoint for the profile card modal
+    Route::get('/chat', ChatIndex::class)->name('chat.index');
+
     Route::get('/user/{user}/profile-card', [ProfileController::class, 'cardData'])
         ->name('user.profile-card');
 });

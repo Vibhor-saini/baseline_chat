@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'is_active',
         'last_seen',
         'profile_image',
         'status_quote',
@@ -31,6 +33,7 @@ class User extends Authenticatable
         'email_verified_at'   => 'datetime',
         'password'            => 'hashed',
         'is_admin'            => 'boolean',
+        'is_active'           => 'boolean',
         'last_seen'           => 'datetime',
         'status'              => \App\Enums\UserStatus::class,
         'status_manually_set' => 'boolean',
@@ -132,5 +135,19 @@ class User extends Authenticatable
     public function hasConversationWith(int $otherUserId): bool
     {
         return $this->getConversationWith($otherUserId) !== null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASSWORD RESET
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Override the default reset notification with our branded one.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }
