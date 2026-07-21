@@ -40,16 +40,11 @@ class NewPasswordController extends Controller
         // Check new password is not same as old password
         $user = User::where('email', $request->email)->first();
         if ($user && Hash::check($request->password, $user->password)) {
-            return back()
+            return redirect()
+                ->route('password.reset', ['token' => $request->token])
                 ->withInput($request->only('email'))
                 ->withErrors(['password' => 'Your new password cannot be the same as your current password.']);
         }
-
-        // DEBUG — remove after fix
-        \Log::info('same-password-check', [
-            'user_found' => $user ? true : false,
-            'hash_check' => $user ? Hash::check($request->password, $user->password) : 'no user',
-        ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
