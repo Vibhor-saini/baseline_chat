@@ -225,6 +225,10 @@
                         </div>
                         <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
                         <div class="strength-label" id="strength-label"></div>
+                        <p class="field-error" id="same-pass-error" style="display:none;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            New password cannot be the same as your current password.
+                        </p>
                         @if ($errors->has('password'))
                             <p class="field-error">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -309,7 +313,53 @@
         // Also check on password field change
         document.getElementById('password').addEventListener('input', checkConfirm);
 
-        // Block submit if passwords don't match
+        // Check if new password same as old — real-time AJAX
+        let samePassTimer = null;
+        const pwInput     = document.getElementById('password');
+        const emailInput  = document.getElementById('email');
+
+        pwInput.addEventListener('input', function() {
+            clearTimeout(samePassTimer);
+            hideSamePassError();
+            samePassTimer = setTimeout(() => checkSamePassword(), 500);
+        });
+
+        function checkSamePassword() {
+            const pw    = pwInput.value;
+            const email = emailInput.value;
+            if (!pw || pw.length < 6) return;
+
+            fetch('{{ route("password.check.same") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ email, password: pw }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.same) {
+                    showSamePassError();
+                } else {
+                    hideSamePassError();
+                }
+            });
+        }
+
+        function showSamePassError() {
+            const err = document.getElementById('same-pass-error');
+            err.style.display = 'flex';
+            pwInput.style.borderColor = 'var(--danger)';
+        }
+
+        function hideSamePassError() {
+            const err = document.getElementById('same-pass-error');
+            err.style.display = 'none';
+            pwInput.style.borderColor = '';
+        }
+
+        // Block submit if same password
         document.querySelector('form').addEventListener('submit', function(e) {
             const pw   = document.getElementById('password').value;
             const conf = document.getElementById('password_confirmation').value;
@@ -317,6 +367,9 @@
                 e.preventDefault();
                 document.getElementById('confirm-error').style.display = 'flex';
                 document.getElementById('password_confirmation').style.borderColor = 'var(--danger)';
+            }
+            if (document.getElementById('same-pass-error').style.display === 'flex') {
+                e.preventDefault();
             }
         });
 

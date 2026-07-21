@@ -54,3 +54,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+
+// Password strength check — unauthenticated, used by reset-password form
+Route::post('/check-password-match', function (\Illuminate\Http\Request $request) {
+    $user = \App\Models\User::where('email', $request->email)->first();
+    if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        return response()->json(['same' => true]);
+    }
+    return response()->json(['same' => false]);
+})->middleware('throttle:30,1')->name('password.check.same');
