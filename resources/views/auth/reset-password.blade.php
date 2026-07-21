@@ -247,11 +247,16 @@
                                 name="password_confirmation"
                                 placeholder="Confirm new password"
                                 required autocomplete="new-password"
+                                oninput="checkConfirm()"
                             >
                             <button type="button" class="toggle-pw" onclick="toggleVisibility('password_confirmation', this)" title="Show/hide password">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             </button>
                         </div>
+                        <p class="field-error" id="confirm-error" style="display:none;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            Passwords do not match.
+                        </p>
                         @if ($errors->has('password_confirmation'))
                             <p class="field-error">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -286,6 +291,34 @@
             input.type = isHidden ? 'text' : 'password';
             btn.querySelector('svg').style.opacity = isHidden ? '0.4' : '1';
         }
+
+        function checkConfirm() {
+            const pw   = document.getElementById('password').value;
+            const conf = document.getElementById('password_confirmation').value;
+            const err  = document.getElementById('confirm-error');
+            const confInput = document.getElementById('password_confirmation');
+            if (conf && pw !== conf) {
+                err.style.display = 'flex';
+                confInput.style.borderColor = 'var(--danger)';
+            } else {
+                err.style.display = 'none';
+                confInput.style.borderColor = '';
+            }
+        }
+
+        // Also check on password field change
+        document.getElementById('password').addEventListener('input', checkConfirm);
+
+        // Block submit if passwords don't match
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const pw   = document.getElementById('password').value;
+            const conf = document.getElementById('password_confirmation').value;
+            if (pw !== conf) {
+                e.preventDefault();
+                document.getElementById('confirm-error').style.display = 'flex';
+                document.getElementById('password_confirmation').style.borderColor = 'var(--danger)';
+            }
+        });
 
         function checkStrength(val) {
             const fill  = document.getElementById('strength-fill');
