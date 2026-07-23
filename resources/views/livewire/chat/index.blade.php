@@ -198,6 +198,7 @@
              class="conv-item {{ ($selectedConversation && $selectedConversation->id === $conversation->id) ? 'conv-active' : '' }}"
              role="listitem" tabindex="0"
              aria-label="Conversation with {{ $other->name }}"
+             data-user-id="{{ $other->id }}"
              wire:key="conv-{{ $conversation->id }}">
           <div class="conv-avatar-wrap">
             @if($other->profile_image)

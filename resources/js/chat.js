@@ -319,7 +319,23 @@
             headerStatus.style.color = color;
         }
 
-        /* 4. MY own topbar + panel elements */
+        /* 4. Update name in conversation list for OTHER users */
+        if (!isMe && name) {
+            // Chat header name — uses data-uid
+            document.querySelectorAll(`.chat-header-name[data-uid="${uid}"]`).forEach(el => {
+                el.textContent = name;
+            });
+            // People panel name
+            document.querySelectorAll(`.pp-name[data-user-id="${uid}"]`).forEach(el => {
+                el.textContent = name;
+            });
+            // Conversation list — conv-name has no data-user-id, but conv-item has data-user-id
+            document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-name`).forEach(el => {
+                el.textContent = name;
+            });
+        }
+
+        /* 5. MY own topbar + panel elements */
         if (isMe) {
             // ── Topbar avatar first-time upload ───────────────────────────
             if (avatarUrl) {
