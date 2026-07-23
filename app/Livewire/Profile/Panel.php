@@ -277,6 +277,15 @@ class Panel extends Component
             'password' => \Illuminate\Support\Facades\Hash::make($this->newPasswordField),
         ]);
 
+        // Broadcast so other sessions are logged out / notified in real-time
+        $avatarUrl = $user->profile_image ? \Illuminate\Support\Facades\Storage::url($user->profile_image) : '';
+        broadcast(new UserProfileUpdated(
+            $user->id,
+            $avatarUrl,
+            $user->status instanceof \App\Enums\UserStatus ? $user->status->value : ($user->status ?? 'available'),
+            $user->name,
+        ));
+
         $this->currentPassword      = '';
         $this->newPasswordField     = '';
         $this->confirmPasswordField = '';
