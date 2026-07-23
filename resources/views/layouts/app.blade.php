@@ -975,6 +975,9 @@
             .nav-rail { display: none; }
             .topbar   { display: none; }
             .mobile-topbar   { display: flex; }
+            /* Hide the app-shell mobile topbar on chat pages — chat has its own topbar */
+            .main-content:has(.page-area.no-pad) .mobile-topbar { display: none; }
+            body.is-chat-page .mobile-topbar { display: none; }
             .mobile-bottomnav { display: flex; }
             .page-area:not(.no-pad) { padding: 16px; }
             .pending-page { padding: 18px; }
@@ -1002,7 +1005,7 @@
     user channel (user.{id}). Without this, realtime updates are silently
     disabled for that session.
 --}}
-<body @auth data-user-id="{{ auth()->id() }}" @endauth>
+<body @auth data-user-id="{{ auth()->id() }}" @endauth class="{{ request()->routeIs('chat.*') ? 'is-chat-page' : '' }}">
     <div class="app-shell">
 
         {{-- ══════════════ DESKTOP NAV RAIL ══════════════ --}}

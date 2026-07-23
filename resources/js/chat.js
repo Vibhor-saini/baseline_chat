@@ -786,10 +786,13 @@
                 })
                 .listen('.message.read', (event) => {
                     console.log('[Chat] message.read:', event);
-                    document.querySelectorAll(`[id^="tick-"]`).forEach(el => {
-                        if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
-                    });
-                    updateSidebarTick(currentConversationId, 'read');
+                    // Only mark ticks as read if this event is for the currently open conversation
+                    if (String(event.conversationId) === String(currentConversationId)) {
+                        document.querySelectorAll(`[id^="tick-"]`).forEach(el => {
+                            if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
+                        });
+                        updateSidebarTick(currentConversationId, 'read');
+                    }
                     const component = getChatComponent();
                     if (component) component.call('markConversationRead', event.conversationId, event.readAt);
                 })
