@@ -775,6 +775,8 @@
                             component.call('appendMessage', event.message);
                             setTimeout(() => scrollToBottom(true), 150);
                         }
+                        // Also update sidebar preview immediately (don't wait for Livewire re-render)
+                        updateSidebarForNewMessage(event.message);
                     } else {
                         updateSidebarForNewMessage(event.message);
                     }
@@ -954,6 +956,7 @@
                 console.log('[Chat] message.sent (user channel):', event);
                 const incomingConvId = String(event.message.conversation_id);
                 if (incomingConvId === String(currentConversationId)) return;
+                // Always update sidebar for messages on non-active conversations
                 updateSidebarForNewMessage(event.message);
             })
             .listen('.message.delivered', (event) => {
