@@ -394,7 +394,7 @@
 
               {{-- Sender name: only first message of a group, theirs side --}}
               @if(!$isMine && $isNewGroup)
-                <div class="msg-sender-name">{{ $message->sender->name }}</div>
+                <div class="msg-sender-name" data-user-id="{{ $message->sender->id }}">{{ $message->sender->name }}</div>
               @endif
 
               {{-- Bubble --}}

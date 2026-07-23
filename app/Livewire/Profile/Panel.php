@@ -159,7 +159,7 @@ class Panel extends Component
 
             $avatarUrl = $user->profile_image ? Storage::url($user->profile_image) : '';
 
-            broadcast(new UserProfileUpdated($user->id, $avatarUrl, $newStatus, $user->name));
+            broadcast(new UserProfileUpdated($user->id, $avatarUrl, $newStatus, $user->name, $user->status_quote ?? ''));
 
             $this->dispatch('status-changed', status: $newStatus);
 
@@ -223,7 +223,7 @@ class Panel extends Component
         auth()->setUser($user->fresh());
 
         $avatarUrl = $newPath ? Storage::url($newPath) : '';
-        broadcast(new UserProfileUpdated(auth()->id(), $avatarUrl, $this->status, $this->name));
+        broadcast(new UserProfileUpdated(auth()->id(), $avatarUrl, $this->status, $this->name, $this->statusQuote));
 
         $this->avatarPath     = '';
         $this->successMessage = 'Profile saved!';
@@ -284,6 +284,7 @@ class Panel extends Component
             $avatarUrl,
             $user->status instanceof \App\Enums\UserStatus ? $user->status->value : ($user->status ?? 'available'),
             $user->name,
+            $user->status_quote ?? '',
         ));
 
         $this->currentPassword      = '';

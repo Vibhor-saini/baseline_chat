@@ -15,8 +15,9 @@ class UserProfileUpdated implements ShouldBroadcastNow
     public function __construct(
         public readonly int    $userId,
         public readonly string $avatarUrl,
-        public readonly string $status = 'available',
-        public readonly string $name   = '',
+        public readonly string $status      = 'available',
+        public readonly string $name        = '',
+        public readonly string $statusQuote = '',
     ) {}
 
     public function broadcastOn(): array
@@ -32,10 +33,11 @@ class UserProfileUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'userId'    => $this->userId,
-            'avatarUrl' => $this->avatarUrl,
-            'status'    => $this->status,
-            'name'      => $this->name,
+            'userId'      => $this->userId,
+            'avatarUrl'   => $this->avatarUrl,
+            'status'      => $this->status,
+            'name'        => $this->name,
+            'statusQuote' => $this->statusQuote,
         ];
     }
 }

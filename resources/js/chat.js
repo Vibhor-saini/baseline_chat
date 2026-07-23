@@ -208,7 +208,7 @@
      * @param {string}        name    display name (may be empty)
      * @param {string}        avatarUrl  full URL or empty string
      */
-    function applyProfileUpdate(userId, status, name, avatarUrl) {
+    function applyProfileUpdate(userId, status, name, avatarUrl, statusQuote) {
         const uid       = String(userId);
         const myUserId  = String(document.body.dataset.userId || '');
         const color     = statusColor(status);
@@ -333,11 +333,31 @@
             document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-name`).forEach(el => {
                 el.textContent = name;
             });
+            // Message sender names in chat window
+            document.querySelectorAll(`.msg-sender-name[data-user-id="${uid}"]`).forEach(el => {
+                el.textContent = name;
+            });
             // Profile card modal — if currently open for this user
             const upcModal  = document.getElementById('userProfileCard');
             const upcNameEl = document.getElementById('upcName');
             if (upcModal && upcNameEl && String(upcModal.dataset.userId) === uid) {
                 upcNameEl.textContent = name;
+                // Update status dot + label in modal
+                const upcStatusDot   = document.getElementById('upcStatusDot');
+                const upcStatusLabel = document.getElementById('upcStatusLabel');
+                const upcStatusRing  = document.getElementById('upcStatusRing');
+                const upcQuoteEl     = document.getElementById('upcQuote');
+                if (upcStatusDot)   { upcStatusDot.style.background = color; }
+                if (upcStatusLabel) { upcStatusLabel.textContent = label; upcStatusLabel.style.color = color; }
+                if (upcStatusRing)  { upcStatusRing.style.borderColor = color; }
+                if (upcQuoteEl && statusQuote !== undefined) {
+                    if (statusQuote) {
+                        upcQuoteEl.textContent = statusQuote;
+                        upcQuoteEl.style.display = '';
+                    } else {
+                        upcQuoteEl.style.display = 'none';
+                    }
+                }
             }
         }
 
@@ -624,7 +644,7 @@
                 }
 
                 userStatusMap.set(String(event.userId), event.status);
-                applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl);
+                applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl, event.statusQuote || '');
                 applyPresence();
             });
 
