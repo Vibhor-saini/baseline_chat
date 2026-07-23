@@ -73,7 +73,9 @@
 /* ── Root wrapper ─────────────────────────────────────── */
 .teams-chat-root {
     width: 100%;
-    height: 100vh;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     background: var(--bg-deepest);
@@ -1511,46 +1513,206 @@
 }
 
 /* ══════════════════════════════════════════════════════
-   RESPONSIVE — Mobile  (≤768px)
+   RESPONSIVE — Mobile  (≤900px)
 ══════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+    /* ── Global touch optimizations ── */
+    * { -webkit-tap-highlight-color: transparent; }
+    button, a, [role="button"] { touch-action: manipulation; }
+
     :root { --sidebar-w: 100%; }
 
-    .teams-topbar { padding: 0 12px; gap: 8px; }
+    /* ── Topbar ── */
+    .teams-topbar { padding: 0 8px; gap: 4px; height: 54px; }
     .topbar-brand-icon { width: 30px; height: 30px; border-radius: 8px; }
+    .topbar-brand { gap: 8px; }
     .topbar-title { display: none; }
     .profile-meta { display: none; }
     .profile-chevron { display: none; }
-    .profile-btn { padding: 4px; gap: 0; }
+    .profile-btn { padding: 4px; gap: 0; min-width: 38px; }
     .search-kbd-hint { display: none; }
-    .global-search-input { padding-right: 14px; font-size: .8rem; height: 36px; }
+    .global-search-wrap { max-width: 100%; }
+    .global-search-input {
+        padding-right: 12px;
+        padding-left: 36px;
+        font-size: .82rem;
+        height: 38px;
+    }
+    /* Search results dropdown — full width on mobile */
+    .global-search-results {
+        left: 0;
+        right: 0;
+        width: auto;
+        border-radius: 14px;
+    }
+    /* Show search action buttons always on mobile (no hover) */
+    .global-search-action { opacity: 1; }
+    /* Topbar center reduces size to prevent overflow */
+    .topbar-center { flex: 1; min-width: 0; max-width: calc(100% - 100px); }
+    .topbar-left { flex-shrink: 0; }
+    .topbar-right { flex-shrink: 0; }
 
-    .teams-layout { position: relative; margin: 8px; gap: 0; }
+    /* ── Layout ── */
+    .teams-layout {
+        position: relative;
+        margin: 6px;
+        gap: 0;
+        flex: 1;
+        min-height: 0;
+        height: 0;
+        /* Clip children so off-screen panels don't cause scrollbars */
+        overflow: hidden;
+    }
 
+    /* ── Sidebar — full screen, slides left when chat opens ── */
     .teams-sidebar {
         position: absolute;
         inset: 0;
-        z-index: 10;
+        z-index: 2;
         width: 100%;
         border-radius: 14px;
-        transform: translateX(0);
-        transition: transform .3s cubic-bezier(.16,1,.3,1);
+        /* GPU layer — eliminates paint during transition */
+        will-change: transform;
+        transform: translateX(0) translateZ(0);
+        transition: transform .32s cubic-bezier(.25,.46,.45,.94);
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        /* Prevent inner scroll from leaking during transition */
+        backface-visibility: hidden;
     }
 
-    .teams-layout.conversation-open .teams-sidebar {
-        transform: translateX(-110%);
+    .teams-layout.conversation-open .teams-sidebar,
+    body.chat-open .teams-sidebar {
+        transform: translateX(-100%) translateZ(0);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* ── Main chat area — hidden off-screen right, slides in when chat opens ── */
+    .teams-main {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        border-radius: 14px;
+        will-change: transform;
+        transform: translateX(100%) translateZ(0);
+        transition: transform .32s cubic-bezier(.25,.46,.45,.94);
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        backface-visibility: hidden;
+        /* Hidden panel should not capture any events */
         pointer-events: none;
     }
 
-    .teams-main { width: 100%; border-radius: 14px; }
-    .mobile-back-btn { display: flex !important; }
-    .chat-header-actions .icon-btn:not(:last-child) { display: none; }
-    .msg-body-wrap { max-width: 84%; }
+    .teams-layout.conversation-open .teams-main,
+    body.chat-open .teams-main {
+        transform: translateX(0) translateZ(0);
+        z-index: 2;
+        pointer-events: auto;
+    }
 
-    .profile-dropdown {
-        right: -8px;
+    /* ── Chat header ── */
+    .mobile-back-btn { display: flex !important; }
+    .chat-header { padding: 0 12px; gap: 10px; }
+    .chat-header-actions .icon-btn:not(:last-child) { display: none; }
+    .chat-header-name { font-size: .9rem; }
+
+    /* ── Messages area ── */
+    .messages-area { padding: 16px 12px; }
+    .msg-body-wrap { max-width: 86%; }
+
+    /* ── Message action bar — tap to show on mobile ── */
+    /* On mobile we use .mobile-actions-visible (set by tap JS) instead of hover.
+       We do NOT force opacity:1 always — that clutters every message. */
+    .msg-actions.mobile-actions-visible {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    /* ── Input area — iOS safe area support ── */
+    .chat-input-area {
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
+    }
+
+    /* Larger touch targets on input action buttons */
+    .input-action-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+    .send-btn { width: 40px; height: 40px; }
+
+    /* ── Reply bar ── */
+    .reply-bar { padding: 8px 10px; }
+
+    /* ── Attachment preview ── */
+    .attach-preview { margin: 0 10px 8px; }
+
+    /* ── Forward modal — full width ── */
+    .forward-modal-box {
         width: calc(100vw - 24px);
+        max-width: 100%;
+        margin: 12px;
+        border-radius: 20px;
+    }
+
+    /* ── Request preview card — reduce padding ── */
+    .request-preview-screen { padding: 16px; }
+    .request-preview-card {
+        padding: 24px 20px;
+        border-radius: 18px;
+    }
+    .request-preview-actions { flex-direction: column; gap: 8px; }
+    .request-preview-actions .btn-accept,
+    .request-preview-actions .btn-reject { width: 100%; }
+
+    /* ── Emoji picker — full width on small screens ── */
+    .msg-emoji-picker {
+        width: calc(100vw - 20px) !important;
+        left: 10px !important;
+        right: 10px !important;
+    }
+
+    /* ── Profile dropdown — safe positioning ── */
+    .profile-dropdown {
+        right: 0;
+        left: auto;
+        width: calc(100vw - 20px);
         max-width: 300px;
+    }
+
+    /* ── Sent-requests banner ── */
+    .sent-requests-btn { padding: 10px 14px; }
+
+    /* ── Date separator ── */
+    .date-separator-label { font-size: .7rem; padding: 3px 10px; }
+
+    /* ── Forwarded card inside bubble ── */
+    .fwd-chat-card { max-width: 100%; }
+    .fwd-chat-card-header { flex-wrap: wrap; gap: 4px; }
+    .fwd-chat-time { font-size: .65rem; }
+
+    /* ── Message images max width ── */
+    .msg-image { max-width: 100%; width: 100%; }
+    .msg-img-wrap { max-width: 220px; }
+
+    /* ── Lightbox ── */
+    .lightbox-content { margin: 10px; }
+
+    /* ── Profile panel — same as desktop, just constrained width ── */
+    .profile-panel {
+        right: 0;
+        left: auto;
+        width: min(300px, calc(100vw - 16px));
+        max-width: min(300px, calc(100vw - 16px));
+    }
+
+    /* ── User profile card modal ── */
+    .upc-card {
+        width: calc(100vw - 24px);
+        max-width: 340px;
     }
 }
 
@@ -1559,8 +1721,27 @@
 ══════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
     .global-search-input { font-size: .78rem; }
-    .teams-topbar-wrapper { padding: 8px 8px 0; }
+    .teams-topbar-wrapper { padding: 6px 6px 0; }
     .topbar-icon-btn .notif-badge { display: none; }
+    .msg-body-wrap { max-width: 90%; }
+    .chat-header { padding: 0 10px; gap: 8px; }
+    .messages-area { padding: 12px 8px; }
+    /* Input area slightly tighter */
+    .input-form { padding: 8px 6px 8px 12px; }
+    .message-input { font-size: .88rem; }
+    .msg-emoji-picker { width: calc(100vw - 12px) !important; left: 6px !important; }
+    /* Request card more compact */
+    .request-preview-card { padding: 20px 16px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE — Landscape on mobile  (short + narrow)
+══════════════════════════════════════════════════════ */
+@media (max-width: 896px) and (orientation: landscape) and (max-height: 500px) {
+    .teams-topbar-wrapper { padding: 4px 6px 0; }
+    .chat-header { --header-h: 48px; min-height: 48px; }
+    .messages-area { padding: 8px 12px; }
+    .chat-input-area { padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px)) 10px; }
 }
 
 .request-toggle{
@@ -2434,7 +2615,7 @@
 }
 
 /* Always visible on small screens */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
     .msg-time-wrap { opacity: 1; }
 }
 
@@ -3456,7 +3637,8 @@
 
 /* Show when bubble is hovered OR when the bar itself has the active class */
 .msg-bubble:hover ~ .msg-actions,
-.msg-actions.is-visible {
+.msg-actions.is-visible,
+.msg-actions.mobile-actions-visible {
     opacity: 1;
     pointer-events: auto;
 }
@@ -3490,6 +3672,13 @@
     transform: scale(1.25);
     background: var(--bg-hover) !important;
     color: initial !important;
+}
+/* Active state — highlights which emoji the user already reacted with */
+.msg-quick-react.active {
+    background: var(--accent-dim) !important;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--border-accent);
+    transform: scale(1.1);
 }
 
 /* Three-dot dropdown wrapper */
@@ -3858,6 +4047,10 @@
     flex-wrap: wrap;
     gap: 4px;
     padding: 4px 2px 0;
+}
+
+.msg-reactions:empty {
+    padding: 0;
 }
 
 .reaction-pill {
@@ -4559,17 +4752,10 @@
 /* ── Chat header status dot — dynamic color (set inline by JS) ────────── */
 .chat-header-status { color: var(--text-secondary, #8a8aaa) !important; }
 
-/* ── Responsive — profile panel on mobile ────────────────────────────── */
-@media (max-width: 768px) {
-    .profile-panel {
-        right: -8px;
-        width: calc(100vw - 24px);
-        max-width: 300px;
-    }
+/* ── Responsive — profile panel on mobile — handled in main responsive block above ── */
+@media (max-width: 480px) {
+    .upc-card { width: calc(100vw - 32px); }
 }
-
-
-/* ════════════════════════════════════════════════════════════════════════════
    USER PROFILE CARD MODAL  (.upc-*)
    Centered read-only card shown when tapping another user's avatar.
    ════════════════════════════════════════════════════════════════════════════ */
@@ -5241,6 +5427,73 @@
 /* Highlight pulse when "Show message" is clicked from lightbox */
 .msg-highlight {
     animation: msgHighlightPulse 1.8s ease forwards;
+}
+
+/* ── Lightbox — mobile responsive ────────────────────────────────── */
+@media (max-width: 900px) {
+    /* Account for notch / status bar */
+    .ilb-overlay {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Topbar: single fixed height, no wrapping */
+    .ilb-topbar {
+        height: 52px;
+        min-height: 52px;
+        max-height: 52px;
+        padding: 0 10px;
+        gap: 8px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    /* Hide zoom buttons — use pinch-to-zoom on mobile */
+    #ilbZoomIn,
+    #ilbZoomOut,
+    .ilb-action-sep { display: none; }
+
+    /* Shrink text */
+    .ilb-sender { font-size: .82rem; }
+    .ilb-meta   { font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+
+    /* "Show message" — icon only */
+    .ilb-show-msg span { display: none; }
+    .ilb-show-msg { padding: 4px 6px; }
+
+    /* Nav arrows closer to edges, smaller */
+    .ilb-prev { left: 4px; }
+    .ilb-next { right: 4px; }
+    .ilb-nav  { width: 34px; height: 34px; }
+
+    /* Stage fills everything below the topbar */
+    .ilb-stage {
+        flex: 1;
+        min-height: 0;
+        height: 0; /* with flex:1 makes height definite for children */
+    }
+
+    /* Image wrap fills stage, image centered */
+    .ilb-img-wrap {
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ilb-main-img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        border-radius: 4px;
+    }
+
+    /* Hide thumbnail strip — gives full screen to image */
+    .ilb-strip-wrap { display: none; }
 }
 @keyframes msgHighlightPulse {
     0%   { background: rgba(123,125,214,.25); border-radius: 12px; }

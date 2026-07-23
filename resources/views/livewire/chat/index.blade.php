@@ -584,29 +584,34 @@
               </div>{{-- /bubble --}}
 
               {{-- ── Reaction pills ── --}}
-              @if(!$message->deleted_at && $message->reactions && count($message->reactions) > 0)
-              @php
-                $reactionGroups = [];
-                foreach ($message->reactions as $r) {
-                    $reactionGroups[$r->emoji] = $reactionGroups[$r->emoji] ?? ['count' => 0, 'mine' => false, 'users' => []];
-                    $reactionGroups[$r->emoji]['count']++;
-                    $reactionGroups[$r->emoji]['users'][] = $r->user->name ?? '';
-                    if ($r->user_id === auth()->id()) $reactionGroups[$r->emoji]['mine'] = true;
-                }
-              @endphp
-              <div class="msg-reactions" id="reactions-{{ $message->id }}">
+              {{-- wire:ignore keeps Livewire's DOM morpher away from this container.
+                   It is always managed exclusively by updateReactionsInDOM() in JS,
+                   which is called both for real-time broadcasts AND for the sender's
+                   own toggle via the Livewire `reactions-updated` dispatch event. --}}
+              <div class="msg-reactions" id="reactions-{{ $message->id }}" wire:ignore>
+                @if(!$message->deleted_at && $message->reactions && count($message->reactions) > 0)
+                @php
+                  $reactionGroups = [];
+                  foreach ($message->reactions as $r) {
+                      $reactionGroups[$r->emoji] = $reactionGroups[$r->emoji] ?? ['count' => 0, 'mine' => false, 'users' => []];
+                      $reactionGroups[$r->emoji]['count']++;
+                      $reactionGroups[$r->emoji]['users'][] = $r->user->name ?? '';
+                      if ($r->user_id === auth()->id()) $reactionGroups[$r->emoji]['mine'] = true;
+                  }
+                @endphp
                 @foreach($reactionGroups as $emoji => $data)
                 <button type="button"
                         class="reaction-pill {{ $data['mine'] ? 'mine' : '' }}"
-                        wire:click="toggleReaction({{ $message->id }}, '{{ $emoji }}')"
+                        data-msg-id="{{ $message->id }}"
+                        data-emoji="{{ $emoji }}"
                         title="{{ implode(', ', $data['users']) }}"
                         aria-label="{{ $emoji }} {{ $data['count'] }} reaction{{ $data['count'] !== 1 ? 's' : '' }}">
                   <span>{{ $emoji }}</span>
                   <span class="reaction-count">{{ $data['count'] }}</span>
                 </button>
                 @endforeach
+                @endif
               </div>
-              @endif
 
               {{-- ── Teams-style message action bar (hover) ── --}}
               @if(!$message->deleted_at && $editingMessageId !== $message->id)
@@ -1221,6 +1226,40 @@
       </button>
     </div>
   </div>
+</div>
+{{-- ══════════════════════════════════════════════════════
+     EMOJI PICKER PANEL (shared, one instance, positioned by JS)
+══════════════════════════════════════════════════════ --}}
+<div id="msgEmojiPicker"
+     class="msg-emoji-picker"
+     role="dialog"
+     aria-label="Emoji picker"
+     aria-hidden="true">
+
+  {{-- Search --}}
+  <div class="mep-search-wrap">
+    <input type="text" id="msgEmojiSearch" class="mep-search"
+           placeholder="Search emoji…" autocomplete="off" aria-label="Search emoji">
+    <svg class="mep-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  </div>
+
+  {{-- Section label + grid --}}
+  <div class="mep-section-label">Recent</div>
+  <div class="mep-grid" id="msgEmojiGrid" role="listbox" aria-label="Emoji list"></div>
+
+  {{-- Category tabs --}}
+  <div class="mep-cats" role="tablist" aria-label="Emoji categories">
+    <button type="button" class="mep-cat mep-cat--active" data-cat="recent"   title="Recent"   aria-label="Recent">🕐</button>
+    <button type="button" class="mep-cat"                 data-cat="smileys"  title="Smileys"  aria-label="Smileys">😊</button>
+    <button type="button" class="mep-cat"                 data-cat="hand"     title="Gestures" aria-label="Gestures">👋</button>
+    <button type="button" class="mep-cat"                 data-cat="nature"   title="Nature"   aria-label="Nature">🐶</button>
+    <button type="button" class="mep-cat"                 data-cat="food"     title="Food"     aria-label="Food">🍎</button>
+    <button type="button" class="mep-cat"                 data-cat="objects"  title="Objects"  aria-label="Objects">💡</button>
+    <button type="button" class="mep-cat"                 data-cat="symbols"  title="Symbols"  aria-label="Symbols">❤️</button>
+  </div>
+
 </div>
 
 </div>{{-- /teams-chat-root --}}

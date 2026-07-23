@@ -145,9 +145,66 @@
         if (tick) tick.outerHTML = tickSVG(status);
     }
 
+    function updateReactionsInDOM(messageId, reactions) {
+        const container = document.getElementById(`reactions-${messageId}`);
+        if (!container) return;
+
+        const myUserId = String(document.body.dataset.userId || '');
+
+        // Group by emoji
+        const groups = {};
+        reactions.forEach(r => {
+            if (!groups[r.emoji]) groups[r.emoji] = { count: 0, mine: false, users: [] };
+            groups[r.emoji].count++;
+            groups[r.emoji].users.push(r.user_name);
+            if (String(r.user_id) === myUserId) groups[r.emoji].mine = true;
+        });
+
+        // Remove all existing reaction pills (both Livewire-rendered and JS-added)
+        container.querySelectorAll('.reaction-pill').forEach(el => el.remove());
+
+        if (Object.keys(groups).length === 0) {
+            _updateQuickReactActiveState(messageId, null);
+            return;
+        }
+
+        // Build new pills — clicks are handled via event delegation below,
+        // so no per-element addEventListener needed (avoids listener leaks on re-render)
+        const fragment = document.createDocumentFragment();
+        Object.entries(groups).forEach(([emoji, data]) => {
+            const btn = document.createElement('button');
+            btn.type      = 'button';
+            btn.className = 'reaction-pill' + (data.mine ? ' mine' : '');
+            btn.title     = data.users.join(', ');
+            btn.dataset.msgId = String(messageId);
+            btn.dataset.emoji = emoji;
+            btn.setAttribute('aria-label', `${emoji} ${data.count} reaction${data.count !== 1 ? 's' : ''}`);
+            btn.innerHTML = `<span>${emoji}</span><span class="reaction-count">${data.count}</span>`;
+            fragment.appendChild(btn);
+        });
+
+        container.appendChild(fragment);
+
+        // Reflect active emoji on the quick-react bar for this message
+        const myEmoji = Object.entries(groups).find(([, d]) => d.mine)?.[0] ?? null;
+        _updateQuickReactActiveState(messageId, myEmoji);
+    }
+
+    /**
+     * Highlight the quick-react button that matches the user's current reaction,
+     * and clear the highlight on all others. Pass null to clear all.
+     */
+    function _updateQuickReactActiveState(messageId, activeEmoji) {
+        const actionsBar = document.querySelector(`.msg-actions[data-msg-id="${messageId}"]`);
+        if (!actionsBar) return;
+        actionsBar.querySelectorAll('.msg-quick-react').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.emoji === activeEmoji);
+            btn.setAttribute('aria-pressed', btn.dataset.emoji === activeEmoji ? 'true' : 'false');
+        });
+    }
+
     function markDeletedInDOM(messageId) {
         const row = document.getElementById(`msg-${messageId}`);
-        if (!row) return;
         const bubble = row.querySelector('.msg-bubble');
         if (!bubble) return;
         bubble.classList.add('bubble-deleted');
@@ -480,6 +537,15 @@
                 input.style.overflowY = 'hidden';
             }
         });
+
+        // Sender's own reaction toggle — update the reactions container immediately
+        // (the container has wire:ignore so Livewire won't morph it)
+        Livewire.on('reactions-updated', (params) => {
+            const p = Array.isArray(params) ? params[0] : params;
+            if (p && p.messageId !== undefined) {
+                updateReactionsInDOM(p.messageId, p.reactions ?? []);
+            }
+        });
     });
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -732,6 +798,10 @@
                     markDeletedInDOM(event.messageId);
                     const component = getChatComponent();
                     if (component) component.call('handleRemoteDelete', event.messageId);
+                })
+                .listen('.reaction.updated', (event) => {
+                    console.log('[Chat] reaction.updated:', event);
+                    updateReactionsInDOM(event.messageId, event.reactions);
                 })
                 .listen('.user.typing', (event) => {
                     console.log('[Chat] user.typing received:', event);
@@ -1059,40 +1129,109 @@
         });
     }
 
-    /* ── Mobile sidebar UX ───────────────────────────────────────────────── */
+    /* ── Mobile sidebar UX — WhatsApp-style screen switching ─────────────── */
+    let _conversationOpen = false;
+    let _morphGuardRAF    = null;
+
+    function setConversationOpen(open) {
+        _conversationOpen = open;
+        _applyConversationOpenClass();
+    }
+
+    /**
+     * Single source of truth for applying / removing the class.
+     * Applied to BODY so Livewire morphing never wipes it.
+     */
+    function _applyConversationOpenClass() {
+        if (_conversationOpen) {
+            document.body.classList.add('chat-open');
+        } else {
+            document.body.classList.remove('chat-open');
+        }
+    }
+
+    /**
+     * Livewire morphing cannot affect body.chat-open — body is outside the
+     * Livewire component boundary. These hooks are kept as a safety net for
+     * any future refactors but are effectively no-ops now.
+     */
+    function _guardMorphClass() {
+        if (_morphGuardRAF) cancelAnimationFrame(_morphGuardRAF);
+        _applyConversationOpenClass();
+        _morphGuardRAF = requestAnimationFrame(() => {
+            _applyConversationOpenClass();
+            _morphGuardRAF = null;
+        });
+    }
+
+    document.addEventListener('livewire:updated',      _guardMorphClass);
+    document.addEventListener('livewire:update',       _guardMorphClass);
+    document.addEventListener('livewire:morph',        _guardMorphClass);
+    document.addEventListener('livewire:morphed',      _guardMorphClass);
+    document.addEventListener('livewire:commit',       _guardMorphClass);
+
     document.addEventListener('click', (e) => {
-        const layout = document.getElementById('teamsLayout');
-        if (!layout) return;
         if (e.target.closest('.conv-item') || e.target.closest('.request-toggle')) {
-            layout.classList.add('conversation-open');
+            setConversationOpen(true);
         }
         if (e.target.closest('#mobileBackBtn')) {
-            layout.classList.remove('conversation-open');
+            setConversationOpen(false);
         }
     });
 
-    /* ── Profile panel — outside-click + Escape dismiss ─────────────────── */
-    let _profileJustToggled = false;
-
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('#profileBtn');
-        if (btn) {
-            _profileJustToggled = true;
-            setTimeout(() => { _profileJustToggled = false; }, 0);
-        }
-    }, true);
-
+    /* ── Profile panel — desktop behavior on all devices ─────────────────── */
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('profileWrap');
         if (!wrap) return;
+        // If clicking inside the profile button or panel, let Livewire handle it
         if (wrap.contains(e.target)) return;
-        if (_profileJustToggled) return;
+        // If clicking inside the open panel itself, don't close
+        const panel = document.querySelector('.profile-panel--open');
+        if (panel && panel.contains(e.target)) return;
+        // Outside click: close panel
         Livewire.dispatch('close-profile-panel');
     });
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') Livewire.dispatch('close-profile-panel');
     });
+
+    /* ── Message action bar — tap to show on mobile ──────────────────────
+       On touch devices the hover CSS never fires, so we toggle the bar on
+       a tap anywhere in the message row. A second tap (or tap elsewhere)
+       hides it again.                                                      ── */
+    (function setupMobileMsgActions() {
+        let _currentlyVisibleBar = null;
+
+        document.addEventListener('touchend', (e) => {
+            // Only apply the tap-to-show logic on actual touch devices
+            if (!window.matchMedia('(max-width: 900px)').matches) return;
+
+            const row = e.target.closest('.msg-row');
+
+            // Tap inside an action button → let the button handler fire, don't toggle
+            if (e.target.closest('.msg-actions button, .msg-actions a')) return;
+
+            if (row) {
+                const bar = row.querySelector('.msg-actions');
+                if (!bar) return;
+
+                if (_currentlyVisibleBar && _currentlyVisibleBar !== bar) {
+                    _currentlyVisibleBar.classList.remove('mobile-actions-visible');
+                }
+
+                bar.classList.toggle('mobile-actions-visible');
+                _currentlyVisibleBar = bar.classList.contains('mobile-actions-visible') ? bar : null;
+                return;
+            }
+
+            // Tap outside any message row → hide current bar
+            if (_currentlyVisibleBar) {
+                _currentlyVisibleBar.classList.remove('mobile-actions-visible');
+                _currentlyVisibleBar = null;
+            }
+        }, { passive: true });
+    })();
 
     /* ── Profile avatar file-reader (JS-driven, no wire:model) ──────────── */
     document.addEventListener('DOMContentLoaded', () => { attachAvatarInputListener(); });
@@ -1580,6 +1719,19 @@
 
     window._hideAllMsgActions = hideAllMsgActions;
     document.addEventListener('click', (e) => {
+        // Reaction pill click (JS-created pills via updateReactionsInDOM)
+        const reactionPill = e.target.closest('.reaction-pill');
+        if (reactionPill) {
+            e.stopPropagation();
+            const msgId = reactionPill.dataset.msgId;
+            const emoji = reactionPill.dataset.emoji;
+            if (msgId && emoji) {
+                const $wire = getChatComponent();
+                if ($wire) $wire.call('toggleReaction', parseInt(msgId), emoji);
+            }
+            return;
+        }
+
         // Three-dot toggle
         const moreBtn = e.target.closest('.msg-more-btn');
         if (moreBtn) {

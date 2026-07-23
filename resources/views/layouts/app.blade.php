@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Baseline Chat') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -208,6 +208,9 @@
         .page-area.no-pad {
             overflow: hidden;
             padding: 0;
+            /* Allow child to fill 100% height */
+            display: flex;
+            flex-direction: column;
         }
 
         .page-area:not(.no-pad) { padding: 28px; }
@@ -597,7 +600,8 @@
         /* ── Mobile bottom nav ──────────────────── */
         .mobile-bottomnav {
             display: none;
-            height: 60px;
+            height: calc(60px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
             background: var(--surface);
             border-top: 1px solid var(--border);
             align-items: center;
@@ -891,7 +895,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 16px;
-            width: 100%; max-width: 380px;
+            width: calc(100vw - 32px); max-width: 380px;
             padding: 28px 24px 22px;
             box-shadow: 0 24px 60px rgba(0,0,0,.5);
             animation: cfSlideIn .2s cubic-bezier(.16,1,.3,1);
@@ -967,7 +971,7 @@
         .confirm-btn--primary:hover { background: var(--accent-h); }
 
         /* ── Responsive ─────────────────────────── */
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .nav-rail { display: none; }
             .topbar   { display: none; }
             .mobile-topbar   { display: flex; }
@@ -979,6 +983,16 @@
             .pending-card-left { width: 100%; }
             .pending-status { width: 100%; }
             .pending-status-badge { width: 100%; display: flex; justify-content: center; }
+            /* Confirm modal safe on mobile */
+            .confirm-backdrop { padding: 16px; align-items: flex-end; }
+            .confirm-box { border-radius: 20px; padding: 24px 20px 20px; }
+            /* Admin tables scroll horizontally on mobile */
+            .page-area table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
+
+        @media (max-width: 480px) {
+            .page-area:not(.no-pad) { padding: 12px; }
+            .confirm-box { padding: 20px 16px 18px; }
         }
     </style>
 </head>

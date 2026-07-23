@@ -13,6 +13,7 @@ use App\Events\MessageSent;
 use App\Events\MessageDelivered;
 use App\Events\MessageRead;
 use App\Events\MessageDeleted;
+use App\Events\MessageReactionUpdated;
 use App\Events\ConversationUpdated;
 use App\Events\PendingRequestUpdated;
 use App\Events\UserTyping;
@@ -712,8 +713,15 @@ class Index extends Component
             ->first();
 
         if ($existing) {
+            // Same emoji tapped again → toggle off (unreact)
             $existing->delete();
         } else {
+            // Different emoji or no reaction yet:
+            // Remove any previous reaction by this user on this message (one reaction per user)
+            MessageReaction::where('message_id', $messageId)
+                ->where('user_id', $userId)
+                ->delete();
+
             MessageReaction::create([
                 'message_id' => $messageId,
                 'user_id'    => $userId,
@@ -721,15 +729,33 @@ class Index extends Component
             ]);
         }
 
-        // Refresh the reactions on the in-memory message so the blade re-renders
+        // Refresh the reactions on the in-memory message
         foreach ($this->messages as $i => $msg) {
             if ($msg->id === $messageId) {
-                $this->messages[$i]->setRelation(
-                    'reactions',
-                    MessageReaction::where('message_id', $messageId)
-                        ->with('user:id,name')
-                        ->get()
-                );
+                $updatedReactions = MessageReaction::where('message_id', $messageId)
+                    ->with('user:id,name')
+                    ->get();
+
+                $this->messages[$i]->setRelation('reactions', $updatedReactions);
+
+                $reactionsPayload = $updatedReactions->map(fn($r) => [
+                    'id'        => $r->id,
+                    'emoji'     => $r->emoji,
+                    'user_id'   => $r->user_id,
+                    'user_name' => $r->user->name ?? '',
+                ])->values()->toArray();
+
+                // Update the sender's own DOM immediately via a JS event
+                // (reactions container uses wire:ignore so Livewire won't morph it)
+                $this->dispatch('reactions-updated', messageId: $messageId, reactions: $reactionsPayload);
+
+                // Broadcast to the other participants
+                broadcast(new MessageReactionUpdated(
+                    $messageId,
+                    $this->selectedConversationId,
+                    $reactionsPayload
+                ))->toOthers();
+
                 break;
             }
         }
