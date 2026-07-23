@@ -333,6 +333,12 @@
             document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-name`).forEach(el => {
                 el.textContent = name;
             });
+            // Profile card modal — if currently open for this user
+            const upcModal  = document.getElementById('userProfileCard');
+            const upcNameEl = document.getElementById('upcName');
+            if (upcModal && upcNameEl && String(upcModal.dataset.userId) === uid) {
+                upcNameEl.textContent = name;
+            }
         }
 
         /* 5. MY own topbar + panel elements */
@@ -1280,6 +1286,10 @@
 
         const overlay = document.getElementById('userProfileCardOverlay');
         if (!overlay) return;
+
+        // Tag the modal with the current user id so profile.updated can target it
+        const cardEl = document.getElementById('userProfileCard');
+        if (cardEl) cardEl.dataset.userId = String(userId);
 
         // Show with loading state
         document.getElementById('upcName').textContent           = '…';
