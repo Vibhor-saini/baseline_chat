@@ -562,7 +562,7 @@ class Index extends Component
             return;
         }
 
-        // ── Active conversation: append + mark read ────────────────────────
+        // ── Active conversation: append message ────────────────────────────
         $message = Message::withTrashed()
             ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender'])
             ->find($messageData['id']);
@@ -576,10 +576,29 @@ class Index extends Component
         $this->messages[] = $message;
 
         $now = now();
-        $message->update(['delivered_at' => $now, 'read_at' => $now, 'is_read' => true]);
-        // No toOthers() so sender receives tick update on their user channel.
-        broadcast(new MessageDelivered($message->id, $message->conversation_id, $now->toISOString(), $message->sender_id));
-        broadcast(new MessageRead($message->conversation_id, auth()->id(), $now->toISOString(), $message->sender_id));
+
+        // Always mark as delivered (recipient's device received it)
+        if (! $message->delivered_at) {
+            $message->update(['delivered_at' => $now]);
+            broadcast(new MessageDelivered(
+                $message->id,
+                $message->conversation_id,
+                $now->toISOString(),
+                $message->sender_id
+            ));
+        }
+
+        // Only mark as READ if the chat window is actually open and visible.
+        // activeScreen === 'chat' means the user is looking at this conversation.
+        if ($this->activeScreen === 'chat') {
+            $message->update(['read_at' => $now, 'is_read' => true]);
+            broadcast(new MessageRead(
+                $message->conversation_id,
+                auth()->id(),
+                $now->toISOString(),
+                $message->sender_id
+            ));
+        }
 
         $this->loadConversations();
         $this->dispatch('scroll-to-bottom');
@@ -987,6 +1006,16 @@ class Index extends Component
             $this->selectedRequest = null;
             $this->activeScreen    = 'empty';
         }
+    }
+
+    /**
+     * Called when the user taps the mobile back button.
+     * Sets activeScreen to 'empty' so incoming messages are NOT marked as read
+     * until the user actually re-opens the conversation.
+     */
+    public function closeChatView(): void
+    {
+        $this->activeScreen = 'empty';
     }
 
     public function openSentRequests(): void

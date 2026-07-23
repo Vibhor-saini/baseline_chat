@@ -868,6 +868,7 @@
                     'openForwardModal',
                     'closeForwardModal',
                     'removeForwardTarget',
+                    'closeChatView',
                     'selectForwardTarget',
                 ]);
 
@@ -1179,6 +1180,10 @@
         }
         if (e.target.closest('#mobileBackBtn')) {
             setConversationOpen(false);
+            // Tell Livewire the chat view is closed so new messages don't get
+            // marked as read until the user re-opens the conversation.
+            const component = getChatComponent();
+            if (component) component.call('closeChatView');
         }
     });
 
