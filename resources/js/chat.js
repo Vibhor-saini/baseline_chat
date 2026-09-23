@@ -205,6 +205,7 @@
 
     function markDeletedInDOM(messageId) {
         const row = document.getElementById(`msg-${messageId}`);
+        if (!row) return; // message not in DOM (conversation not open) — sidebar update handles this case
         const bubble = row.querySelector('.msg-bubble');
         if (!bubble) return;
         bubble.classList.add('bubble-deleted');
