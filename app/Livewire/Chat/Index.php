@@ -330,14 +330,17 @@ class Index extends Component
         $updatedMessageIds = [];
 
         // Find all accepted conversations where the OTHER user is currently online.
+        // NOTE: the orWhere must be nested inside a single where() closure to
+        // prevent it from escaping the outer `status = 'accepted'` constraint.
         $conversations = Conversation::where('status', 'accepted')
             ->where(function ($q) use ($onlineUserIds) {
-                $q->where('user_one_id', auth()->id())
-                  ->whereIn('user_two_id', $onlineUserIds);
-            })
-            ->orWhere(function ($q) use ($onlineUserIds) {
-                $q->where('user_two_id', auth()->id())
-                  ->whereIn('user_one_id', $onlineUserIds);
+                $q->where(function ($inner) use ($onlineUserIds) {
+                    $inner->where('user_one_id', auth()->id())
+                          ->whereIn('user_two_id', $onlineUserIds);
+                })->orWhere(function ($inner) use ($onlineUserIds) {
+                    $inner->where('user_two_id', auth()->id())
+                          ->whereIn('user_one_id', $onlineUserIds);
+                });
             })
             ->get(['id', 'user_one_id', 'user_two_id']);
 
@@ -624,7 +627,16 @@ class Index extends Component
 
         $message->delete(); // soft delete
 
-        broadcast(new MessageDeleted($messageId, $conversationId))->toOthers();
+        // Resolve the recipient so MessageDeleted can dual-broadcast to both
+        // chat.{id} (active conversation) and user.{id} (any other screen).
+        $conversation = Conversation::find($conversationId);
+        $recipientId  = $conversation
+            ? ($conversation->user_one_id === auth()->id()
+                ? $conversation->user_two_id
+                : $conversation->user_one_id)
+            : 0;
+
+        broadcast(new MessageDeleted($messageId, $conversationId, $recipientId))->toOthers();
 
         foreach ($this->messages as $i => $msg) {
             if ($msg->id === $messageId) {

@@ -691,28 +691,10 @@
         };
 
 
-        /* ── Profile updates channel (public) ──────────────────────────── */
-        Echo.channel('profile-updates')
-            .listen('.profile.updated', (event) => {
-                console.log('[Profile] profile.updated received:', event);
-
-                // 'offline' is a logout sentinel — remove from presence and
-                // update UI immediately without waiting for the WS leave timeout.
-                if (event.status === 'offline') {
-                    onlineUserIds.delete(String(event.userId));
-                    // Update data-last-seen so the offline label shows correctly
-                    const headerStatus = document.getElementById('chat-header-status');
-                    if (headerStatus && String(headerStatus.dataset.presenceUid) === String(event.userId)) {
-                        headerStatus.dataset.lastSeen = 'just now';
-                    }
-                    applyPresence();
-                    return;
-                }
-
-                userStatusMap.set(String(event.userId), event.status);
-                applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl, event.statusQuote || '');
-                applyPresence();
-            });
+        /* ── Profile updates — now received on the private user.{id} channel ─ */
+        // The public 'profile-updates' channel has been removed. Profile updates
+        // are now broadcast only to users who share an accepted conversation,
+        // arriving on their existing private user.{id} channel below.
 
         /* ── Livewire profile-saved event (fires on own tab only) ────────── */
         Livewire.on('profile-saved', (params) => {
@@ -974,6 +956,33 @@
                 updateSidebarTick(event.conversationId, 'read');
                 const component = getChatComponent();
                 if (component) component.call('markConversationRead', event.conversationId, event.readAt);
+            })
+            .listen('.message.deleted', (event) => {
+                console.log('[Chat] message.deleted (user channel):', event);
+                // Recipient has a different chat open — update sidebar preview
+                // so deleted message doesn't linger as the last preview text.
+                markDeletedInDOM(event.messageId);
+                const component = getChatComponent();
+                if (component) component.call('handleRemoteDelete', event.messageId);
+            })
+            .listen('.profile.updated', (event) => {
+                console.log('[Chat] profile.updated (user channel):', event);
+
+                // 'offline' is a logout sentinel — remove from presence and
+                // update UI immediately without waiting for the WS leave timeout.
+                if (event.status === 'offline') {
+                    onlineUserIds.delete(String(event.userId));
+                    const headerStatus = document.getElementById('chat-header-status');
+                    if (headerStatus && String(headerStatus.dataset.presenceUid) === String(event.userId)) {
+                        headerStatus.dataset.lastSeen = 'just now';
+                    }
+                    applyPresence();
+                    return;
+                }
+
+                userStatusMap.set(String(event.userId), event.status);
+                applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl, event.statusQuote || '');
+                applyPresence();
             })
             .listen('.user.typing', (event) => {
                 console.log('[Chat] user.typing (user channel):', event);
