@@ -2241,4 +2241,62 @@
         });
     })();
 
+    /* ════════════════════════════════════════════════════════
+       AVATAR FALLBACK
+       When a profile image fails to load (403/404 — e.g. file
+       missing locally or on a fresh server), replace the <img>
+       with an initials div so the UI never shows a broken image.
+       Works for every avatar in the app automatically.
+       ════════════════════════════════════════════════════════ */
+    (function () {
+        function getInitial(altText) {
+            return (altText || '?').trim().charAt(0).toUpperCase();
+        }
+
+        function replaceBrokenAvatar(img) {
+            // Avoid infinite loop if the fallback itself somehow fails
+            img.onerror = null;
+
+            const initial  = getInitial(img.alt);
+            const userId   = img.dataset.userId || '';
+            // Generate a consistent hue from the initial character
+            const hue      = (initial.charCodeAt(0) * 37) % 360;
+
+            const div      = document.createElement('div');
+            div.textContent = initial;
+            div.dataset.userId = userId;
+
+            // Copy all classes from the img so sizing/shape CSS still applies
+            div.className  = img.className;
+            div.style.cssText = [
+                `background: hsl(${hue}, 50%, 42%)`,
+                'color: #fff',
+                'display: inline-flex',
+                'align-items: center',
+                'justify-content: center',
+                'font-weight: 700',
+                'font-size: .75rem',
+                'border-radius: 50%',
+                'flex-shrink: 0',
+                'width: ' + (img.width  || img.offsetWidth  || 32) + 'px',
+                'height: '+ (img.height || img.offsetHeight || 32) + 'px',
+            ].join(';');
+
+            img.parentNode?.replaceChild(div, img);
+        }
+
+        // Attach to all existing avatar imgs on page load
+        function attachFallbacks() {
+            document.querySelectorAll('img[data-user-id], img.conv-avatar--img, img.msg-avatar-img').forEach(img => {
+                if (!img.onerror) img.onerror = () => replaceBrokenAvatar(img);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', attachFallbacks);
+
+        // Re-attach after every Livewire re-render (new avatars may appear)
+        document.addEventListener('livewire:update', attachFallbacks);
+
+    })();
+
 })();
