@@ -40,6 +40,9 @@ class MessageDeleted implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        return ['messageId' => $this->messageId];
+        return [
+            'messageId'      => $this->messageId,
+            'conversationId' => $this->conversationId,
+        ];
     }
 }

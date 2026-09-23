@@ -245,6 +245,16 @@
         }
     }
 
+    /* ── Sidebar instant update when a message is deleted ────────────────── */
+    function updateSidebarForDeletedMessage(conversationId) {
+        const preview = document.getElementById(`conv-preview-${conversationId}`);
+        if (!preview) return;
+        const deletedText = 'This message was deleted';
+        preview.textContent          = deletedText;
+        preview.dataset.lastPreview  = deletedText;
+        _sidebarPreviewCache.set(String(conversationId), deletedText);
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════
      | AVATAR & STATUS UPDATE HELPERS
      | Applies profile updates (avatar, status, name) to ALL matching DOM
@@ -783,6 +793,7 @@
                 .listen('.message.deleted', (event) => {
                     console.log('[Chat] message.deleted:', event);
                     markDeletedInDOM(event.messageId);
+                    updateSidebarForDeletedMessage(event.conversationId);
                     const component = getChatComponent();
                     if (component) component.call('handleRemoteDelete', event.messageId);
                 })
@@ -962,6 +973,7 @@
                 // Recipient has a different chat open — update sidebar preview
                 // so deleted message doesn't linger as the last preview text.
                 markDeletedInDOM(event.messageId);
+                updateSidebarForDeletedMessage(event.conversationId);
                 const component = getChatComponent();
                 if (component) component.call('handleRemoteDelete', event.messageId);
             })
