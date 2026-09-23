@@ -2,11 +2,12 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 class UserProfileUpdated implements ShouldBroadcastNow
 {
@@ -22,7 +23,24 @@ class UserProfileUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [new Channel('profile-updates')];
+        // Broadcast only to users who share an accepted conversation with this user.
+        // This replaces the unauthenticated public channel and prevents profile
+        // data from leaking to anyone who knows the channel name.
+        $partnerIds = DB::table('conversations')
+            ->where('status', 'accepted')
+            ->where(function ($q) {
+                $q->where('user_one_id', $this->userId)
+                  ->orWhere('user_two_id', $this->userId);
+            })
+            ->get(['user_one_id', 'user_two_id'])
+            ->flatMap(fn ($row) => [$row->user_one_id, $row->user_two_id])
+            ->unique()
+            ->reject(fn ($id) => (int) $id === (int) $this->userId)
+            ->values();
+
+        return $partnerIds
+            ->map(fn ($id) => new PrivateChannel('user.' . $id))
+            ->all();
     }
 
     public function broadcastAs(): string

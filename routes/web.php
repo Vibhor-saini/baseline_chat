@@ -11,6 +11,9 @@ use App\Livewire\Chat\Index as ChatIndex;
 use App\Http\Controllers\PresenceController;
 
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('chat.index');
+    }
     return view('auth.login');
 });
 
