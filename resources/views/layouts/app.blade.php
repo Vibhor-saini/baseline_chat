@@ -952,6 +952,200 @@
             color: #57c75a;
         }
 
+        /* ── Copy toast ─────────────────────────── */
+        .copy-toast {
+            position: fixed;
+            bottom: 80px; left: 50%; transform: translateX(-50%) translateY(6px);
+            background: #2a2a3d; color: #e0e0f0;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 8px; padding: 7px 18px;
+            font-size: .82rem; font-weight: 500;
+            pointer-events: none; z-index: 9999;
+            opacity: 0; transition: opacity .18s ease, transform .18s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,.4);
+        }
+        .copy-toast--visible {
+            opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── Message Search (Find in Chat — Teams style) ───────────────── */
+        .chat-header-search-btn {
+            margin-left: auto;
+            display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 8px;
+            background: transparent; border: none; cursor: pointer;
+            color: #9090b0; flex-shrink: 0;
+            transition: background .15s, color .15s;
+        }
+        .chat-header-search-btn:hover,
+        .chat-header-search-btn[aria-expanded="true"] {
+            background: rgba(255,255,255,.08); color: #e0e0f0;
+        }
+
+        /* Side panel */
+        .find-in-chat-panel {
+            width: 0;
+            flex-shrink: 0;
+            background: #13131e;
+            border-left: 0px solid rgba(255,255,255,.07);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            transition: width .22s cubic-bezier(.4,0,.2,1),
+                        border-left-width .22s,
+                        opacity .22s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .find-in-chat-panel.fic-panel--open {
+            width: 320px;
+            border-left-width: 1px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        @media (max-width: 700px) {
+            .find-in-chat-panel.fic-panel--open {
+                position: fixed; inset: 0; width: 100%; z-index: 200;
+            }
+        }
+
+        /* Panel header */
+        .fic-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            flex-shrink: 0;
+        }
+        .fic-title {
+            font-size: .95rem; font-weight: 600; color: #e0e0f0;
+            white-space: nowrap;
+        }
+        .fic-close {
+            display: flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 6px;
+            background: transparent; border: none; cursor: pointer;
+            color: #8080a0; transition: background .15s, color .15s;
+        }
+        .fic-close:hover { background: rgba(255,255,255,.08); color: #e0e0f0; }
+
+        /* Search input */
+        .fic-search-wrap {
+            display: flex; align-items: center;
+            margin: 10px 12px 8px;
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px;
+            padding: 7px 10px;
+            gap: 6px;
+            flex-shrink: 0;
+            transition: border-color .15s;
+        }
+        .fic-search-wrap:focus-within { border-color: rgba(255,255,255,.25); }
+        .fic-search-input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: #e0e0f0; font-size: .88rem; min-width: 0;
+        }
+        .fic-search-input::placeholder { color: #5050a0; }
+        .fic-search-icon { flex-shrink: 0; color: #6060a0; }
+        .fic-clear-btn {
+            background: transparent; border: none; cursor: pointer;
+            color: #6868a8; font-size: .8rem; font-weight: 500;
+            padding: 0; flex-shrink: 0;
+            transition: color .15s;
+        }
+        .fic-clear-btn:hover { color: #e0e0f0; }
+
+        /* Body / results */
+        .fic-body {
+            flex: 1; overflow-y: auto; padding-bottom: 12px;
+        }
+
+        /* Empty state */
+        .fic-empty-state {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 40px 20px; gap: 8px; text-align: center;
+        }
+        .fic-empty-icon { opacity: .5; margin-bottom: 4px; }
+        .fic-empty-title {
+            font-size: .95rem; font-weight: 600; color: #c0c0e0;
+        }
+        .fic-empty-sub {
+            font-size: .8rem; color: #6060a0; margin: 0;
+        }
+
+        /* Month label */
+        .fic-month-label {
+            font-size: .74rem; font-weight: 600; color: #6060a0;
+            text-transform: uppercase; letter-spacing: .06em;
+            padding: 14px 14px 4px;
+        }
+
+        /* Result item */
+        .fic-result-item {
+            display: flex; gap: 10px; width: 100%;
+            text-align: left; background: transparent; border: none;
+            padding: 10px 14px; cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            transition: background .12s;
+        }
+        .fic-result-item:last-child { border-bottom: none; }
+        .fic-result-item:hover { background: rgba(255,255,255,.05); }
+
+        .fic-result-left { flex-shrink: 0; }
+        .fic-result-avatar {
+            position: relative;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #2a2a4a;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .82rem; font-weight: 600; color: #a0a0d0;
+            overflow: hidden;
+        }
+        .fic-result-avatar img {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+        }
+        .fic-result-you-dot {
+            position: absolute; bottom: 0; right: 0;
+            width: 9px; height: 9px; border-radius: 50%;
+            background: #23e07a;
+            border: 1.5px solid #13131e;
+        }
+
+        .fic-result-content { flex: 1; min-width: 0; }
+        .fic-result-meta {
+            display: flex; justify-content: space-between; align-items: baseline;
+            margin-bottom: 3px;
+        }
+        .fic-result-sender {
+            font-size: .8rem; font-weight: 600; color: #b0b0d8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .fic-result-date {
+            font-size: .72rem; color: #5050a0; flex-shrink: 0; margin-left: 6px;
+        }
+        .fic-result-body {
+            font-size: .83rem; color: #9090b8; margin: 0;
+            word-break: break-word; white-space: pre-wrap;
+            display: -webkit-box; -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical; overflow: hidden;
+            line-height: 1.45;
+        }
+        .fic-mark {
+            background: rgba(255,200,0,.22);
+            color: #ffe066; border-radius: 2px; padding: 0 1px;
+        }
+
+        /* Highlight animation when jumping to a message */
+        .msg-search-highlight-bubble {
+            animation: msgSearchPulse 2s ease forwards;
+        }
+        @keyframes msgSearchPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(255,200,0,.5); }
+            30%  { box-shadow: 0 0 0 6px rgba(255,200,0,.3); }
+            100% { box-shadow: 0 0 0 0 rgba(255,200,0,0); }
+        }
+
         .flash-toast--error {
             background: rgba(224,91,91,.1);
             border-color: rgba(224,91,91,.4);

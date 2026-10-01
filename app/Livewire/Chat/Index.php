@@ -93,6 +93,10 @@ class Index extends Component
     public ?int   $editingMessageId = null;
     public string $editBody         = '';
 
+    /** Message search within conversation ── */
+    public string $msgSearch        = '';
+    public array  $msgSearchResults = [];
+
     public string $search       = '';
     public bool   $showRequests = false;
 
@@ -760,6 +764,91 @@ class Index extends Component
     {
         $this->editingMessageId = null;
         $this->editBody         = '';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MESSAGE SEARCH
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Search messages within the currently open conversation.
+     * Called via wire:model.live on the search input.
+     * Results are plain arrays so Livewire never serializes Eloquent objects.
+     */
+    public function updatedMsgSearch(): void
+    {
+        $term = trim($this->msgSearch);
+
+        if (mb_strlen($term) < 2 || ! $this->selectedConversationId) {
+            $this->msgSearchResults = [];
+            $this->dispatch('msg-search-results', term: '', results: []);
+            return;
+        }
+
+        $results = Message::withTrashed()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('type', 'text')
+            ->whereNull('deleted_at')
+            ->where('body', 'like', '%' . $term . '%')
+            ->with('sender:id,name,profile_image')
+            ->latest()
+            ->limit(30)
+            ->get()
+            ->map(fn($m) => [
+                'id'          => $m->id,
+                'body'        => $m->body,
+                'sender_name' => $m->sender?->name ?? 'Unknown',
+                'sender_id'   => $m->sender_id,
+                'is_mine'     => $m->sender_id === auth()->id(),
+                'avatar_url'  => $m->sender?->profile_image
+                    ? \Illuminate\Support\Facades\Storage::url($m->sender->profile_image)
+                    : '',
+                'raw_date'    => $m->created_at->toISOString(),
+                'created_at'  => $m->created_at->setTimezone('Asia/Kolkata')->format('M j, g:i A'),
+                'date_short'  => $m->created_at->setTimezone('Asia/Kolkata')->format('d-m'),
+            ])
+            ->values()
+            ->all();
+
+        $this->msgSearchResults = $results;
+        $this->dispatch('msg-search-results', term: $term, results: $results);
+    }
+
+    public function clearMsgSearch(): void
+    {
+        $this->msgSearch        = '';
+        $this->msgSearchResults = [];
+    }
+
+    /**
+     * Load messages around a specific message ID so JS can scroll to it.
+     * Fetches 50 messages ending at the target message.
+     */
+    public function loadMessageContext(int $messageId): void
+    {
+        if (! $this->selectedConversationId) return;
+
+        // Verify message belongs to current conversation
+        $target = Message::withTrashed()
+            ->where('id', $messageId)
+            ->where('conversation_id', $this->selectedConversationId)
+            ->first();
+
+        if (! $target) return;
+
+        // Load 50 messages up to and including the target
+        $this->messages = Message::withTrashed()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('id', '<=', $messageId)
+            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender', 'reactions.user'])
+            ->latest()
+            ->take(50)
+            ->get()
+            ->reverse()
+            ->values()
+            ->all();
     }
 
     /*

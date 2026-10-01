@@ -1469,6 +1469,278 @@
     /* ── Delete confirmation modal ───────────────────────────────────────── */
     let _pendingDeleteId = null;
 
+    /* ── Message Search ──────────────────────────────────────────────────── */
+    let _msgSearchOpen = false;
+
+    window._toggleMsgSearch = function () {
+        const panel  = document.getElementById('findInChatPanel');
+        const btn    = document.getElementById('msgSearchToggleBtn');
+        const layout = document.querySelector('.teams-layout');
+        if (!panel) return;
+
+        _msgSearchOpen = !_msgSearchOpen;
+
+        if (_msgSearchOpen) {
+            panel.classList.add('fic-panel--open');
+            panel.setAttribute('aria-hidden', 'false');
+            if (layout) layout.classList.add('fic-layout--open');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+            requestAnimationFrame(() => {
+                const input = document.getElementById('msgSearchInput');
+                if (input) input.focus();
+            });
+        } else {
+            panel.classList.remove('fic-panel--open');
+            panel.setAttribute('aria-hidden', 'true');
+            if (layout) layout.classList.remove('fic-layout--open');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+            const component = getChatComponent();
+            if (component) component.call('clearMsgSearch');
+            // reset input
+            const input = document.getElementById('msgSearchInput');
+            if (input) input.value = '';
+            _ficRenderEmpty();
+        }
+    };
+
+    // Search input — send to Livewire on input (debounced)
+    let _ficDebounceTimer = null;
+    document.addEventListener('input', (e) => {
+        if (e.target.id !== 'msgSearchInput') return;
+        const val     = e.target.value;
+        const clearBtn = document.getElementById('ficClearBtn');
+        const icon     = document.getElementById('ficSearchIcon');
+        if (clearBtn) clearBtn.style.display = val ? '' : 'none';
+        if (icon)     icon.style.display     = val ? 'none' : '';
+        clearTimeout(_ficDebounceTimer);
+        _ficDebounceTimer = setTimeout(() => {
+            const component = getChatComponent();
+            if (component) {
+                // Directly set Livewire property and trigger search
+                component.set('msgSearch', val);
+            }
+        }, 300);
+    });
+
+    // Result item click — event delegation on ficResults container
+    document.addEventListener('click', (e) => {
+        const item = e.target.closest('.fic-result-item');
+        if (!item) return;
+        const msgId = item.dataset.msgId;
+        const term  = decodeURIComponent(item.dataset.term || '');
+        if (msgId) window._jumpToMessage(parseInt(msgId, 10), term);
+    });
+
+    // Clear button
+    document.addEventListener('click', (e) => {
+        if (e.target.id !== 'ficClearBtn' && !e.target.closest('#ficClearBtn')) return;
+        const input = document.getElementById('msgSearchInput');
+        if (input) { input.value = ''; input.focus(); }
+        const clearBtn = document.getElementById('ficClearBtn');
+        const icon     = document.getElementById('ficSearchIcon');
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (icon)     icon.style.display     = '';
+        const component = getChatComponent();
+        if (component) component.set('msgSearch', '');
+        _ficRenderEmpty();
+    });
+
+    // Livewire dispatches results — render them in JS
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('msg-search-results', ({ term, results }) => {
+            _ficRenderResults(term, results);
+        });
+    });
+
+    function _ficRenderEmpty() {
+        const body    = document.getElementById('ficBody');
+        const empty   = document.getElementById('ficEmptyState');
+        const results = document.getElementById('ficResults');
+        if (!body) return;
+        if (empty)   { empty.style.display = ''; empty.querySelector('p.fic-empty-title').textContent = 'Search in this chat'; empty.querySelector('p.fic-empty-sub').textContent = 'Find messages shared in this chat.'; }
+        if (results) { results.style.display = 'none'; results.innerHTML = ''; }
+    }
+
+    function _ficRenderResults(term, results) {
+        const empty   = document.getElementById('ficEmptyState');
+        const container = document.getElementById('ficResults');
+        if (!container) return;
+
+        if (!term || !results || results.length === 0) {
+            if (empty) {
+                empty.style.display = '';
+                const title = empty.querySelector('p.fic-empty-title');
+                const sub   = empty.querySelector('p.fic-empty-sub');
+                if (title) title.textContent = term ? 'No results found' : 'Search in this chat';
+                if (sub)   sub.textContent   = term ? 'Try a different keyword.' : 'Find messages shared in this chat.';
+            }
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+        container.style.display = '';
+
+        // Group by month
+        let html = '';
+        let currentMonth = null;
+        results.forEach(r => {
+            const d     = new Date(r.raw_date);
+            const month = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+            if (month !== currentMonth) {
+                currentMonth = month;
+                html += `<div class="fic-month-label">${month}</div>`;
+            }
+
+            // Highlight matched term in body
+            const escapedBody = r.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const highlighted = escapedBody.replace(new RegExp(`(${escapedTerm})`, 'gi'), '<mark class="fic-mark">$1</mark>');
+
+            const avatarHtml = r.avatar_url
+                ? `<img src="${r.avatar_url}" alt="${r.sender_name.replace(/"/g,'')}">`
+                : `${r.sender_name.charAt(0).toUpperCase()}`;
+            const youDot = r.is_mine ? `<span class="fic-result-you-dot"></span>` : '';
+
+            html += `
+                <button type="button" class="fic-result-item"
+                        data-msg-id="${r.id}" data-term="${encodeURIComponent(term)}">
+                  <div class="fic-result-left">
+                    <div class="fic-result-avatar">${avatarHtml}${youDot}</div>
+                  </div>
+                  <div class="fic-result-content">
+                    <div class="fic-result-meta">
+                      <span class="fic-result-sender">${r.is_mine ? 'You' : r.sender_name.replace(/</g,'&lt;')}</span>
+                      <span class="fic-result-date">${r.date_short}</span>
+                    </div>
+                    <p class="fic-result-body">${highlighted}</p>
+                  </div>
+                </button>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    window._jumpToMessage = function (messageId, term) {
+        // Close find-in-chat panel first
+        const panel  = document.getElementById('findInChatPanel');
+        const btn    = document.getElementById('msgSearchToggleBtn');
+        const layout = document.querySelector('.teams-layout');
+        if (panel)  panel.classList.remove('fic-panel--open');
+        if (panel)  panel.setAttribute('aria-hidden', 'true');
+        if (layout) layout.classList.remove('fic-layout--open');
+        if (btn)    btn.setAttribute('aria-expanded', 'false');
+        _msgSearchOpen = false;
+
+        // Reset search input UI
+        const input    = document.getElementById('msgSearchInput');
+        const clearBtn = document.getElementById('ficClearBtn');
+        const icon     = document.getElementById('ficSearchIcon');
+        if (input)    input.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (icon)     icon.style.display = '';
+        _ficRenderEmpty();
+
+        // Wait for panel close transition (220ms) then scroll
+        setTimeout(() => {
+            const el = document.getElementById(`msg-${messageId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                _highlightSearchMatch(el, term);
+            } else {
+                // Message not in loaded 50 — load context then scroll
+                const component = getChatComponent();
+                if (component) {
+                    component.call('loadMessageContext', messageId).then(() => {
+                        setTimeout(() => {
+                            const target = document.getElementById(`msg-${messageId}`);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                _highlightSearchMatch(target, term);
+                            }
+                        }, 250);
+                    });
+                }
+            }
+
+            // Clear Livewire state after scroll is initiated
+            const component = getChatComponent();
+            if (component) component.call('clearMsgSearch');
+        }, 240);
+    };
+
+    function _highlightSearchMatch(el, term) {
+        if (!term) return;
+        el.classList.add('msg-search-highlight');
+        // Also flash the bubble
+        const bubble = el.querySelector('.msg-bubble');
+        if (bubble) bubble.classList.add('msg-search-highlight-bubble');
+        setTimeout(() => {
+            el.classList.remove('msg-search-highlight');
+            if (bubble) bubble.classList.remove('msg-search-highlight-bubble');
+        }, 2000);
+    }
+
+    // Close search on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && _msgSearchOpen) {
+            window._toggleMsgSearch();
+        }
+    });
+
+    // Close search when conversation changes — NOT when typing in search
+    document.addEventListener('livewire:init', () => {
+        Livewire.hook('commit', ({ commit, succeed }) => {
+            succeed(() => {
+                const calls = commit?.calls ?? [];
+                const switched = calls.some(c => c.method === 'selectConversation');
+                if (switched && _msgSearchOpen) {
+                    const panel  = document.getElementById('findInChatPanel');
+                    const btn    = document.getElementById('msgSearchToggleBtn');
+                    const layout = document.querySelector('.teams-layout');
+                    if (panel)  panel.classList.remove('fic-panel--open');
+                    if (panel)  panel.setAttribute('aria-hidden', 'true');
+                    if (layout) layout.classList.remove('fic-layout--open');
+                    if (btn)    btn.setAttribute('aria-expanded', 'false');
+                    _msgSearchOpen = false;
+                }
+            });
+        });
+    });
+    /* ── end Message Search ──────────────────────────────────────────────── */
+
+    window._copyMessageText = function (text) {
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            // Show a brief "Copied" toast
+            const existing = document.getElementById('copyToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id          = 'copyToast';
+            toast.className   = 'copy-toast';
+            toast.textContent = 'Copied';
+            document.body.appendChild(toast);
+            // Animate in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => toast.classList.add('copy-toast--visible'));
+            });
+            setTimeout(() => {
+                toast.classList.remove('copy-toast--visible');
+                setTimeout(() => toast.remove(), 250);
+            }, 1500);
+        }).catch(() => {
+            // Fallback for older browsers
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        });
+    };
+
     window._openDeleteConfirm = function (messageId) {
         _pendingDeleteId = messageId;
         const overlay = document.getElementById('deleteConfirmOverlay');

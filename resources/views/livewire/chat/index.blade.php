@@ -333,6 +333,19 @@
             <span id="chat-header-status-text">{{ $selectedConversation->otherUser()->lastSeenText() }}</span>
           </span>
         </div>
+
+        {{-- Search icon button --}}
+        <button type="button"
+                class="chat-header-search-btn"
+                id="msgSearchToggleBtn"
+                title="Search messages"
+                aria-label="Search messages"
+                aria-expanded="false"
+                onclick="window._toggleMsgSearch()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
       </div>
 
       {{-- Messages Area --}}
@@ -721,6 +734,13 @@
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 9l5 5-5 5"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>
                       Forward
                     </button>
+                    @if(!$message->deleted_at && $message->type === 'text')
+                    <button type="button" class="msg-more-item" role="menuitem"
+                            onclick="window._copyMessageText({{ json_encode($message->body) }}); window._closeAllMsgMenus()">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      Copy
+                    </button>
+                    @endif
                     @if($isMine)
                     <div class="msg-more-divider" role="separator"></div>
                     <button type="button" class="msg-more-item msg-more-item--danger" role="menuitem"
@@ -968,6 +988,44 @@
     @endif
 
   </main>
+
+  {{-- ══ TEAMS-STYLE FIND IN CHAT PANEL ══ --}}
+  {{-- wire:ignore prevents Livewire morphing from wiping the fic-panel--open class --}}
+  <div class="find-in-chat-panel" id="findInChatPanel" aria-hidden="true" role="complementary" aria-label="Find in chat" wire:ignore>
+
+    {{-- Panel header --}}
+    <div class="fic-header">
+      <span class="fic-title">Find in chat</span>
+      <button type="button" class="fic-close" id="ficClose" aria-label="Close search" onclick="window._toggleMsgSearch()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    {{-- Search input --}}
+    <div class="fic-search-wrap">
+      <input type="text"
+             id="msgSearchInput"
+             class="fic-search-input"
+             placeholder="Enter a search keyword…"
+             autocomplete="off"
+             aria-label="Search messages">
+      <button type="button" class="fic-clear-btn" id="ficClearBtn" style="display:none" aria-label="Clear">Clear</button>
+      <svg class="fic-search-icon" id="ficSearchIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+
+    {{-- Results body — fully JS-managed --}}
+    <div class="fic-body" id="ficBody">
+      <div class="fic-empty-state" id="ficEmptyState">
+        <div class="fic-empty-icon">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <p class="fic-empty-title">Search in this chat</p>
+        <p class="fic-empty-sub">Find messages shared in this chat.</p>
+      </div>
+      <div id="ficResults" style="display:none"></div>
+    </div>
+  </div>
+
 </div>
 
 {{-- ══════════════════════════════════════════════════════
