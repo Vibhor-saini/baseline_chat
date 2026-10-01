@@ -351,6 +351,82 @@
         .msg-file-dl   { flex-shrink: 0; opacity: .7; }
         .msg-caption   { margin: 4px 0 0; font-size: .82rem; opacity: .85; }
 
+        /* -- PDF file card variant -- */
+        .msg-file-wrap--pdf { cursor: pointer; }
+        .msg-file-wrap--pdf:hover { background: rgba(224,90,90,.18); }
+        .msg-file-icon--pdf svg { stroke: #e05a5a; }
+        .msg-file-preview-badge {
+            flex-shrink: 0;
+            font-size: .68rem; font-weight: 600; letter-spacing: .04em;
+            color: #e05a5a;
+            border: 1px solid rgba(224,90,90,.5);
+            border-radius: 4px;
+            padding: 1px 6px;
+        }
+
+        /* ── PDF Viewer Overlay ─────────────────────────────────────── */
+        .pdf-overlay {
+            position: fixed; inset: 0; z-index: 2000;
+            background: #0d0d14;
+            display: flex; flex-direction: column;
+            opacity: 1; transition: opacity .16s ease;
+        }
+        .pdf-topbar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 0 16px; height: 52px; flex-shrink: 0;
+            background: #15151f;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+        .pdf-close {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 8px;
+            background: transparent; border: none; cursor: pointer;
+            color: #b0b0cc;
+            transition: background .15s, color .15s;
+        }
+        .pdf-close:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .pdf-topbar-info {
+            display: flex; align-items: center; gap: 8px;
+            flex: 1; overflow: hidden;
+        }
+        .pdf-filename {
+            font-size: .88rem; font-weight: 500; color: #e0e0f0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .pdf-topbar-actions {
+            display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+        }
+        .pdf-action-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 8px;
+            background: transparent; border: none; cursor: pointer;
+            color: #b0b0cc; text-decoration: none;
+            transition: background .15s, color .15s;
+        }
+        .pdf-action-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .pdf-body {
+            flex: 1; position: relative; overflow: hidden;
+        }
+        .pdf-loading {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 12px; color: #8080a0; font-size: .9rem;
+        }
+        .pdf-spinner {
+            width: 36px; height: 36px;
+            border: 3px solid rgba(255,255,255,.1);
+            border-top-color: #e05a5a;
+            border-radius: 50%;
+            animation: pdfSpin .7s linear infinite;
+        }
+        @keyframes pdfSpin { to { transform: rotate(360deg); } }
+        .pdf-frame {
+            width: 100%; height: 100%;
+            border: none;
+            transition: opacity .2s ease;
+        }
+
         /* -- Message actions hover menu -- */
         .msg-actions {
             display: flex; gap: 4px;
@@ -467,6 +543,11 @@
         .draft-text {
             color: var(--text-2);
             font-size: .78rem;
+        }
+        .you-label {
+            color: var(--text-2);
+            font-size: .75rem;
+            font-weight: 500;
         }
 
         /* ── Unread badge ───────────────────────── */

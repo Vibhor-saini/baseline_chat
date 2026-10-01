@@ -13,6 +13,7 @@ use App\Events\MessageSent;
 use App\Events\MessageDelivered;
 use App\Events\MessageRead;
 use App\Events\MessageDeleted;
+use App\Events\MessageEdited;
 use App\Events\MessageReactionUpdated;
 use App\Events\ConversationUpdated;
 use App\Events\PendingRequestUpdated;
@@ -280,6 +281,15 @@ class Index extends Component
 
     public function selectConversation(int $conversationId): void
     {
+        // ── Authorization: user must be a participant ──────────────────────
+        $authId = auth()->id();
+        abort_unless(
+            Conversation::where('id', $conversationId)
+                ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+                ->exists(),
+            403
+        );
+
         // ── Save current draft before switching ───────────────────────────
         if ($this->selectedConversationId && trim($this->body) !== '') {
             $this->draftBodies[(string) $this->selectedConversationId] = $this->body;
@@ -447,14 +457,20 @@ class Index extends Component
 
     public function openRequest(int $requestId): void
     {
-        $this->selectedRequest      = Conversation::with(['userOne'])->findOrFail($requestId);
+        // Authorization: only the recipient (user_two_id) can view this request
+        $conversation = Conversation::with(['userOne'])->findOrFail($requestId);
+        abort_unless($conversation->user_two_id === auth()->id(), 403);
+
+        $this->selectedRequest      = $conversation;
         $this->selectedConversation = null;
         $this->activeScreen         = 'request-preview';
     }
 
     public function acceptRequest(int $conversationId): void
     {
+        // Authorization: only the recipient (user_two_id) can accept
         $conversation = Conversation::findOrFail($conversationId);
+        abort_unless($conversation->user_two_id === auth()->id(), 403);
 
         // Set last_message_at so this conversation sorts to the top of the
         // sidebar (loadConversations orders by latest('last_message_at')).
@@ -479,7 +495,9 @@ class Index extends Component
 
     public function rejectRequest(int $conversationId): void
     {
+        // Authorization: only the recipient (user_two_id) can reject
         $conversation = Conversation::findOrFail($conversationId);
+        abort_unless($conversation->user_two_id === auth()->id(), 403);
 
         $this->broadcastPendingUpdate($conversation->user_one_id, $conversation->user_two_id);
         $conversation->delete();
@@ -603,7 +621,16 @@ class Index extends Component
             ));
         }
 
-        $this->loadConversations();
+        // Do NOT call loadConversations() here — it triggers a full sidebar
+        // re-render that wipes JS-managed unread badges on other conversations.
+        // JS (updateSidebarForNewMessage) already updated the preview text and
+        // the active conversation never shows a badge anyway.
+        // Only bump last_message_at in the in-memory conversation so sidebar
+        // ordering stays correct after the next natural loadConversations() call.
+        if ($this->selectedConversation) {
+            $this->selectedConversation->last_message_at = $now;
+        }
+
         $this->dispatch('scroll-to-bottom');
     }
 
@@ -694,18 +721,35 @@ class Index extends Component
         $newBody = trim($this->editBody);
         if ($newBody === '') return; // don't allow empty
 
+        $now = now();
         $message->update([
             'body'      => $newBody,
-            'edited_at' => now(),
+            'edited_at' => $now,
         ]);
 
         // Update in-memory array so the UI reflects changes immediately
         foreach ($this->messages as $i => $msg) {
             if ($msg->id === $this->editingMessageId) {
                 $this->messages[$i]->body      = $newBody;
-                $this->messages[$i]->edited_at = now();
+                $this->messages[$i]->edited_at = $now;
                 break;
             }
+        }
+
+        // Broadcast edit to the other participant in realtime
+        $conversation = $this->selectedConversation;
+        if ($conversation) {
+            $recipientId = $conversation->user_one_id === auth()->id()
+                ? $conversation->user_two_id
+                : $conversation->user_one_id;
+
+            broadcast(new MessageEdited(
+                $message->id,
+                $message->conversation_id,
+                $newBody,
+                $now->toISOString(),
+                $recipientId,
+            ))->toOthers();
         }
 
         $this->cancelEdit();
@@ -733,6 +777,14 @@ class Index extends Component
     public function toggleReaction(int $messageId, string $emoji): void
     {
         if (! $this->selectedConversationId) return;
+
+        // C-6: Verify message belongs to the currently open conversation
+        abort_unless(
+            Message::where('id', $messageId)
+                ->where('conversation_id', $this->selectedConversationId)
+                ->exists(),
+            403
+        );
 
         $emoji = mb_substr(trim($emoji), 0, 10); // sanitise length
         if ($emoji === '') return;
@@ -905,7 +957,25 @@ class Index extends Component
             ? (int) $this->forwardSelectedTarget['id']
             : $targetConversationId;
 
-        $original  = Message::withTrashed()->findOrFail($this->forwardingMessageId);
+        $authId = auth()->id();
+
+        // C-5: Verify source message belongs to a conversation the user is in
+        $original = Message::withTrashed()->findOrFail($this->forwardingMessageId);
+        abort_unless(
+            Conversation::where('id', $original->conversation_id)
+                ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+                ->exists(),
+            403
+        );
+
+        // C-4: Verify target conversation belongs to the user
+        abort_unless(
+            Conversation::where('id', $convId)
+                ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+                ->exists(),
+            403
+        );
+
         $extraText = trim($this->forwardExtraText);
 
         // Single message: optional text in body, original file forwarded

@@ -264,7 +264,7 @@
                 @elseif($latest)
                   @if($isMineLatest)
                     @include('livewire.chat.partials.tick', ['status' => $latest->deliveryStatus()])
-                    <span>{{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}</span>
+                    <span><span class="you-label">You:</span> {{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}</span>
                   @else
                     <span>{{ $latest->deleted_at ? 'This message was deleted' : $latestPreviewShort }}</span>
                   @endif
@@ -272,11 +272,15 @@
                   <span class="conv-preview-placeholder">Click to open chat</span>
                 @endif
               </p>
-              @if($unread > 0)
-                <span class="unread-badge" id="unread-{{ $conversation->id }}">{{ $unread > 99 ? '99+' : $unread }}</span>
-              @else
-                <span class="unread-badge" id="unread-{{ $conversation->id }}" style="display:none">0</span>
-              @endif
+              @php
+                $isActive     = $selectedConversation && $selectedConversation->id === $conversation->id;
+                $showUnread   = !$isActive && $unread > 0;
+              @endphp
+              <span class="unread-badge"
+                    id="unread-{{ $conversation->id }}"
+                    @if(!$showUnread) style="display:none" @endif>
+                {{ $showUnread ? ($unread > 99 ? '99+' : $unread) : '0' }}
+              </span>
             </div>
           </div>
         </div>
@@ -463,20 +467,37 @@
                         {{-- Show the actual forwarded image --}}
                         <a href="javascript:void(0)"
                            class="msg-img-wrap"
-                           onclick="window._openLightbox('{{ $message->fileUrl() }}', {{ $message->id }})">
+                           onclick="window._openLightbox('{{ $message->fileUrl() }}', {{ $message->id }})"
+                           data-lightbox-src="{{ $message->fileUrl() }}"
+                           data-lightbox-sender="{{ $message->forwardedFrom->sender?->name ?? 'Unknown' }}"
+                           data-lightbox-time="{{ $message->forwardedFrom->created_at->format('M j, Y g:i A') }}"
+                           data-lightbox-msgid="{{ $message->id }}">
                           <img src="{{ $message->fileUrl() }}" alt="Image" class="msg-image" loading="lazy">
                         </a>
                       @elseif($message->type === 'file')
                         {{-- Show the actual forwarded file download --}}
-                        <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
-                          <span class="msg-file-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                          </span>
-                          <span class="msg-file-name">{{ $message->fileName() }}</span>
-                          <span class="msg-file-dl">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          </span>
-                        </a>
+                        @php $fwdIsPdf = str_ends_with(strtolower($message->fileName() ?? ''), '.pdf'); @endphp
+                        @if($fwdIsPdf)
+                          <a href="javascript:void(0)"
+                             onclick="window._openPdfViewer('{{ $message->fileUrl() }}', '{{ e($message->fileName()) }}')"
+                             class="msg-file-wrap msg-file-wrap--pdf">
+                            <span class="msg-file-icon msg-file-icon--pdf">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9"/></svg>
+                            </span>
+                            <span class="msg-file-name">{{ $message->fileName() }}</span>
+                            <span class="msg-file-preview-badge">Preview</span>
+                          </a>
+                        @else
+                          <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
+                            <span class="msg-file-icon">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </span>
+                            <span class="msg-file-name">{{ $message->fileName() }}</span>
+                            <span class="msg-file-dl">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </span>
+                          </a>
+                        @endif
                       @else
                         {{ \Illuminate\Support\Str::limit($message->forwardedFrom->body, 300) }}
                       @endif
@@ -498,15 +519,28 @@
                     @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
 
                   @elseif($message->type === 'file')
-                    <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
-                      <span class="msg-file-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      </span>
-                      <span class="msg-file-name">{{ $message->fileName() }}</span>
-                      <span class="msg-file-dl">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      </span>
-                    </a>
+                    @php $isPdf = str_ends_with(strtolower($message->fileName() ?? ''), '.pdf'); @endphp
+                    @if($isPdf)
+                      <a href="javascript:void(0)"
+                         onclick="window._openPdfViewer('{{ $message->fileUrl() }}', '{{ e($message->fileName()) }}')"
+                         class="msg-file-wrap msg-file-wrap--pdf">
+                        <span class="msg-file-icon msg-file-icon--pdf">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9"/></svg>
+                        </span>
+                        <span class="msg-file-name">{{ $message->fileName() }}</span>
+                        <span class="msg-file-preview-badge">Preview</span>
+                      </a>
+                    @else
+                      <a href="{{ $message->fileUrl() }}" download class="msg-file-wrap">
+                        <span class="msg-file-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </span>
+                        <span class="msg-file-name">{{ $message->fileName() }}</span>
+                        <span class="msg-file-dl">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </span>
+                      </a>
+                    @endif
                     @if($message->body)<p class="msg-caption">{{ $message->body }}</p>@endif
 
                   @else
@@ -554,7 +588,7 @@
                         </div>
                       </div>
                     @else
-                      <span class="msg-text">{!! preg_replace_callback(
+                      <span class="msg-text" id="msg-text-{{ $message->id }}">{!! preg_replace_callback(
                           '/https?:\/\/[^\s<>"\']+/i',
                           fn($m) => '<a class="msg-link" href="' . e($m[0]) . '" data-href="' . e($m[0]) . '" onclick="window._openLinkMenu(event, this)" aria-label="Link: ' . e($m[0]) . '">' . e($m[0]) . '</a>',
                           e($message->body)
@@ -568,7 +602,9 @@
                 @if(!$message->deleted_at && $editingMessageId !== $message->id)
                 <span class="msg-time-wrap">
                   @if($message->edited_at)
-                    <span class="msg-edited-label">edited</span>
+                    <span class="msg-edited-label" id="msg-edited-{{ $message->id }}">edited</span>
+                  @else
+                    <span class="msg-edited-label" id="msg-edited-{{ $message->id }}" style="display:none">edited</span>
                   @endif
                   <span class="msg-time"
                         data-timestamp="{{ $message->created_at->toISOString() }}"
@@ -1170,6 +1206,41 @@
   {{-- Thumbnail strip --}}
   <div class="ilb-strip-wrap">
     <div class="ilb-strip" id="ilbStrip"></div>
+  </div>
+
+</div>
+
+{{-- ══════════════════════════════════════════════════════
+     PDF VIEWER MODAL
+══════════════════════════════════════════════════════ --}}
+<div id="pdfViewerOverlay" class="pdf-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="PDF viewer">
+
+  {{-- Top bar --}}
+  <div class="pdf-topbar">
+    <button class="pdf-close" id="pdfClose" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="pdf-topbar-info">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e05a5a" stroke-width="2" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="pdf-filename" id="pdfFilename"></span>
+    </div>
+    <div class="pdf-topbar-actions">
+      <a class="pdf-action-btn" id="pdfDownload" aria-label="Download" title="Download" download>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </a>
+      <a class="pdf-action-btn" id="pdfOpenTab" aria-label="Open in new tab" title="Open in new tab" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+    </div>
+  </div>
+
+  {{-- PDF iframe --}}
+  <div class="pdf-body">
+    <div class="pdf-loading" id="pdfLoading">
+      <div class="pdf-spinner"></div>
+      <span>Loading PDF…</span>
+    </div>
+    <iframe id="pdfFrame" class="pdf-frame" src="" title="PDF viewer" allowfullscreen></iframe>
   </div>
 
 </div>

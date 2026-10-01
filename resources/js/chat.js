@@ -228,7 +228,8 @@
     function updateSidebarForNewMessage(message) {
         const convId  = message.conversation_id;
         const preview = document.getElementById(`conv-preview-${convId}`);
-        const badge   = document.getElementById(`unread-${convId}`);
+        // Only update the preview text instantly — badge is managed by Livewire
+        // re-render (loadConversations) which has the accurate DB count.
         if (preview && !preview.classList.contains('conv-preview--typing')) {
             let text = '';
             if (message.type === 'image')     text = '📷 Image';
@@ -238,11 +239,24 @@
             preview.dataset.lastPreview = text;
             _sidebarPreviewCache.set(String(convId), text);
         }
-        if (badge) {
-            const current = parseInt(badge.textContent, 10) || 0;
-            const next    = current + 1;
-            badge.textContent   = next > 99 ? '99+' : String(next);
-            badge.style.display = '';
+    }
+
+    /* ── Apply an edited message body to DOM ────────────────────────────── */
+    function applyEditedMessageInDOM(messageId, newBody) {
+        const textEl   = document.getElementById(`msg-text-${messageId}`);
+        const editedEl = document.getElementById(`msg-edited-${messageId}`);
+
+        if (textEl) {
+            // Re-render body with link highlighting (same logic as blade)
+            const escaped = newBody.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const linked  = escaped.replace(
+                /(https?:\/\/[^\s<>"']+)/gi,
+                (url) => `<a class="msg-link" href="${url}" data-href="${url}" onclick="window._openLinkMenu(event, this)">${url}</a>`
+            );
+            textEl.innerHTML = linked;
+        }
+        if (editedEl) {
+            editedEl.style.display = '';
         }
     }
 
@@ -798,6 +812,10 @@
                     const component = getChatComponent();
                     if (component) component.call('handleRemoteDelete', event.messageId);
                 })
+                .listen('.message.edited', (event) => {
+                    console.log('[Chat] message.edited:', event);
+                    applyEditedMessageInDOM(event.messageId, event.newBody);
+                })
                 .listen('.reaction.updated', (event) => {
                     console.log('[Chat] reaction.updated:', event);
                     updateReactionsInDOM(event.messageId, event.reactions);
@@ -822,12 +840,24 @@
             if (conversationId && conversationId !== '' && conversationId !== 'null') {
                 connectToConversation(conversationId);
             } else if (!conversationId || conversationId === '' || conversationId === 'null') {
+                // Only leave if we had a channel — but NOT if this is just a transient
+                // morph mid-render where data-conversation is temporarily missing.
+                // We use a small debounce so a Livewire re-render that briefly clears
+                // the attribute doesn't cause a spurious leave/rejoin cycle.
                 if (currentConversationChannel) {
-                    Echo.leave(currentConversationChannel);
-                    hideTypingIndicator();
-                    console.log('[Chat] Left channel (conversation closed):', currentConversationChannel);
-                    currentConversationChannel = null;
-                    currentConversationId      = null;
+                    clearTimeout(window._leaveChannelTimer);
+                    window._leaveChannelTimer = setTimeout(() => {
+                        // Re-check after DOM settles — if conversation is back, don't leave
+                        const rootNow = document.querySelector('.teams-chat-root');
+                        const convNow = rootNow?.dataset.conversation;
+                        if (!convNow || convNow === '' || convNow === 'null') {
+                            Echo.leave(currentConversationChannel);
+                            hideTypingIndicator();
+                            console.log('[Chat] Left channel (conversation closed):', currentConversationChannel);
+                            currentConversationChannel = null;
+                            currentConversationId      = null;
+                        }
+                    }, 100);
                 }
             }
         }
@@ -878,6 +908,11 @@
                     attachTypingListener();
                     if (shouldScroll) scrollToBottom(true);
                     if (window._applyPresence) window._applyPresence();
+
+                    // After Livewire re-renders, clear the preview cache so stale JS-set
+                    // texts don't overwrite the fresh server-rendered previews.
+                    // The cache is only used to restore previews during typing animations.
+                    _sidebarPreviewCache.clear();
                     cacheSidebarPreviews();
 
                     // After every Livewire re-render, re-apply status to the
@@ -950,21 +985,23 @@
                 console.log('[Chat] message.sent (user channel):', event);
                 const incomingConvId = String(event.message.conversation_id);
                 if (incomingConvId === String(currentConversationId)) return;
-                // Always update sidebar for messages on non-active conversations
+                // Update sidebar preview text instantly (no waiting for Livewire)
                 updateSidebarForNewMessage(event.message);
+                // Trigger Livewire re-render so the unread badge count is accurate from DB
+                const component = getChatComponent();
+                if (component) component.call('refreshSidebarForConv', parseInt(incomingConvId, 10));
             })
             .listen('.message.delivered', (event) => {
                 console.log('[Chat] message.delivered (user channel):', event);
+                // If this conversation is open, Subscription A (chat channel) already handled it.
+                if (String(event.conversationId) === String(currentConversationId)) return;
                 updateTickDOM(event.messageId, 'delivered');
                 updateSidebarTick(event.conversationId, 'delivered');
             })
             .listen('.message.read', (event) => {
                 console.log('[Chat] message.read (user channel):', event);
-                if (String(event.conversationId) === String(currentConversationId)) {
-                    document.querySelectorAll('[id^="tick-"]').forEach(el => {
-                        if (el.querySelector('svg')) el.innerHTML = tickSVG('read');
-                    });
-                }
+                // If this conversation is open, Subscription A (chat channel) already handled it.
+                if (String(event.conversationId) === String(currentConversationId)) return;
                 updateSidebarTick(event.conversationId, 'read');
                 const component = getChatComponent();
                 if (component) component.call('markConversationRead', event.conversationId, event.readAt);
@@ -977,6 +1014,14 @@
                 updateSidebarForDeletedMessage(event.conversationId);
                 const component = getChatComponent();
                 if (component) component.call('handleRemoteDelete', event.messageId);
+            })
+            .listen('.message.edited', (event) => {
+                console.log('[Chat] message.edited (user channel):', event);
+                // If this conversation is open, chat channel already handled it.
+                if (String(event.conversationId) === String(currentConversationId)) return;
+                // Do NOT update sidebar preview — sidebar always shows the latest message
+                // by created_at (not the edited body). Livewire handles this correctly on
+                // the next loadConversations() re-render.
             })
             .listen('.profile.updated', (event) => {
                 console.log('[Chat] profile.updated (user channel):', event);
@@ -2082,6 +2127,60 @@
                 setZoom(1);
             }, 160);
         }
+
+        /* ── PDF Viewer ──────────────────────────────────────────────────── */
+        window._openPdfViewer = function (src, filename) {
+            const overlay  = document.getElementById('pdfViewerOverlay');
+            const frame    = document.getElementById('pdfFrame');
+            const loading  = document.getElementById('pdfLoading');
+            const nameEl   = document.getElementById('pdfFilename');
+            const dlBtn    = document.getElementById('pdfDownload');
+            const tabBtn   = document.getElementById('pdfOpenTab');
+            if (!overlay || !frame) return;
+
+            // Reset state
+            frame.src           = '';
+            frame.style.opacity = '0';
+            if (loading) loading.style.display = 'flex';
+            if (nameEl)  nameEl.textContent    = filename || 'document.pdf';
+            if (dlBtn)   { dlBtn.href = src; dlBtn.download = filename || 'document.pdf'; }
+            if (tabBtn)  tabBtn.href = src;
+
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // Load PDF into iframe after overlay renders
+            frame.onload = () => {
+                if (loading) loading.style.display = 'none';
+                frame.style.opacity = '1';
+            };
+            setTimeout(() => { frame.src = src; }, 80);
+        };
+
+        function closePdfViewer() {
+            const overlay = document.getElementById('pdfViewerOverlay');
+            const frame   = document.getElementById('pdfFrame');
+            if (!overlay) return;
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display  = 'none';
+                overlay.style.opacity  = '';
+                document.body.style.overflow = '';
+                if (frame) frame.src = '';
+            }, 160);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('pdfClose')?.addEventListener('click', closePdfViewer);
+            document.getElementById('pdfViewerOverlay')?.addEventListener('click', (e) => {
+                if (e.target.id === 'pdfViewerOverlay') closePdfViewer();
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePdfViewer();
+        });
+        /* ── end PDF Viewer ──────────────────────────────────────────────── */
 
         document.addEventListener('DOMContentLoaded', () => {
             const overlay = document.getElementById('imgLightboxOverlay');
