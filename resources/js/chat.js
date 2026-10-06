@@ -834,24 +834,45 @@
 
         /* ── Livewire profile-saved event (fires on own tab only) ────────── */
         Livewire.on('profile-saved', (params) => {
-            const p         = params && params[0];
+            // Livewire 4 dispatches named params as a plain object directly
+            const p         = (params && typeof params === 'object' && !Array.isArray(params))
+                                ? params
+                                : (params && params[0]);
             const status    = (p && p.status)    || '';
             const name      = (p && p.name)      || '';
             const avatarUrl = (p && p.avatarUrl) || '';
             const myUserId  = document.body.dataset.userId || '';
-            // Only update the map when we have a real status value from the server.
-            // Never fall back to 'available' here — that would override a saved
-            // Busy/Away/DND status with the wrong value.
+
+            // Update map FIRST so commit hook picks up the correct value
             if (myUserId && status) userStatusMap.set(String(myUserId), status);
+
             if (myUserId) {
+                // Update topbar avatar, name, status dot everywhere
                 applyProfileUpdate(myUserId, status || userStatusMap.get(String(myUserId)) || 'available', name, avatarUrl);
+                // Explicitly sync the panel status buttons + dot + ring
+                applyPanelStatus(status);
                 applyPresence();
+
+                // Also directly update topbarAvatarImg src if avatarUrl is fresh
+                if (avatarUrl) {
+                    const topbarImg = document.getElementById('topbarAvatarImg');
+                    if (topbarImg) topbarImg.src = avatarUrl;
+
+                    const navRailImg = document.getElementById('navRailAvatarImg');
+                    if (navRailImg) navRailImg.src = avatarUrl;
+
+                    // Update panel preview too
+                    const panelImg = document.querySelector('#avatarPreviewWrap img.pp-avatar-img');
+                    if (panelImg) panelImg.src = avatarUrl;
+                }
             }
         });
 
         /* ── Livewire status-changed event — server confirmation ──────── */
         Livewire.on('status-changed', (params) => {
-            const p        = params && params[0];
+            const p        = (params && typeof params === 'object' && !Array.isArray(params))
+                               ? params
+                               : (params && params[0]);
             const status   = (p && p.status) || '';
             const myUserId = document.body.dataset.userId || '';
             if (!myUserId || !status) return;
@@ -861,6 +882,7 @@
             const imgEl     = document.getElementById('topbarAvatarImg');
             const avatarUrl = imgEl ? imgEl.src : '';
             applyProfileUpdate(myUserId, status, name, avatarUrl || '');
+            applyPanelStatus(status);
             applyPresence();
         });
 
@@ -1046,16 +1068,19 @@
                     //      used on the very first render before Echo has fired.
                     const myId = String(document.body.dataset.userId || '');
 
-                    // Determine authoritative status
-                    let currentStatus = userStatusMap.get(myId);
-                    if (!currentStatus) {
-                        // Cold-start only: read what the server rendered initially
-                        const panel = document.getElementById('profileDropdown');
-                        currentStatus = panel && panel.dataset.currentStatus;
-                    }
-                    if (!currentStatus) currentStatus = 'available';
+                    // Determine authoritative status.
+                    // After a profile save/status change, Livewire re-renders the panel
+                    // with the fresh $status value in data-current-status — this is the
+                    // most accurate source. Always prefer it over the map so a status
+                    // change is reflected immediately without waiting for Echo.
+                    const panel = document.getElementById('profileDropdown');
+                    const panelStatus = panel && panel.dataset.currentStatus;
 
-                    // Keep the map in sync so the next render cycle is consistent
+                    // If panel has a real status (post-render), use it and sync map.
+                    // Otherwise fall back to map (e.g. panel not yet rendered).
+                    let currentStatus = panelStatus || userStatusMap.get(myId) || 'available';
+
+                    // Keep map in sync
                     if (myId) userStatusMap.set(myId, currentStatus);
 
                     // Topbar dot
