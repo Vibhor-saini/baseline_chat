@@ -571,7 +571,118 @@
                 updateReactionsInDOM(p.messageId, p.reactions ?? []);
             }
         });
+
+        /* ── Load More Messages ──────────────────────────────────────────── */
+
+        // After Livewire prepends older messages, restore scroll position so
+        // the viewport stays on the same message the user was looking at.
+        Livewire.on('prepend-messages', ({ anchorId, hasMore }) => {
+            const container = document.getElementById('messages-container');
+            const sentinel  = document.getElementById('load-more-sentinel');
+            const spinner   = document.getElementById('loadMoreSpinner');
+
+            // Find the anchor element (first message that was already visible)
+            // before Livewire re-renders and changes DOM heights.
+            // We saved its offsetTop in _lmAnchorTop before calling loadOlderMessages.
+            const anchorEl = document.getElementById(`msg-${anchorId}`);
+
+            if (anchorEl && container && _lmAnchorTop !== null) {
+                // After Livewire re-render, compute how much the anchor moved
+                // and compensate by adjusting scrollTop.
+                requestAnimationFrame(() => {
+                    const newTop   = anchorEl.offsetTop;
+                    const delta    = newTop - _lmAnchorTop;
+                    container.scrollTop += delta;
+                    _lmAnchorTop = null;
+                });
+            }
+
+            // Update sentinel state
+            if (sentinel) sentinel.dataset.hasMore = hasMore ? 'true' : 'false';
+            if (spinner)  spinner.style.display    = 'none';
+            _lmLoading = false;
+
+            // Re-attach observer if more messages exist
+            if (hasMore) {
+                _lmObserve();
+            } else {
+                _lmDisconnect();
+            }
+        });
+
+        Livewire.on('no-more-messages', () => {
+            const sentinel = document.getElementById('load-more-sentinel');
+            const spinner  = document.getElementById('loadMoreSpinner');
+            if (sentinel) sentinel.dataset.hasMore = 'false';
+            if (spinner)  spinner.style.display    = 'none';
+            _lmLoading = false;
+            _lmDisconnect();
+        });
     });
+
+    /* ── Load More — IntersectionObserver setup ──────────────────────────── */
+    let _lmObserver  = null;
+    let _lmLoading   = false;
+    let _lmAnchorTop = null;  // offsetTop of first visible message before prepend
+
+    function _lmObserve() {
+        _lmDisconnect();
+        const sentinel = document.getElementById('load-more-sentinel');
+        if (!sentinel) return;
+
+        _lmObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                if (_lmLoading) return;
+                if (sentinel.dataset.hasMore !== 'true') return;
+
+                _lmTriggerLoad();
+            });
+        }, {
+            root:      document.getElementById('messages-container'),
+            threshold: 0,
+            rootMargin: '80px 0px 0px 0px',   // trigger 80px before top
+        });
+
+        _lmObserver.observe(sentinel);
+    }
+
+    function _lmDisconnect() {
+        if (_lmObserver) { _lmObserver.disconnect(); _lmObserver = null; }
+    }
+
+    function _lmTriggerLoad() {
+        const container = document.getElementById('messages-container');
+        const spinner   = document.getElementById('loadMoreSpinner');
+
+        _lmLoading = true;
+        if (spinner) spinner.style.display = '';
+
+        // Save the offsetTop of the FIRST real message (after sentinel) so we
+        // can restore scroll position after Livewire prepends older messages.
+        const firstMsg = container?.querySelector('[id^="msg-"]');
+        _lmAnchorTop = firstMsg ? firstMsg.offsetTop : null;
+
+        const component = getChatComponent();
+        if (component) {
+            component.call('loadOlderMessages');
+        } else {
+            _lmLoading = false;
+            if (spinner) spinner.style.display = 'none';
+        }
+    }
+
+    // Initialise observer when a conversation opens / changes
+    // (called from the Livewire commit hook after selectConversation)
+    window._lmInit = function (hasMore) {
+        _lmLoading   = false;
+        _lmAnchorTop = null;
+        _lmDisconnect();
+        const spinner = document.getElementById('loadMoreSpinner');
+        if (spinner) spinner.style.display = 'none';
+        if (hasMore) _lmObserve();
+    };
+    /* ── end Load More ───────────────────────────────────────────────────── */
 
     /* ═══════════════════════════════════════════════════════════════════════
      | LIVEWIRE INIT — all realtime wiring
@@ -914,6 +1025,14 @@
                     // The cache is only used to restore previews during typing animations.
                     _sidebarPreviewCache.clear();
                     cacheSidebarPreviews();
+
+                    // Initialise load-more observer when conversation changes
+                    const wasSelect = calls.some(c => c.method === 'selectConversation' || c.method === 'acceptRequest');
+                    if (wasSelect && window._lmInit) {
+                        const sentinel = document.getElementById('load-more-sentinel');
+                        const hasMore  = sentinel?.dataset.hasMore === 'true';
+                        window._lmInit(hasMore);
+                    }
 
                     // After every Livewire re-render, re-apply status to the
                     // topbar dot and profile panel.

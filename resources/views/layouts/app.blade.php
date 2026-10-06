@@ -968,6 +968,29 @@
             opacity: 1; transform: translateX(-50%) translateY(0);
         }
 
+        /* ── Load More Messages ─────────────────────────────────────────── */
+        .load-more-sentinel {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 8px; padding: 4px 0;
+            pointer-events: none;
+        }
+        .load-more-spinner {
+            display: flex; align-items: center; gap: 5px;
+            padding: 8px 0 4px;
+        }
+        .lm-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: rgba(255,255,255,.25);
+            animation: lmPulse 1.2s ease-in-out infinite;
+        }
+        .lm-dot:nth-child(1) { animation-delay: 0s; }
+        .lm-dot:nth-child(2) { animation-delay: .2s; }
+        .lm-dot:nth-child(3) { animation-delay: .4s; }
+        @keyframes lmPulse {
+            0%, 80%, 100% { transform: scale(.7); opacity: .4; }
+            40%            { transform: scale(1);  opacity: 1;   }
+        }
+
         /* ── Message Search (Find in Chat — Teams style) ───────────────── */
         .chat-header-search-btn {
             margin-left: auto;

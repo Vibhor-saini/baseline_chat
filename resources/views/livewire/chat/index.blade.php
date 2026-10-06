@@ -350,6 +350,15 @@
 
       {{-- Messages Area --}}
       <div class="messages-area" id="messages-container" role="log" aria-live="polite" aria-label="Messages">
+
+        {{-- ── Load More sentinel — IntersectionObserver watches this ── --}}
+        <div id="load-more-sentinel" class="load-more-sentinel" aria-hidden="true"
+             data-has-more="{{ $hasMoreMessages ? 'true' : 'false' }}">
+          <div class="load-more-spinner" id="loadMoreSpinner" style="display:none">
+            <span class="lm-dot"></span><span class="lm-dot"></span><span class="lm-dot"></span>
+          </div>
+        </div>
+
         @php
           $prevDate      = null;
           $prevSenderId  = null;

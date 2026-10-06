@@ -97,6 +97,10 @@ class Index extends Component
     public string $msgSearch        = '';
     public array  $msgSearchResults = [];
 
+    /** Load more messages ── */
+    public bool $hasMoreMessages    = false;
+    public ?int $oldestLoadedMsgId  = null;
+
     public string $search       = '';
     public bool   $showRequests = false;
 
@@ -318,6 +322,15 @@ class Index extends Component
             ->reverse()
             ->values()
             ->all();          // <── plain array
+
+        // Track whether older messages exist for "load more" trigger
+        $this->oldestLoadedMsgId = ! empty($this->messages) ? $this->messages[0]->id : null;
+        $this->hasMoreMessages   = $this->oldestLoadedMsgId
+            ? Message::withTrashed()
+                ->where('conversation_id', $conversationId)
+                ->where('id', '<', $this->oldestLoadedMsgId)
+                ->exists()
+            : false;
 
         $this->selectedRequest = null;
         $this->showRequests    = false;
@@ -764,6 +777,58 @@ class Index extends Component
     {
         $this->editingMessageId = null;
         $this->editBody         = '';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD MORE (older messages)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Called from JS IntersectionObserver when the top sentinel enters view.
+     * Prepends 30 messages older than the current oldest loaded message.
+     * Dispatches 'prepend-messages' with the new messages so JS can insert
+     * them into the DOM without triggering a full Livewire re-render (which
+     * would scroll the window back to bottom).
+     */
+    public function loadOlderMessages(): void
+    {
+        if (! $this->selectedConversationId || ! $this->oldestLoadedMsgId) return;
+
+        $older = Message::withTrashed()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('id', '<', $this->oldestLoadedMsgId)
+            ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender', 'reactions.user'])
+            ->latest()
+            ->take(30)
+            ->get()
+            ->reverse()
+            ->values();
+
+        if ($older->isEmpty()) {
+            $this->hasMoreMessages  = false;
+            $this->dispatch('no-more-messages');
+            return;
+        }
+
+        // Prepend to in-memory messages array
+        $this->messages = array_merge($older->all(), $this->messages);
+
+        // Update tracking state
+        $this->oldestLoadedMsgId = $older->first()->id;
+        $this->hasMoreMessages   = Message::withTrashed()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('id', '<', $this->oldestLoadedMsgId)
+            ->exists();
+
+        // Dispatch to JS with serializable payload
+        $payload = $older->map(fn($m) => [
+            'id'           => $m->id,
+            'html_id'      => 'msg-' . $m->id,
+        ])->values()->all();
+
+        $this->dispatch('prepend-messages', anchorId: $older->last()->id, hasMore: $this->hasMoreMessages);
     }
 
     /*
