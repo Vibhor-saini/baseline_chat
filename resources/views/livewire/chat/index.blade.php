@@ -211,7 +211,8 @@
                 <img src="{{ Storage::url($other->profile_image) }}"
                      alt="{{ $other->name }}"
                      class="conv-avatar conv-avatar--img"
-                     data-user-id="{{ $other->id }}">
+                     data-user-id="{{ $other->id }}"
+                     data-initials="{{ strtoupper(substr($other->name,0,1)) }}">
               </button>
             @else
               <button type="button"
@@ -409,7 +410,8 @@
                     <img src="{{ Storage::url($message->sender->profile_image) }}"
                          alt="{{ $message->sender->name }}"
                          class="msg-avatar-img"
-                         data-user-id="{{ $message->sender->id }}">
+                         data-user-id="{{ $message->sender->id }}"
+                         data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}">
                   @else
                     <div data-user-id="{{ $message->sender->id }}">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                   @endif
@@ -775,7 +777,8 @@
                   <img src="{{ Storage::url($message->sender->profile_image) }}"
                        alt="{{ $message->sender->name }}"
                        class="msg-avatar-img"
-                       data-user-id="{{ $message->sender->id }}">
+                       data-user-id="{{ $message->sender->id }}"
+                       data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}">
                 @else
                   {{ strtoupper(substr($message->sender->name,0,1)) }}
                 @endif

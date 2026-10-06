@@ -23,7 +23,44 @@
     function statusColor(s) { return STATUS_COLORS[s] || STATUS_COLORS.available; }
     function statusLabel(s) { return STATUS_LABELS[s] || 'Available'; }
 
-    /* ── Scroll helpers ──────────────────────────────────────────────────── */
+    /* ── Avatar image error fallback ─────────────────────────────────────── */
+    // If any avatar img fails to load (404/403), replace it with an initials div.
+    document.addEventListener('error', (e) => {
+        const img = e.target;
+        if (img.tagName !== 'IMG') return;
+
+        const isSidebarAvatar = img.classList.contains('conv-avatar--img');
+        const isMsgAvatar     = img.classList.contains('msg-avatar-img');
+        const isProfileAvatar = img.classList.contains('profile-avatar-img') ||
+                                img.classList.contains('pp-avatar-img');
+
+        if (!isSidebarAvatar && !isMsgAvatar && !isProfileAvatar) return;
+
+        const initials  = img.dataset.initials || img.alt?.charAt(0).toUpperCase() || '?';
+        const userId    = img.dataset.userId   || '';
+
+        const div = document.createElement('div');
+        div.textContent = initials;
+        div.style.fontWeight = '700';
+
+        if (isSidebarAvatar) {
+            div.className       = 'conv-avatar';
+            div.dataset.userId  = userId;
+        } else if (isMsgAvatar) {
+            div.className       = img.classList.contains('msg-avatar-img') ? 'msg-avatar-img' : '';
+            div.className       = 'msg-avatar-fallback';
+            div.dataset.userId  = userId;
+            div.style.cssText   = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--accent-dim,#3a3a5c);color:#e0e0f0;font-size:.85rem;font-weight:700;';
+        } else {
+            // Topbar / profile panel avatar
+            div.className      = img.className.replace(/\bprofile-avatar-img\b|\bpp-avatar-img\b/, '').trim();
+            div.dataset.userId = userId;
+            div.style.cssText  = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--accent-dim,#3a3a5c);color:#e0e0f0;font-size:1.1rem;font-weight:700;';
+        }
+
+        img.replaceWith(div);
+    }, true); // capture phase so it fires before any other handler
+    /* ── end avatar error fallback ───────────────────────────────────────── */
     function scrollToBottom(smooth = false) {
         const anchor = document.getElementById('scroll-anchor');
         if (!anchor) return;
