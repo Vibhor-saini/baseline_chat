@@ -40,28 +40,29 @@
         <div class="global-search-results" id="globalSearchResults" role="listbox" aria-label="Search results">
           @foreach($searchResults as $user)
             @php
-              $existingConv    = auth()->user()->getConversationWith($user->id);
-              $alreadyAccepted = $existingConv && $existingConv->status === 'accepted';
-              $alreadyPending  = $existingConv && $existingConv->status === 'pending';
-              $iSent           = $alreadyPending && $existingConv->user_one_id === auth()->id();
-              $iReceived       = $alreadyPending && $existingConv->user_two_id === auth()->id();
-              $isAdminConv     = auth()->user()->is_admin || $user->is_admin;
+              $authId          = auth()->id();
+              $existingConv    = $user['conv'] ?? null;
+              $alreadyAccepted = $existingConv && $existingConv['status'] === 'accepted';
+              $alreadyPending  = $existingConv && $existingConv['status'] === 'pending';
+              $iSent           = $alreadyPending && $existingConv['user_one_id'] === $authId;
+              $iReceived       = $alreadyPending && $existingConv['user_two_id'] === $authId;
+              $isAdminConv     = auth()->user()->is_admin || $user['is_admin'];
             @endphp
             <div class="global-search-item" role="option">
-              <div class="global-search-avatar">{{ strtoupper(substr($user->name,0,1)) }}</div>
+              <div class="global-search-avatar">{{ strtoupper(substr($user['name'],0,1)) }}</div>
               <div class="global-search-info">
-                <div class="global-search-name">{{ $user->name }}</div>
-                <div class="global-search-email">{{ $user->email }}</div>
+                <div class="global-search-name">{{ $user['name'] }}</div>
+                <div class="global-search-email">{{ $user['email'] }}</div>
               </div>
               <div class="global-search-action">
                 @if($alreadyAccepted)
-                  <button type="button" wire:click="openExistingConversation({{ $user->id }})" class="search-action-btn search-action-btn--open">Open Chat</button>
+                  <button type="button" wire:click="openExistingConversation({{ $user['id'] }})" class="search-action-btn search-action-btn--open">Open Chat</button>
                 @elseif($iSent)
                   <span class="search-status-badge search-status-badge--pending">Request Sent</span>
                 @elseif($iReceived)
-                  <button type="button" wire:click="acceptRequest({{ $existingConv->id }})" class="search-action-btn search-action-btn--accept">Accept</button>
+                  <button type="button" wire:click="acceptRequest({{ $existingConv['id'] }})" class="search-action-btn search-action-btn--accept">Accept</button>
                 @else
-                  <button type="button" wire:click="startConversation({{ $user->id }})" class="search-action-btn">{{ $isAdminConv ? 'Start Chat' : 'Send Request' }}</button>
+                  <button type="button" wire:click="startConversation({{ $user['id'] }})" class="search-action-btn">{{ $isAdminConv ? 'Start Chat' : 'Send Request' }}</button>
                 @endif
               </div>
             </div>
@@ -191,7 +192,7 @@
         @php
           $other        = $conversation->otherUser();
           $latest       = $conversation->latestMessage;
-          $unread       = $conversation->unreadCountFor(auth()->id());
+          $unread       = $conversation->unread_count ?? 0;
           $isMineLatest = $latest && $latest->sender_id === auth()->id();
         @endphp
         <div wire:click="selectConversation({{ $conversation->id }})"

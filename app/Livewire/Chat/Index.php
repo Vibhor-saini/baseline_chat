@@ -4,6 +4,7 @@ namespace App\Livewire\Chat;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\Attributes\Locked;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 use App\Models\Message;
@@ -38,6 +39,7 @@ class Index extends Component
     */
 
     public array $conversations   = [];
+    #[Locked]
     public array $messages        = [];
     public array $searchResults   = [];
     public array $pendingRequests = [];
@@ -152,6 +154,10 @@ class Index extends Component
                   ->orWhere('user_two_id', $userId);
             })
             ->with(['userOne', 'userTwo', 'latestMessage.sender'])
+            ->withCount(['messages as unread_count' => function ($q) use ($userId) {
+                $q->where('sender_id', '!=', $userId)
+                  ->whereNull('read_at');
+            }])
             ->latest('last_message_at')
             ->get()
             ->all();          // <── plain array, never Collection
@@ -240,14 +246,40 @@ class Index extends Component
             return;
         }
 
-        $term = '%' . trim($this->search) . '%';
+        $term    = '%' . trim($this->search) . '%';
+        $authId  = auth()->id();
 
-        $this->searchResults = User::query()
-            ->where('id', '!=', auth()->id())
+        $users = User::query()
+            ->where('id', '!=', $authId)
             ->where(fn($q) => $q->where('name', 'like', $term)->orWhere('email', 'like', $term))
             ->limit(8)
-            ->get()
-            ->all();          // <── plain array
+            ->get();
+
+        // Pre-load all conversations between auth user and found users in ONE query
+        $userIds = $users->pluck('id')->all();
+        $convMap = Conversation::query()
+            ->where(function ($q) use ($authId, $userIds) {
+                $q->where('user_one_id', $authId)->whereIn('user_two_id', $userIds);
+            })
+            ->orWhere(function ($q) use ($authId, $userIds) {
+                $q->where('user_two_id', $authId)->whereIn('user_one_id', $userIds);
+            })
+            ->get(['id', 'user_one_id', 'user_two_id', 'status'])
+            ->keyBy(fn($c) => $c->user_one_id === $authId ? $c->user_two_id : $c->user_one_id);
+
+        // Attach conversation data to each user result
+        $this->searchResults = $users->map(fn($u) => [
+            'id'       => $u->id,
+            'name'     => $u->name,
+            'email'    => $u->email,
+            'is_admin' => $u->is_admin,
+            'conv'     => $convMap->has($u->id) ? [
+                'id'         => $convMap[$u->id]->id,
+                'status'     => $convMap[$u->id]->status,
+                'user_one_id'=> $convMap[$u->id]->user_one_id,
+                'user_two_id'=> $convMap[$u->id]->user_two_id,
+            ] : null,
+        ])->all();
     }
 
     public function clearSearch(): void
