@@ -201,7 +201,7 @@
              aria-label="Conversation with {{ $other->name }}"
              data-user-id="{{ $other->id }}"
              wire:key="conv-{{ $conversation->id }}">
-          <div class="conv-avatar-wrap">
+          <div class="conv-avatar-wrap" wire:ignore>
               <button type="button"
                       class="conv-avatar-btn"
                       onclick="event.stopPropagation(); window._openUserProfileCard('{{ $other->id }}')"
@@ -214,9 +214,11 @@
                        data-user-id="{{ $other->id }}"
                        data-initials="{{ strtoupper(substr($other->name,0,1)) }}"
                        onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
-                  <div class="conv-avatar" data-user-id="{{ $other->id }}" style="display:none;">{{ strtoupper(substr($other->name,0,1)) }}</div>
+                  <div class="conv-avatar" data-user-id="{{ $other->id }}"
+                       style="display:none;background:{{ \App\Helpers\AvatarColor::gradient($other->id) }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
                 @else
-                  <div class="conv-avatar" data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+                  <div class="conv-avatar" data-user-id="{{ $other->id }}"
+                       style="background:{{ \App\Helpers\AvatarColor::gradient($other->id) }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
                 @endif
               </button>
             <span class="presence-dot"

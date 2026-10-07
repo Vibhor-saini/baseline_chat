@@ -403,15 +403,32 @@
                         el.insertBefore(img, el.firstChild);
                         el.id = ''; el.classList.add('profile-avatar--has-img');
                         el.removeAttribute('data-user-id');
+                    } else if (el.classList.contains('conv-avatar')) {
+                        // Conversation avatar in sidebar — use wire:ignore to prevent Livewire interference
+                        // Check if already converted to image
+                        const existingImg = el.querySelector('img');
+                        if (existingImg) {
+                            // Already an image, just update src
+                            existingImg.src = avatarUrl;
+                        } else {
+                            // Convert initials div to image by updating innerHTML
+                            el.innerHTML = '';
+                            const img = document.createElement('img');
+                            img.src = avatarUrl;
+                            img.alt = name || '';
+                            img.dataset.userId = uid;
+                            img.className = 'conv-avatar--img';
+                            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
+                            el.appendChild(img);
+                            el.classList.add('conv-avatar--has-img');
+                        }
                     } else {
+                        // Other avatar containers
                         const img = document.createElement('img');
                         img.src = avatarUrl; img.alt = name || '';
                         img.dataset.userId = uid;
                         img.id = el.id || '';
-                        if (el.classList.contains('conv-avatar')) {
-                            img.className = 'conv-avatar conv-avatar--img';
-                            img.style.cssText = 'width:42px;height:42px;border-radius:50%;object-fit:cover;';
-                        } else if (el.classList.contains('pp-avatar-initials')) {
+                        if (el.classList.contains('pp-avatar-initials')) {
                             img.className = 'pp-avatar-img';
                             img.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;';
                         } else {
@@ -459,7 +476,7 @@
             document.querySelectorAll(`.pp-name[data-user-id="${uid}"]`).forEach(el => {
                 el.textContent = name;
             });
-            // Conversation list — conv-name has no data-user-id, but conv-item has data-user-id
+            // Conversation list — update directly via JS for smooth transition
             document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-name`).forEach(el => {
                 el.textContent = name;
             });
