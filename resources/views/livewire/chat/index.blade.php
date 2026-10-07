@@ -219,7 +219,6 @@
                   <div class="conv-avatar" data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
                 @endif
               </button>
-            @endif
             <span class="presence-dot"
                   data-presence-uid="{{ $other->id }}"
                   data-user-status="{{ $other->status instanceof \App\Enums\UserStatus ? $other->status->value : 'available' }}"
