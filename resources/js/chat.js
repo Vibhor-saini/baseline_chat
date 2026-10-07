@@ -24,7 +24,8 @@
     function statusLabel(s) { return STATUS_LABELS[s] || 'Available'; }
 
     /* ── Avatar image error fallback ─────────────────────────────────────── */
-    // If any avatar img fails to load (404/403), replace it with an initials div.
+    // If any avatar img fails to load (404/403), replace it with a styled
+    // initials div. onerror=null prevents infinite loop if fallback also fails.
     document.addEventListener('error', (e) => {
         const img = e.target;
         if (img.tagName !== 'IMG') return;
@@ -36,30 +37,40 @@
 
         if (!isSidebarAvatar && !isMsgAvatar && !isProfileAvatar) return;
 
-        const initials  = img.dataset.initials || img.alt?.charAt(0).toUpperCase() || '?';
-        const userId    = img.dataset.userId   || '';
+        // Prevent infinite error loop
+        img.onerror = null;
+
+        const initial = (img.dataset.initials || img.alt || '?').charAt(0).toUpperCase();
+        const userId  = img.dataset.userId || '';
 
         const div = document.createElement('div');
-        div.textContent = initials;
-        div.style.fontWeight = '700';
+        div.textContent    = initial;
+        div.dataset.userId = userId;
 
         if (isSidebarAvatar) {
-            div.className       = 'conv-avatar';
-            div.dataset.userId  = userId;
+            // Use existing .conv-avatar class — already has gradient, bold, 42px circle
+            div.className = 'conv-avatar';
         } else if (isMsgAvatar) {
-            div.className       = img.classList.contains('msg-avatar-img') ? 'msg-avatar-img' : '';
-            div.className       = 'msg-avatar-fallback';
-            div.dataset.userId  = userId;
-            div.style.cssText   = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--accent-dim,#3a3a5c);color:#e0e0f0;font-size:.85rem;font-weight:700;';
+            // Use existing msg-avatar styling
+            div.className = 'msg-avatar-img';
+            div.style.cssText = [
+                'display:flex', 'align-items:center', 'justify-content:center',
+                'width:32px', 'height:32px', 'border-radius:50%',
+                'background:linear-gradient(135deg,var(--accent,#6c47ff),#5e3de8)',
+                'color:#fff', 'font-size:.8rem', 'font-weight:700', 'flex-shrink:0'
+            ].join(';');
         } else {
-            // Topbar / profile panel avatar
-            div.className      = img.className.replace(/\bprofile-avatar-img\b|\bpp-avatar-img\b/, '').trim();
-            div.dataset.userId = userId;
-            div.style.cssText  = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--accent-dim,#3a3a5c);color:#e0e0f0;font-size:1.1rem;font-weight:700;';
+            // Topbar / profile panel
+            div.style.cssText = [
+                'display:flex', 'align-items:center', 'justify-content:center',
+                'width:100%', 'height:100%', 'border-radius:50%',
+                'background:linear-gradient(135deg,var(--accent,#6c47ff),#5e3de8)',
+                'color:#fff', 'font-size:1.1rem', 'font-weight:700'
+            ].join(';');
         }
 
         img.replaceWith(div);
-    }, true); // capture phase so it fires before any other handler
+    }, true);
     /* ── end avatar error fallback ───────────────────────────────────────── */
     function scrollToBottom(smooth = false) {
         const anchor = document.getElementById('scroll-anchor');
