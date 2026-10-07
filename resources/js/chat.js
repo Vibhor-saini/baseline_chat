@@ -138,12 +138,16 @@
         const preview = document.getElementById(`conv-preview-${conversationId}`);
         if (preview) {
             preview.classList.add('conv-preview--typing');
+            // SECURITY FIX: Prevent XSS injection via userName
+            // Separate HTML structure from user-provided data
             preview.innerHTML =
                 `<span class="sidebar-typing-dots" aria-hidden="true">` +
                     `<span class="sidebar-typing-dot"></span>` +
                     `<span class="sidebar-typing-dot"></span>` +
                     `<span class="sidebar-typing-dot"></span>` +
-                `</span> ${userName} is typing…`;
+                `</span> `;
+            const textNode = document.createTextNode(`${userName} is typing…`);
+            preview.appendChild(textNode);
         }
         setTimeout(() => scrollToBottom(true), 80);
     }
@@ -1260,12 +1264,16 @@
                 clearTimeout(_sidebarTypingTimer);
                 if (event.isTyping) {
                     preview.classList.add('conv-preview--typing');
+                    // SECURITY FIX: Prevent XSS injection via userName
+                    // Use textContent instead of direct string interpolation in innerHTML
                     preview.innerHTML =
                         `<span class="sidebar-typing-dots" aria-hidden="true">` +
                             `<span class="sidebar-typing-dot"></span>` +
                             `<span class="sidebar-typing-dot"></span>` +
                             `<span class="sidebar-typing-dot"></span>` +
-                        `</span> ${event.userName} is typing…`;
+                        `</span> `;
+                    const textNode = document.createTextNode(`${event.userName} is typing…`);
+                    preview.appendChild(textNode);
                     _sidebarTypingTimer = setTimeout(() => {
                         if (preview.classList.contains('conv-preview--typing')) {
                             restoreSidebarPreview(convId);
