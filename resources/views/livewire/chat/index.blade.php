@@ -311,7 +311,11 @@
             <img src="{{ Storage::url($selectedConversation->otherUser()->profile_image) }}"
                  alt="{{ $selectedConversation->otherUser()->name }}"
                  style="width:100%;height:100%;border-radius:50%;object-fit:cover;"
-                 data-user-id="{{ $selectedConversation->otherUser()->id }}">
+                 data-user-id="{{ $selectedConversation->otherUser()->id }}"
+                 data-initials="{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}"
+                 onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
+            <span style="display:none;width:100%;height:100%;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;"
+                  data-user-id="{{ $selectedConversation->otherUser()->id }}">{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}</span>
           @else
             {{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}
           @endif
