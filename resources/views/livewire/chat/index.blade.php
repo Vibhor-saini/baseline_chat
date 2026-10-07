@@ -202,26 +202,22 @@
              data-user-id="{{ $other->id }}"
              wire:key="conv-{{ $conversation->id }}">
           <div class="conv-avatar-wrap">
-            @if($other->profile_image)
               <button type="button"
                       class="conv-avatar-btn"
                       onclick="event.stopPropagation(); window._openUserProfileCard('{{ $other->id }}')"
                       title="View {{ $other->name }}'s profile"
                       aria-label="View {{ $other->name }}'s profile">
-                <img src="{{ Storage::url($other->profile_image) }}"
-                     alt="{{ $other->name }}"
-                     class="conv-avatar conv-avatar--img"
-                     data-user-id="{{ $other->id }}"
-                     data-initials="{{ strtoupper(substr($other->name,0,1)) }}">
-              </button>
-            @else
-              <button type="button"
-                      class="conv-avatar-btn"
-                      onclick="event.stopPropagation(); window._openUserProfileCard('{{ $other->id }}')"
-                      title="View {{ $other->name }}'s profile"
-                      aria-label="View {{ $other->name }}'s profile">
-                <div class="conv-avatar"
-                     data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+                @if($other->profile_image)
+                  <img src="{{ Storage::url($other->profile_image) }}"
+                       alt="{{ $other->name }}"
+                       class="conv-avatar conv-avatar--img"
+                       data-user-id="{{ $other->id }}"
+                       data-initials="{{ strtoupper(substr($other->name,0,1)) }}"
+                       onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
+                  <div class="conv-avatar" data-user-id="{{ $other->id }}" style="display:none;">{{ strtoupper(substr($other->name,0,1)) }}</div>
+                @else
+                  <div class="conv-avatar" data-user-id="{{ $other->id }}">{{ strtoupper(substr($other->name,0,1)) }}</div>
+                @endif
               </button>
             @endif
             <span class="presence-dot"
@@ -411,9 +407,13 @@
                          alt="{{ $message->sender->name }}"
                          class="msg-avatar-img"
                          data-user-id="{{ $message->sender->id }}"
-                         data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}">
+                         data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}"
+                         onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
+                    <div data-user-id="{{ $message->sender->id }}"
+                         style="display:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                   @else
-                    <div data-user-id="{{ $message->sender->id }}">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+                    <div data-user-id="{{ $message->sender->id }}"
+                         style="display:flex;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                   @endif
                 @endif
               </div>
@@ -778,7 +778,10 @@
                        alt="{{ $message->sender->name }}"
                        class="msg-avatar-img"
                        data-user-id="{{ $message->sender->id }}"
-                       data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}">
+                       data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}"
+                       onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
+                  <div data-user-id="{{ $message->sender->id }}"
+                       style="display:none;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                 @else
                   {{ strtoupper(substr($message->sender->name,0,1)) }}
                 @endif
