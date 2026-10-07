@@ -4944,9 +4944,12 @@
 }
 
 /* Ensure the img inside the button fills correctly */
-.conv-avatar-btn .conv-avatar,
 .conv-avatar-btn .conv-avatar--img {
     display: block;
+}
+/* Initials div inside button needs flex for centering */
+.conv-avatar-btn .conv-avatar {
+    display: flex;
 }
 
 /* ══════════════════════════════════════════════════════
