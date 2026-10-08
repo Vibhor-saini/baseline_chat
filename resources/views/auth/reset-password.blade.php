@@ -327,6 +327,8 @@
         function checkSamePassword() {
             const pw    = pwInput.value;
             const email = emailInput.value;
+            const token = document.querySelector('input[name="token"]').value;
+            
             if (!pw || pw.length < 6) return;
 
             fetch('{{ route("password.check.same") }}', {
@@ -335,7 +337,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({ email, password: pw }),
+                body: JSON.stringify({ email, password: pw, token }),
             })
             .then(r => r.json())
             .then(data => {
@@ -344,6 +346,10 @@
                 } else {
                     hideSamePassError();
                 }
+            })
+            .catch(err => {
+                // Silent fail - if token is invalid/expired, just allow password change
+                hideSamePassError();
             });
         }
 

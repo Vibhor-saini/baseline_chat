@@ -58,11 +58,41 @@ Route::middleware(['auth', 'active'])->group(function () {
 
 require __DIR__ . '/auth.php';
 
-// Password strength check — unauthenticated, used by reset-password form
+// Password strength check — secured with token validation
+// Only allows checking password during active password reset flow
 Route::post('/check-password-match', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'token' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:8',
+    ]);
+
+    // Verify the password reset token is valid
+    $tokenRecord = \Illuminate\Support\Facades\DB::table('password_reset_tokens')
+        ->where('email', $request->email)
+        ->first();
+
+    // If no valid token exists, deny the check (prevents oracle attack)
+    if (!$tokenRecord) {
+        return response()->json(['same' => false]);
+    }
+
+    // Verify the token matches and hasn't expired
+    if (!\Illuminate\Support\Facades\Hash::check($request->token, $tokenRecord->token)) {
+        return response()->json(['same' => false]);
+    }
+
+    // Check if token is expired (tokens expire after 60 minutes by default)
+    $expiresAt = \Carbon\Carbon::parse($tokenRecord->created_at)->addMinutes(60);
+    if (now()->isAfter($expiresAt)) {
+        return response()->json(['same' => false]);
+    }
+
+    // Token is valid - now check if new password matches old password
     $user = \App\Models\User::where('email', $request->email)->first();
     if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
         return response()->json(['same' => true]);
     }
+
     return response()->json(['same' => false]);
 })->middleware('throttle:30,1')->name('password.check.same');
