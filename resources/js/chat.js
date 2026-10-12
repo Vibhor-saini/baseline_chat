@@ -295,8 +295,12 @@
 
     /* ── Apply an edited message body to DOM ────────────────────────────── */
     function applyEditedMessageInDOM(messageId, newBody) {
+        console.log('[applyEditedMessageInDOM] Attempting to update message:', messageId, 'with body:', newBody);
+        
         const textEl   = document.getElementById(`msg-text-${messageId}`);
         const editedEl = document.getElementById(`msg-edited-${messageId}`);
+
+        console.log('[applyEditedMessageInDOM] Elements found:', { textEl, editedEl });
 
         if (textEl) {
             // Re-render body with link highlighting (same logic as blade)
@@ -306,9 +310,16 @@
                 (url) => `<a class="msg-link" href="${url}" data-href="${url}" onclick="window._openLinkMenu(event, this)">${url}</a>`
             );
             textEl.innerHTML = linked;
+            console.log('[applyEditedMessageInDOM] Updated textEl.innerHTML to:', linked);
+        } else {
+            console.warn('[applyEditedMessageInDOM] msg-text element NOT FOUND for message:', messageId);
         }
+        
         if (editedEl) {
             editedEl.style.display = '';
+            console.log('[applyEditedMessageInDOM] Showed edited label');
+        } else {
+            console.warn('[applyEditedMessageInDOM] msg-edited element NOT FOUND for message:', messageId);
         }
     }
 
@@ -320,6 +331,33 @@
         preview.textContent          = deletedText;
         preview.dataset.lastPreview  = deletedText;
         _sidebarPreviewCache.set(String(conversationId), deletedText);
+    }
+
+    /* ── Sidebar instant update when a message is edited ─────────────────── */
+    function updateSidebarForEditedMessage(conversationId, newBody) {
+        const preview = document.getElementById(`conv-preview-${conversationId}`);
+        if (!preview) return;
+        
+        // Truncate to match server-side preview length (30 chars)
+        const truncated = newBody.length > 30 ? newBody.substring(0, 30) + '...' : newBody;
+        
+        // Update preview text (preserve any "You:" prefix if it exists)
+        const currentText = preview.textContent || '';
+        const hasYouPrefix = currentText.startsWith('You:');
+        
+        if (hasYouPrefix) {
+            // Keep the "You:" label but update the message text
+            const youLabel = preview.querySelector('.you-label');
+            if (youLabel && youLabel.nextSibling) {
+                youLabel.nextSibling.textContent = ' ' + truncated;
+            }
+        } else {
+            // Just update the text directly
+            preview.textContent = truncated;
+        }
+        
+        preview.dataset.lastPreview = truncated;
+        _sidebarPreviewCache.set(String(conversationId), truncated);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════
@@ -1017,6 +1055,8 @@
                 .listen('.message.edited', (event) => {
                     console.log('[Chat] message.edited:', event);
                     applyEditedMessageInDOM(event.messageId, event.newBody);
+                    // ALWAYS update sidebar preview, even if this chat is open
+                    updateSidebarForEditedMessage(event.conversationId, event.newBody);
                 })
                 .listen('.reaction.updated', (event) => {
                     console.log('[Chat] reaction.updated:', event);
@@ -1232,9 +1272,8 @@
                 console.log('[Chat] message.edited (user channel):', event);
                 // If this conversation is open, chat channel already handled it.
                 if (String(event.conversationId) === String(currentConversationId)) return;
-                // Do NOT update sidebar preview — sidebar always shows the latest message
-                // by created_at (not the edited body). Livewire handles this correctly on
-                // the next loadConversations() re-render.
+                // Update sidebar preview with edited text for real-time sync
+                updateSidebarForEditedMessage(event.conversationId, event.newBody);
             })
             .listen('.profile.updated', (event) => {
                 console.log('[Chat] profile.updated (user channel):', event);
