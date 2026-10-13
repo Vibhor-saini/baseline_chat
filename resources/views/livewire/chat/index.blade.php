@@ -52,7 +52,9 @@
               <div class="global-search-avatar">{{ strtoupper(substr($user['name'],0,1)) }}</div>
               <div class="global-search-info">
                 <div class="global-search-name">{{ $user['name'] }}</div>
-                <div class="global-search-email">{{ $user['email'] }}</div>
+                @if($user['email'])
+                  <div class="global-search-email">{{ $user['email'] }}</div>
+                @endif
               </div>
               <div class="global-search-action">
                 @if($alreadyAccepted)

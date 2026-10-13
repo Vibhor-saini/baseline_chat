@@ -268,10 +268,11 @@ class Index extends Component
             ->keyBy(fn($c) => $c->user_one_id === $authId ? $c->user_two_id : $c->user_one_id);
 
         // Attach conversation data to each user result
+        // Privacy: Only show emails to admins (S-3 security fix)
         $this->searchResults = $users->map(fn($u) => [
             'id'       => $u->id,
             'name'     => $u->name,
-            'email'    => $u->email,
+            'email'    => auth()->user()->is_admin ? $u->email : null, // Hide for non-admins
             'is_admin' => $u->is_admin,
             'conv'     => $convMap->has($u->id) ? [
                 'id'         => $convMap[$u->id]->id,
@@ -643,7 +644,7 @@ class Index extends Component
             if ($existing->id === $message->id) return; // deduplicate
         }
 
-        $this->messages[] = $message;
+        $this->messages[] = $message;                                                                                         
 
         $now = now();
 
