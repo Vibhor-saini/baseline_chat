@@ -1294,6 +1294,34 @@
                 applyProfileUpdate(event.userId, event.status, event.name, event.avatarUrl, event.statusQuote || '');
                 applyPresence();
             })
+            .listen('.account.suspended', (event) => {
+                console.log('[Chat] account.suspended - User account has been suspended:', event);
+                
+                // S-4: Instant disconnect on account suspension
+                // 1. Disconnect WebSocket
+                if (window.Echo) {
+                    Echo.disconnect();
+                    console.log('[Chat] WebSocket disconnected due to suspension');
+                }
+                
+                // 2. Show suspension message
+                alert(event.reason || 'Your account has been suspended. Please contact support.');
+                
+                // 3. Logout user (invalidate session)
+                fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                }).then(() => {
+                    // 4. Redirect to login page
+                    window.location.href = '/login';
+                }).catch(() => {
+                    // Force redirect even if logout fails
+                    window.location.href = '/login';
+                });
+            })
             .listen('.user.typing', (event) => {
                 console.log('[Chat] user.typing (user channel):', event);
                 if (String(event.conversationId) === String(currentConversationId)) return;

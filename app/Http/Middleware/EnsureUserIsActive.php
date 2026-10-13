@@ -13,13 +13,23 @@ class EnsureUserIsActive
     {
         $user = Auth::user();
 
+        // Check if user account is inactive (old field)
         if ($user && ! $user->is_active) {
-            // Log the user out so they can't keep the session alive
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('account.disabled');
+        }
+
+        // S-4: Check if user account is suspended (new field)
+        if ($user && $user->account_status === 'suspended') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->with('error', 'Your account has been suspended. Please contact support.');
         }
 
         return $next($request);

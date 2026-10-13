@@ -17,6 +17,7 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'is_active',
+        'account_status', // S-4: active or suspended
         'last_seen',
         'profile_image',
         'status_quote',

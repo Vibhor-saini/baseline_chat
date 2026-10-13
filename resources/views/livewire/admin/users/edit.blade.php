@@ -218,6 +218,22 @@
                     </label>
                 </div>
 
+                <div class="field">
+                    <label>Account Status</label>
+                    <select wire:model="account_status" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-1);">
+                        <option value="active">Active - User can access the platform</option>
+                        <option value="suspended">Suspended - User will be instantly disconnected</option>
+                    </select>
+                    @if($account_status === 'suspended')
+                        <p class="field-hint" style="color: var(--danger); font-weight: 600;">
+                            ⚠️ This user will be immediately logged out and cannot access the platform
+                        </p>
+                    @endif
+                    @error('account_status') 
+                        <p class="field-error">{{ $message }}</p> 
+                    @enderror
+                </div>
+
                 <div class="form-divider"></div>
 
                 <div class="form-actions">

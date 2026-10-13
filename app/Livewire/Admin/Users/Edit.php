@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Users;
 
 use App\Models\User;
+use App\Events\AccountSuspended;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -18,6 +19,8 @@ class Edit extends Component
 
     public bool $is_admin = false;
 
+    public string $account_status = 'active'; // S-4: active or suspended
+
     public function mount(User $user)
     {
         $this->user = $user;
@@ -27,6 +30,8 @@ class Edit extends Component
         $this->email = $user->email;
 
         $this->is_admin = $user->is_admin;
+
+        $this->account_status = $user->account_status ?? 'active';
     }
 
     protected function rules()
@@ -37,12 +42,17 @@ class Edit extends Component
 
             'email' => ['required', 'email', 'unique:users,email,' . $this->user->id],
 
+            'account_status' => ['required', 'in:active,suspended'],
+
         ];
     }
 
     public function update()
     {
         $this->validate();
+
+        $wasActive = $this->user->account_status === 'active';
+        $nowSuspended = $this->account_status === 'suspended';
 
         $data = [
 
@@ -52,6 +62,8 @@ class Edit extends Component
 
             'is_admin' => $this->is_admin,
 
+            'account_status' => $this->account_status,
+
         ];
 
         if ($this->password) {
@@ -60,6 +72,14 @@ class Edit extends Component
         }
 
         $this->user->update($data);
+
+        // S-4: Broadcast suspension event for instant disconnect
+        if ($wasActive && $nowSuspended) {
+            broadcast(new AccountSuspended(
+                $this->user->id,
+                'Your account has been suspended by an administrator'
+            ));
+        }
 
         session()->flash('success', 'User updated successfully.');
 
