@@ -445,13 +445,18 @@ class Index extends Component
 
         if (!$conversation) return;
 
+        // Get the other user ID (message sender)
+        $otherUserId = $conversation->user_one_id === $authId 
+            ? $conversation->user_two_id 
+            : $conversation->user_one_id;
+
         // Mark only the LAST message from the other user as unread
         // (Microsoft Teams style - just 1 message for reminder)
         Message::where('conversation_id', $conversationId)
             ->where('sender_id', '!=', $authId)
             ->whereNotNull('read_at')
             ->latest()
-            ->take(1)  // Changed from 5 to 1
+            ->take(1)
             ->update(['read_at' => null]);
 
         // Close the current conversation (switch to empty state)
@@ -466,6 +471,10 @@ class Index extends Component
 
         // Refresh sidebar to show unread badge
         $this->loadConversations();
+
+        // Broadcast to the message sender to refresh their sidebar
+        // This updates their tick from blue to grey
+        $this->broadcastConversationUpdate($conversation, $otherUserId);
 
         // Close the menu via JS
         $this->dispatch('close-conv-menu', conversationId: $conversationId);
