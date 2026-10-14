@@ -188,6 +188,24 @@
     </div>
     @endif
 
+    {{-- Sidebar Conversation Search --}}
+    <div class="sidebar-search-wrap">
+      <svg class="sidebar-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" 
+             wire:model.live.debounce.300ms="conversationSearch" 
+             placeholder="Search conversations…"
+             class="sidebar-search-input" 
+             autocomplete="off"
+             aria-label="Search conversations">
+      @if($conversationSearch)
+        <button type="button" wire:click="clearConversationSearch" class="sidebar-search-clear" aria-label="Clear search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      @endif
+    </div>
+
     {{-- Conversations List --}}
     <div class="conversations-list" role="list">
       @forelse($conversations as $conversation)
@@ -287,8 +305,15 @@
         </div>
       @empty
         <div class="empty-list" role="status">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p>No conversations yet</p>
+          @if($conversationSearch)
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <p>No conversations found for "{{ $conversationSearch }}"</p>
+          @else
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <p>No conversations yet</p>
+          @endif
         </div>
       @endforelse
     </div>

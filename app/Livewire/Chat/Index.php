@@ -45,6 +45,9 @@ class Index extends Component
     public array $pendingRequests = [];
     public array $sentRequests    = [];
 
+    // Sidebar conversation search
+    public string $conversationSearch = '';
+
     public ?Conversation $selectedConversation   = null;
     public ?int          $selectedConversationId = null;
     public               $selectedRequest        = null;
@@ -147,12 +150,36 @@ class Index extends Component
     {
         $userId = auth()->id();
 
-        $this->conversations = Conversation::query()
+        $query = Conversation::query()
             ->where('status', 'accepted')
             ->where(function ($q) use ($userId) {
                 $q->where('user_one_id', $userId)
                   ->orWhere('user_two_id', $userId);
-            })
+            });
+
+        // Apply search filter if search term exists
+        if (trim($this->conversationSearch) !== '') {
+            $searchTerm = '%' . trim($this->conversationSearch) . '%';
+
+            $query->where(function ($q) use ($searchTerm, $userId) {
+                // Search by other user's name
+                $q->whereHas('userOne', function ($userQuery) use ($searchTerm, $userId) {
+                    $userQuery->where('id', '!=', $userId)
+                              ->where('name', 'like', $searchTerm);
+                })
+                ->orWhereHas('userTwo', function ($userQuery) use ($searchTerm, $userId) {
+                    $userQuery->where('id', '!=', $userId)
+                              ->where('name', 'like', $searchTerm);
+                })
+                // Search in message content
+                ->orWhereHas('messages', function ($msgQuery) use ($searchTerm) {
+                    $msgQuery->where('body', 'like', $searchTerm)
+                             ->whereNull('deleted_at');
+                });
+            });
+        }
+
+        $this->conversations = $query
             ->with(['userOne', 'userTwo', 'latestMessage.sender'])
             ->withCount(['messages as unread_count' => function ($q) use ($userId) {
                 $q->where('sender_id', '!=', $userId)
@@ -287,6 +314,23 @@ class Index extends Component
     {
         $this->search        = '';
         $this->searchResults = [];
+    }
+
+    /**
+     * Update conversation list when sidebar search changes.
+     */
+    public function updatedConversationSearch(): void
+    {
+        $this->loadConversations();
+    }
+
+    /**
+     * Clear sidebar conversation search.
+     */
+    public function clearConversationSearch(): void
+    {
+        $this->conversationSearch = '';
+        $this->loadConversations();
     }
 
     /*
