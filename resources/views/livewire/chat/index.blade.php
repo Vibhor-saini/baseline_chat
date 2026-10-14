@@ -249,7 +249,18 @@
           <div class="conv-info">
             <div class="conv-info-top">
               <span class="conv-name">{{ $other->name }}</span>
-              <span class="conv-time">{{ $conversation->last_message_at?->diffForHumans(short:true) ?? '' }}</span>
+              <div class="conv-top-right">
+                <span class="conv-time">{{ $conversation->last_message_at?->diffForHumans(short:true) ?? '' }}</span>
+                <button type="button" 
+                        class="conv-menu-btn" 
+                        onclick="event.stopPropagation(); window._toggleConvMenu({{ $conversation->id }})"
+                        aria-label="Conversation options"
+                        title="More options">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="conv-bottom-row">
               @php
@@ -301,6 +312,22 @@
                 {{ $showUnread ? ($unread > 99 ? '99+' : $unread) : '0' }}
               </span>
             </div>
+          </div>
+
+          {{-- Conversation Context Menu --}}
+          <div class="conv-menu" id="conv-menu-{{ $conversation->id }}" style="display:none">
+            <button type="button" 
+                    class="conv-menu-item"
+                    onclick="event.stopPropagation(); window._openInNewWindow({{ $conversation->id }}, '{{ $other->name }}', {{ $other->id }})"
+                    title="Open chat in a separate window">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              <span>Open in New Window</span>
+            </button>
+            {{-- Future menu items will go here --}}
           </div>
         </div>
       @empty

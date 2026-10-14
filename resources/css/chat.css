@@ -882,6 +882,12 @@
     gap: 6px;
 }
 
+.conv-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .conv-name {
     font-size: .85rem;
     font-weight: 600;
@@ -2801,6 +2807,92 @@
     flex-shrink: 0;
     box-shadow: 0 0 8px var(--accent-glow);
     animation: badgePulse 2s ease infinite;
+}
+
+/* Conversation Menu (3-dot button + dropdown) */
+.conv-menu-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all .15s;
+}
+
+.conv-item:hover .conv-menu-btn {
+    opacity: 1;
+}
+
+.conv-menu-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.conv-menu-btn:active {
+    transform: scale(0.95);
+}
+
+/* Dropdown Menu */
+.conv-menu {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    background: var(--bg-float);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    min-width: 200px;
+    z-index: 100;
+    animation: menuSlideIn .15s ease;
+}
+
+@keyframes menuSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+}
+
+.conv-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: .85rem;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: left;
+}
+
+.conv-menu-item:hover {
+    background: var(--bg-hover);
+    color: var(--accent-bright);
+}
+
+.conv-menu-item:hover svg {
+    color: var(--accent-bright);
+}
+
+.conv-menu-item svg {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    transition: color .15s;
 }
 
 .draft-label {

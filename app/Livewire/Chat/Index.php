@@ -136,6 +136,18 @@ class Index extends Component
         $this->loadConversations();
         $this->loadPendingRequests();
         $this->loadSentRequests();
+
+        // Auto-open conversation if conversation ID is in URL (for popup windows)
+        if (request()->has('conversation')) {
+            $conversationId = (int) request()->get('conversation');
+            $conversation = Conversation::find($conversationId);
+            
+            // Verify user has access to this conversation
+            if ($conversation && 
+                ($conversation->user_one_id === auth()->id() || $conversation->user_two_id === auth()->id())) {
+                $this->selectConversation($conversationId);
+            }
+        }
     }
 
     /*

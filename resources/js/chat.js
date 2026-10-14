@@ -2955,3 +2955,75 @@
     })();
 
 })();
+
+    /* ══════════════════════════════════════════════════════════════════════
+     | CONVERSATION CONTEXT MENU
+     ════════════════════════════════════════════════════════════════════════*/
+
+    /**
+     * Toggle conversation context menu (3-dot dropdown)
+     */
+    window._toggleConvMenu = function(conversationId) {
+        const menu = document.getElementById(`conv-menu-${conversationId}`);
+        if (!menu) return;
+
+        // Close all other open menus first
+        document.querySelectorAll('.conv-menu').forEach(m => {
+            if (m !== menu) m.style.display = 'none';
+        });
+
+        // Toggle current menu
+        const isVisible = menu.style.display !== 'none';
+        menu.style.display = isVisible ? 'none' : 'block';
+    };
+
+    /**
+     * Open conversation in new popup window
+     */
+    window._openInNewWindow = function(conversationId, userName, userId) {
+        const baseUrl = window.location.origin;
+        const url = `${baseUrl}/chat?conversation=${conversationId}`;
+        
+        // Window features: 800x600, centered on screen
+        const width = 800;
+        const height = 600;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        
+        const features = `
+            width=${width},
+            height=${height},
+            left=${left},
+            top=${top},
+            toolbar=no,
+            menubar=no,
+            scrollbars=yes,
+            resizable=yes,
+            status=no
+        `.replace(/\s+/g, '');
+
+        const popup = window.open(url, `chat-${conversationId}`, features);
+        
+        if (popup) {
+            popup.focus();
+            // Close the menu after opening
+            const menu = document.getElementById(`conv-menu-${conversationId}`);
+            if (menu) menu.style.display = 'none';
+        } else {
+            alert('Please allow popups for this site to open chat in a new window.');
+        }
+    };
+
+    /**
+     * Close all conversation menus when clicking outside
+     */
+    document.addEventListener('click', (e) => {
+        // Check if click is outside all conv-menu and conv-menu-btn elements
+        if (!e.target.closest('.conv-menu') && !e.target.closest('.conv-menu-btn')) {
+            document.querySelectorAll('.conv-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        }
+    });
+
+    /* ── end Conversation Context Menu ────────────────────────────────────── */
