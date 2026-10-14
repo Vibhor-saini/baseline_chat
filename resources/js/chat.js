@@ -3026,4 +3026,17 @@
         }
     });
 
+    /**
+     * Listen for Livewire event to close specific menu
+     */
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('close-conv-menu', (data) => {
+            const conversationId = data.conversationId || data[0]?.conversationId;
+            if (conversationId) {
+                const menu = document.getElementById(`conv-menu-${conversationId}`);
+                if (menu) menu.style.display = 'none';
+            }
+        });
+    });
+
     /* ── end Conversation Context Menu ────────────────────────────────────── */

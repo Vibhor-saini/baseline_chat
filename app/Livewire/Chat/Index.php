@@ -432,6 +432,36 @@ class Index extends Component
     }
 
     /**
+     * Mark conversation as unread by clearing read_at on recent messages.
+     * Useful for reminding user to reply later.
+     */
+    public function markAsUnread(int $conversationId): void
+    {
+        // Verify user has access
+        $authId = auth()->id();
+        $conversation = Conversation::where('id', $conversationId)
+            ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->first();
+
+        if (!$conversation) return;
+
+        // Mark the most recent message(s) from the other user as unread
+        // We'll mark up to 5 latest messages to ensure unread badge appears
+        Message::where('conversation_id', $conversationId)
+            ->where('sender_id', '!=', $authId)
+            ->whereNotNull('read_at')
+            ->latest()
+            ->take(5)
+            ->update(['read_at' => null]);
+
+        // Refresh sidebar to show unread badge
+        $this->loadConversations();
+
+        // Close the menu via JS
+        $this->dispatch('close-conv-menu', conversationId: $conversationId);
+    }
+
+    /**
      * Called from JS after every Livewire commit, passing the array of user IDs
      * currently online (from the presence channel Set).
      *
