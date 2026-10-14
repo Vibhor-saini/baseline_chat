@@ -445,14 +445,24 @@ class Index extends Component
 
         if (!$conversation) return;
 
-        // Mark the most recent message(s) from the other user as unread
-        // We'll mark up to 5 latest messages to ensure unread badge appears
+        // Mark only the LAST message from the other user as unread
+        // (Microsoft Teams style - just 1 message for reminder)
         Message::where('conversation_id', $conversationId)
             ->where('sender_id', '!=', $authId)
             ->whereNotNull('read_at')
             ->latest()
-            ->take(5)
+            ->take(1)  // Changed from 5 to 1
             ->update(['read_at' => null]);
+
+        // Close the current conversation (switch to empty state)
+        // This mimics Microsoft Teams behavior
+        if ($this->selectedConversationId === $conversationId) {
+            $this->selectedConversation = null;
+            $this->selectedConversationId = null;
+            $this->messages = [];
+            $this->body = '';
+            $this->activeScreen = 'chat';
+        }
 
         // Refresh sidebar to show unread badge
         $this->loadConversations();
