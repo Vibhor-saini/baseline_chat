@@ -1387,7 +1387,7 @@
                          id="navRailAvatarImg"
                          style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">
                 @else
-                    <span id="navRailAvatarInitials">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    <span id="navRailAvatarInitials" style="background:{{ \App\Helpers\AvatarColor::gradient(auth()->id()) }};width:100%;height:100%;display:flex;align-items:center;justify-content:center;border-radius:50%;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                 @endif
                 {{-- Self dot — always online while logged in --}}
                 <span class="presence presence-online" aria-hidden="true"></span>

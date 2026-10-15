@@ -941,19 +941,6 @@
     position: relative;
 }
 
-/* Decorative gradient blob in background */
-.teams-main::before {
-    content: '';
-    position: absolute;
-    bottom: 100px;
-    right: -60px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(124,92,252,.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-}
-
 /* Chat header */
 .chat-header {
     height: var(--header-h);
@@ -2840,27 +2827,27 @@
 /* Dropdown Menu */
 .conv-menu {
     position: absolute;
-    top: 50%;
+    top: 100%;
     right: 8px;
-    transform: translateY(-50%);
+    margin-top: 4px;
     background: var(--bg-float);
     border: 1px solid var(--border-dim);
     border-radius: 10px;
     box-shadow: var(--shadow-lg);
     padding: 6px;
     min-width: 200px;
-    z-index: 100;
+    z-index: 500;
     animation: menuSlideIn .15s ease;
 }
 
 @keyframes menuSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-50%) scale(0.95);
+        transform: translateY(-4px) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(-50%) scale(1);
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -2906,6 +2893,12 @@
 
 .conv-menu-item--danger svg {
     color: var(--danger);
+}
+
+.conv-menu-divider {
+    height: 1px;
+    background: var(--border-dim);
+    margin: 4px 0;
 }
 
 /* Conversation Start Header (Teams style) */
@@ -4537,6 +4530,45 @@
     align-items: center;
     justify-content: center;
     z-index: 2;
+}
+
+/* Remove Avatar Button */
+.pp-remove-avatar-btn {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--danger, #ff5f72);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: .72rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 3;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    transition: all .15s;
+    white-space: nowrap;
+}
+
+.pp-remove-avatar-btn:hover {
+    background: var(--danger-bright, #ff4560);
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 4px 12px rgba(255, 95, 114, .4);
+}
+
+.pp-remove-avatar-btn:active {
+    transform: translateX(-50%) scale(0.98);
+}
+
+.pp-remove-avatar-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 /* ── Header info ───────────────────────────────────────────────────────── */

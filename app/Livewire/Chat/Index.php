@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Locked;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Message;
 use App\Models\Conversation;
@@ -163,11 +164,18 @@ class Index extends Component
         $userId = auth()->id();
 
         $query = Conversation::query()
-            ->whereNull('deleted_at')  // Exclude soft-deleted conversations
             ->where('status', 'accepted')
             ->where(function ($q) use ($userId) {
                 $q->where('user_one_id', $userId)
                   ->orWhere('user_two_id', $userId);
+            })
+            // Exclude conversations deleted by THIS user
+            ->whereNotExists(function ($query) use ($userId) {
+                $query->select(DB::raw(1))
+                    ->from('conversation_user')
+                    ->whereColumn('conversation_user.conversation_id', 'conversations.id')
+                    ->where('conversation_user.user_id', $userId)
+                    ->where('conversation_user.is_deleted', true);
             });
 
         // Apply search filter if search term exists
@@ -314,6 +322,7 @@ class Index extends Component
             'name'     => $u->name,
             'email'    => auth()->user()->is_admin ? $u->email : null, // Hide for non-admins
             'is_admin' => $u->is_admin,
+            'profile_image' => $u->profile_image, // Add profile image
             'conv'     => $convMap->has($u->id) ? [
                 'id'         => $convMap[$u->id]->id,
                 'status'     => $convMap[$u->id]->status,
@@ -403,8 +412,22 @@ class Index extends Component
         // ── Restore draft for the new conversation ────────────────────────
         $this->body = $this->draftBodies[(string) $conversationId] ?? '';
 
-        $this->messages = Message::withTrashed()
+        // Check if user has deleted this conversation before (filter old messages)
+        $deletionRecord = DB::table('conversation_user')
             ->where('conversation_id', $conversationId)
+            ->where('user_id', $authId)
+            ->whereNotNull('last_seen_message_id') // ← Check if there was a deletion, regardless of current status
+            ->first();
+
+        $messageQuery = Message::withTrashed()
+            ->where('conversation_id', $conversationId);
+
+        // If user had deleted conversation, only show messages AFTER deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $messageQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+
+        $this->messages = $messageQuery
             ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender', 'reactions.user'])
             ->latest()
             ->take(50)
@@ -415,12 +438,21 @@ class Index extends Component
 
         // Track whether older messages exist for "load more" trigger
         $this->oldestLoadedMsgId = ! empty($this->messages) ? $this->messages[0]->id : null;
-        $this->hasMoreMessages   = $this->oldestLoadedMsgId
-            ? Message::withTrashed()
+        
+        if ($this->oldestLoadedMsgId) {
+            $hasMoreQuery = Message::withTrashed()
                 ->where('conversation_id', $conversationId)
-                ->where('id', '<', $this->oldestLoadedMsgId)
-                ->exists()
-            : false;
+                ->where('id', '<', $this->oldestLoadedMsgId);
+            
+            // If user had deleted conversation, don't count messages before deletion
+            if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+                $hasMoreQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+            }
+            
+            $this->hasMoreMessages = $hasMoreQuery->exists();
+        } else {
+            $this->hasMoreMessages = false;
+        }
 
         $this->selectedRequest = null;
         $this->showRequests    = false;
@@ -482,8 +514,8 @@ class Index extends Component
     }
 
     /**
-     * Soft delete conversation and all its messages.
-     * User can still search and start fresh conversation with same person.
+     * Delete conversation for CURRENT USER only (not both users).
+     * Uses conversation_user pivot table to track per-user deletion.
      */
     public function deleteConversation(int $conversationId): void
     {
@@ -495,11 +527,22 @@ class Index extends Component
 
         if (!$conversation) return;
 
-        // Soft delete the conversation
-        $conversation->delete();
+        // Get the last message ID before deletion
+        $lastMessageId = Message::where('conversation_id', $conversationId)->max('id');
 
-        // Soft delete all messages in this conversation
-        Message::where('conversation_id', $conversationId)->delete();
+        // Mark as deleted for THIS user only (not both users)
+        DB::table('conversation_user')->updateOrInsert(
+            [
+                'conversation_id' => $conversationId,
+                'user_id' => $authId,
+            ],
+            [
+                'is_deleted' => true,
+                'deleted_at' => now(),
+                'last_seen_message_id' => $lastMessageId, // Store last message ID
+                'updated_at' => now(),
+            ]
+        );
 
         // Close the conversation if it's currently selected
         if ($this->selectedConversationId === $conversationId) {
@@ -510,7 +553,7 @@ class Index extends Component
             $this->activeScreen = 'chat';
         }
 
-        // Refresh sidebar (deleted conversation won't appear)
+        // Refresh sidebar (deleted conversation won't appear for THIS user)
         $this->loadConversations();
 
         // Close the menu
@@ -747,6 +790,21 @@ class Index extends Component
         $this->messages[] = $message;
 
         $this->selectedConversation->update(['last_message_at' => now()]);
+
+        // Un-delete conversation for recipient if they had deleted it
+        $recipientId = $this->selectedConversation->user_one_id === auth()->id()
+            ? $this->selectedConversation->user_two_id
+            : $this->selectedConversation->user_one_id;
+
+        DB::table('conversation_user')
+            ->where('conversation_id', $this->selectedConversation->id)
+            ->where('user_id', $recipientId)
+            ->where('is_deleted', true)
+            ->update([
+                'is_deleted' => false,
+                'deleted_at' => null,
+            ]);
+
         $this->loadConversations();
 
         broadcast(new MessageSent($message))->toOthers();
@@ -971,9 +1029,25 @@ class Index extends Component
     {
         if (! $this->selectedConversationId || ! $this->oldestLoadedMsgId) return;
 
-        $older = Message::withTrashed()
+        $authId = auth()->id();
+
+        // Check if user has deleted this conversation before (filter old messages)
+        $deletionRecord = DB::table('conversation_user')
             ->where('conversation_id', $this->selectedConversationId)
-            ->where('id', '<', $this->oldestLoadedMsgId)
+            ->where('user_id', $authId)
+            ->whereNotNull('last_seen_message_id') // ← Check if there was a deletion, regardless of current status
+            ->first();
+
+        $olderQuery = Message::withTrashed()
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('id', '<', $this->oldestLoadedMsgId);
+
+        // If user had deleted conversation, don't load messages before deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $olderQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+
+        $older = $olderQuery
             ->with(['sender', 'forwardedFrom.sender', 'replyTo.sender', 'reactions.user'])
             ->latest()
             ->take(30)
@@ -992,10 +1066,17 @@ class Index extends Component
 
         // Update tracking state
         $this->oldestLoadedMsgId = $older->first()->id;
-        $this->hasMoreMessages   = Message::withTrashed()
+        
+        $hasMoreQuery = Message::withTrashed()
             ->where('conversation_id', $this->selectedConversationId)
-            ->where('id', '<', $this->oldestLoadedMsgId)
-            ->exists();
+            ->where('id', '<', $this->oldestLoadedMsgId);
+        
+        // If user had deleted conversation, don't count messages before deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $hasMoreQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+        
+        $this->hasMoreMessages = $hasMoreQuery->exists();
 
         // Dispatch to JS with serializable payload
         $payload = $older->map(fn($m) => [
@@ -1027,11 +1108,27 @@ class Index extends Component
             return;
         }
 
-        $results = Message::withTrashed()
+        $authId = auth()->id();
+
+        // Check if user has deleted this conversation before (to filter old messages)
+        $deletionRecord = DB::table('conversation_user')
+            ->where('conversation_id', $this->selectedConversationId)
+            ->where('user_id', $authId)
+            ->whereNotNull('last_seen_message_id')
+            ->first();
+
+        $messageQuery = Message::withTrashed()
             ->where('conversation_id', $this->selectedConversationId)
             ->where('type', 'text')
             ->whereNull('deleted_at')
-            ->where('body', 'like', '%' . $term . '%')
+            ->where('body', 'like', '%' . $term . '%');
+
+        // If user had deleted conversation, only search messages AFTER deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $messageQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+
+        $results = $messageQuery
             ->with('sender:id,name,profile_image')
             ->latest()
             ->limit(30)
@@ -1045,6 +1142,7 @@ class Index extends Component
                 'avatar_url'  => $m->sender?->profile_image
                     ? \Illuminate\Support\Facades\Storage::url($m->sender->profile_image)
                     : '',
+                'avatar_color' => \App\Helpers\AvatarColor::gradient($m->sender_id), // Add avatar color
                 'raw_date'    => $m->created_at->toISOString(),
                 'created_at'  => $m->created_at->setTimezone('Asia/Kolkata')->format('M j, g:i A'),
                 'date_short'  => $m->created_at->setTimezone('Asia/Kolkata')->format('d-m'),

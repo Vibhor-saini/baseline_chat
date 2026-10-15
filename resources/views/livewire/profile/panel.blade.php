@@ -33,6 +33,7 @@
                         <div class="pp-avatar-initials"
                              id="avatarPreviewImg"
                              data-user-id="{{ auth()->id() }}"
+                             style="background:{{ \App\Helpers\AvatarColor::gradient(auth()->id()) }};"
                              aria-hidden="true">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
                     @endif
                 </div>
@@ -55,6 +56,21 @@
                    class="file-input-hidden"
                    aria-label="Select profile picture"
                    onclick="event.stopPropagation()">
+
+            {{-- Remove Avatar Button (only show if image exists) --}}
+            @if(auth()->user()->profile_image)
+                <button type="button"
+                        wire:click="removeAvatar"
+                        class="pp-remove-avatar-btn"
+                        title="Remove profile picture"
+                        aria-label="Remove profile picture">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Remove
+                </button>
+            @endif
 
             {{-- Upload loading spinner overlay --}}
             <div class="pp-upload-loading" id="ppUploadLoading" style="display:none" aria-live="polite">

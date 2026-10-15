@@ -134,6 +134,58 @@ class Panel extends Component
     }
 
     /**
+     * Remove the current profile image from database and storage.
+     * Avatar will revert to colored initials automatically.
+     */
+    public function removeAvatar(): void
+    {
+        $user    = auth()->user();
+        $oldPath = $user->profile_image;
+
+        if (!$oldPath) {
+            return; // No avatar to remove
+        }
+
+        try {
+            DB::transaction(function () use ($user, $oldPath) {
+                // Set profile_image to null in database
+                $user->update(['profile_image' => null]);
+
+                // Delete file from storage
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            });
+
+            auth()->setUser($user->fresh());
+
+            // Broadcast update with empty avatar URL (will show colored initials)
+            broadcast(new UserProfileUpdated(
+                auth()->id(),
+                '', // Empty avatar URL
+                $this->status,
+                $this->name,
+                $this->statusQuote
+            ));
+
+            $this->successMessage = 'Profile image removed!';
+            
+            // Force component to re-render by resetting mount state
+            $this->syncFromUser();
+            
+            // Dispatch event to update UI
+            $this->dispatch('avatar-removed');
+            
+            // Dispatch browser event for immediate JS update
+            $this->dispatch('profile-avatar-removed', userId: auth()->id(), name: $this->name);
+
+        } catch (\Throwable $e) {
+            Log::error('[ProfilePanel] Avatar removal failed: ' . $e->getMessage());
+            $this->saveError = 'Failed to remove profile image. Please try again.';
+        }
+    }
+
+    /**
      * Quick status-only change.
      * Busy/Away/DND → status_manually_set = true (presence cannot override)
      * Available     → status_manually_set = false (presence may reset it)

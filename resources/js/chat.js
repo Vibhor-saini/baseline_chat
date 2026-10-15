@@ -1670,6 +1670,92 @@
     }
 
 
+    /* ── Listen for avatar removal event ─────────────────────────────────── */
+    document.addEventListener('livewire:init', () => {
+        // Listen for browser event
+        window.addEventListener('profile-avatar-removed', (event) => {
+            console.log('[Avatar] Removal event received:', event.detail);
+            
+            const detail = event.detail[0] || event.detail;
+            const userId = String(detail.userId || '');
+            const userName = detail.name || '';
+            const initial = userName.charAt(0).toUpperCase();
+            
+            if (!userId) return;
+
+            console.log('[Avatar] Removing avatar for user:', userId, userName);
+
+            // 1. Update profile panel avatar
+            const previewWrap = document.getElementById('avatarPreviewWrap');
+            if (previewWrap) {
+                console.log('[Avatar] Updating preview wrap');
+                const existingImg = previewWrap.querySelector('img.pp-avatar-img');
+                if (existingImg) {
+                    console.log('[Avatar] Removing existing image');
+                    existingImg.remove();
+                }
+
+                // Check if initials div exists
+                let initialsDiv = previewWrap.querySelector('.pp-avatar-initials');
+                if (!initialsDiv) {
+                    console.log('[Avatar] Creating initials div');
+                    // Create initials div with gradient color
+                    initialsDiv = document.createElement('div');
+                    initialsDiv.className = 'pp-avatar-initials';
+                    initialsDiv.id = 'avatarPreviewImg';
+                    initialsDiv.dataset.userId = userId;
+                    initialsDiv.textContent = initial;
+                    
+                    // Get gradient color from a helper function or use a default
+                    // Since we can't access PHP here, we'll fetch from existing elements
+                    const existingColoredAvatar = document.querySelector(`[data-user-id="${userId}"].conv-avatar`);
+                    if (existingColoredAvatar && existingColoredAvatar.style.background) {
+                        initialsDiv.style.background = existingColoredAvatar.style.background;
+                    }
+                    
+                    initialsDiv.setAttribute('aria-hidden', 'true');
+                    previewWrap.appendChild(initialsDiv);
+                }
+            }
+
+            // 2. Hide remove button
+            const removeBtn = document.querySelector('.pp-remove-avatar-btn');
+            if (removeBtn) {
+                console.log('[Avatar] Hiding remove button');
+                removeBtn.style.display = 'none';
+            }
+
+            // 3. Update topbar avatar
+            const topbarImg = document.getElementById('topbarAvatarImg');
+            if (topbarImg) {
+                console.log('[Avatar] Updating topbar avatar');
+                const parent = topbarImg.parentElement;
+                topbarImg.remove();
+                
+                if (parent) {
+                    parent.id = 'topbarAvatarInitials';
+                    parent.classList.remove('profile-avatar--has-img');
+                    parent.dataset.userId = userId;
+                    parent.textContent = initial;
+                }
+            }
+
+            // 4. Update nav rail avatar
+            const navRailImg = document.getElementById('navRailAvatarImg');
+            if (navRailImg) {
+                console.log('[Avatar] Updating nav rail avatar');
+                const span = document.createElement('span');
+                span.id = 'navRailAvatarInitials';
+                span.dataset.userId = userId;
+                span.textContent = initial;
+                navRailImg.replaceWith(span);
+            }
+
+            console.log('[Avatar] Avatar removal complete');
+        });
+    });
+
+
     /* ── Global search — blur on outside click ───────────────────────────── */
     document.addEventListener('click', (e) => {
         const wrap = document.getElementById('globalSearchWrap');
@@ -1884,7 +1970,7 @@
 
             const avatarHtml = r.avatar_url
                 ? `<img src="${r.avatar_url}" alt="${r.sender_name.replace(/"/g,'')}">`
-                : `${r.sender_name.charAt(0).toUpperCase()}`;
+                : `<div style="width:100%;height:100%;border-radius:50%;background:${r.avatar_color};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;">${r.sender_name.charAt(0).toUpperCase()}</div>`;
             const youDot = r.is_mine ? `<span class="fic-result-you-dot"></span>` : '';
 
             html += `
@@ -3055,14 +3141,34 @@
         );
 
         if (confirmed) {
+            console.log('[Delete] Deleting conversation:', conversationId);
+            
             // Close the menu first
             const menu = document.getElementById(`conv-menu-${conversationId}`);
             if (menu) menu.style.display = 'none';
 
-            // Call Livewire method
-            const component = getChatComponent();
+            // Find the Livewire component
+            const root = document.querySelector('.teams-chat-root');
+            if (!root) {
+                console.error('[Delete] Chat root not found');
+                return;
+            }
+
+            const el = root.closest('[wire\\:id]') || root.querySelector('[wire\\:id]');
+            if (!el) {
+                console.error('[Delete] Livewire element not found');
+                return;
+            }
+
+            const wireId = el.getAttribute('wire:id');
+            console.log('[Delete] Found Livewire component:', wireId);
+
+            const component = Livewire.find(wireId);
             if (component) {
+                console.log('[Delete] Calling deleteConversation...');
                 component.call('deleteConversation', conversationId);
+            } else {
+                console.error('[Delete] Component not found with wireId:', wireId);
             }
         } else {
             // User cancelled - close menu

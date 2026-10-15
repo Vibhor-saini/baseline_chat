@@ -49,7 +49,21 @@
               $isAdminConv     = auth()->user()->is_admin || $user['is_admin'];
             @endphp
             <div class="global-search-item" role="option">
-              <div class="global-search-avatar">{{ strtoupper(substr($user['name'],0,1)) }}</div>
+              <div class="global-search-avatar">
+                @if($user['profile_image'] ?? false)
+                  <img src="{{ Storage::url($user['profile_image']) }}"
+                       alt="{{ $user['name'] }}"
+                       style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;"
+                       onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
+                  <div style="display:none;width:100%;height:100%;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($user['id']) }};color:#fff;font-weight:700;font-size:.95rem;align-items:center;justify-content:center;">
+                    {{ strtoupper(substr($user['name'],0,1)) }}
+                  </div>
+                @else
+                  <div style="display:flex;width:100%;height:100%;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($user['id']) }};color:#fff;font-weight:700;font-size:.95rem;align-items:center;justify-content:center;">
+                    {{ strtoupper(substr($user['name'],0,1)) }}
+                  </div>
+                @endif
+              </div>
               <div class="global-search-info">
                 <div class="global-search-name">{{ $user['name'] }}</div>
                 @if($user['email'])
@@ -105,6 +119,7 @@
             <div class="profile-avatar"
                  id="topbarAvatarInitials"
                  data-user-id="{{ auth()->id() }}"
+                 style="background:{{ \App\Helpers\AvatarColor::gradient(auth()->id()) }};"
                  aria-hidden="true">
               {{ strtoupper(substr(auth()->user()->name,0,1)) }}
               <span class="profile-status-dot profile-status-dot--{{ auth()->user()->status instanceof \App\Enums\UserStatus ? auth()->user()->status->value : 'available' }}"
@@ -338,6 +353,7 @@
               </svg>
               <span>Mark as Unread</span>
             </button>
+            <div class="conv-menu-divider"></div>
             <button type="button" 
                     class="conv-menu-item conv-menu-item--danger"
                     onclick="event.stopPropagation(); window._confirmDeleteConversation({{ $conversation->id }}, '{{ $other->name }}')"
@@ -384,19 +400,18 @@
         <div class="chat-header-avatar upc-trigger"
              data-user-id="{{ $selectedConversation->otherUser()->id }}"
              data-uid="{{ $selectedConversation->otherUser()->id }}"
-             style="cursor:pointer"
+             style="cursor:pointer;position:relative;overflow:hidden;"
              title="View profile">
           @if($selectedConversation->otherUser()->profile_image)
             <img src="{{ Storage::url($selectedConversation->otherUser()->profile_image) }}"
                  alt="{{ $selectedConversation->otherUser()->name }}"
-                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;"
+                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;position:relative;z-index:2;"
                  data-user-id="{{ $selectedConversation->otherUser()->id }}"
-                 data-initials="{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}"
-                 onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
-            <span style="display:none;width:100%;height:100%;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;"
-                  data-user-id="{{ $selectedConversation->otherUser()->id }}">{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}</span>
+                 data-initials="{{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}">
           @else
-            {{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}
+            <div style="width:100%;height:100%;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($selectedConversation->otherUser()->id) }};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff;">
+              {{ strtoupper(substr($selectedConversation->otherUser()->name,0,1)) }}
+            </div>
           @endif
         </div>
         <div class="chat-header-info">
@@ -440,7 +455,8 @@
         </div>
 
         {{-- Start of Conversation Header (Microsoft Teams style) --}}
-        @if(count($messages) === 0 || !$hasMoreMessages)
+        {{-- Only show when there are NO messages at all --}}
+        @if(count($messages) === 0)
         <div class="conversation-start-header">
           <div class="conv-start-avatar">
             @if($selectedConversation->otherUser()->profile_image)
@@ -512,10 +528,10 @@
                          data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}"
                          onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
                     <div data-user-id="{{ $message->sender->id }}"
-                         style="display:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+                         style="display:none;width:32px;height:32px;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($message->sender->id) }};color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                   @else
                     <div data-user-id="{{ $message->sender->id }}"
-                         style="display:flex;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+                         style="display:flex;width:32px;height:32px;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($message->sender->id) }};color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;flex-shrink:0;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                   @endif
                 @endif
               </div>
@@ -883,20 +899,17 @@
                        data-initials="{{ strtoupper(substr($message->sender->name,0,1)) }}"
                        onerror="this.onerror=null;this.style.display='none';var s=this.nextElementSibling;if(s){s.style.display='flex';}">
                   <div data-user-id="{{ $message->sender->id }}"
-                       style="display:none;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#5e3de8);color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
+                       style="display:none;width:100%;height:100%;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($message->sender->id) }};color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                 @else
-                  {{ strtoupper(substr($message->sender->name,0,1)) }}
+                  <div data-user-id="{{ $message->sender->id }}"
+                       style="display:flex;width:100%;height:100%;border-radius:50%;background:{{ \App\Helpers\AvatarColor::gradient($message->sender->id) }};color:#fff;font-weight:700;font-size:.82rem;align-items:center;justify-content:center;">{{ strtoupper(substr($message->sender->name,0,1)) }}</div>
                 @endif
               </div>
             @endif
 
           </div>{{-- /msg-row --}}
         @empty
-          <div class="empty-messages" role="status">
-            <div class="empty-messages-icon">💬</div>
-            <h3>No messages yet</h3>
-            <p>Send a message to start the conversation</p>
-          </div>
+          {{-- Empty state removed - "Start of conversation" header shows instead --}}
         @endforelse
 
         {{-- Typing Indicator --}}
