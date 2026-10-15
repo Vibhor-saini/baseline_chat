@@ -163,6 +163,7 @@ class Index extends Component
         $userId = auth()->id();
 
         $query = Conversation::query()
+            ->whereNull('deleted_at')  // Exclude soft-deleted conversations
             ->where('status', 'accepted')
             ->where(function ($q) use ($userId) {
                 $q->where('user_one_id', $userId)
@@ -477,6 +478,42 @@ class Index extends Component
         $this->broadcastConversationUpdate($conversation, $otherUserId);
 
         // Close the menu via JS
+        $this->dispatch('close-conv-menu', conversationId: $conversationId);
+    }
+
+    /**
+     * Soft delete conversation and all its messages.
+     * User can still search and start fresh conversation with same person.
+     */
+    public function deleteConversation(int $conversationId): void
+    {
+        // Verify user has access
+        $authId = auth()->id();
+        $conversation = Conversation::where('id', $conversationId)
+            ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->first();
+
+        if (!$conversation) return;
+
+        // Soft delete the conversation
+        $conversation->delete();
+
+        // Soft delete all messages in this conversation
+        Message::where('conversation_id', $conversationId)->delete();
+
+        // Close the conversation if it's currently selected
+        if ($this->selectedConversationId === $conversationId) {
+            $this->selectedConversation = null;
+            $this->selectedConversationId = null;
+            $this->messages = [];
+            $this->body = '';
+            $this->activeScreen = 'chat';
+        }
+
+        // Refresh sidebar (deleted conversation won't appear)
+        $this->loadConversations();
+
+        // Close the menu
         $this->dispatch('close-conv-menu', conversationId: $conversationId);
     }
 

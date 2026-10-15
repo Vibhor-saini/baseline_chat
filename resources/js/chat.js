@@ -3040,3 +3040,33 @@
     });
 
     /* ── end Conversation Context Menu ────────────────────────────────────── */
+
+    /**
+     * Confirm delete conversation with native browser dialog
+     */
+    window._confirmDeleteConversation = function(conversationId, userName) {
+        const confirmed = confirm(
+            `Delete conversation with ${userName}?\n\n` +
+            `This will:\n` +
+            `• Remove conversation from your list\n` +
+            `• Delete all messages\n` +
+            `• Cannot be undone\n\n` +
+            `Are you sure?`
+        );
+
+        if (confirmed) {
+            // Close the menu first
+            const menu = document.getElementById(`conv-menu-${conversationId}`);
+            if (menu) menu.style.display = 'none';
+
+            // Call Livewire method
+            const component = getChatComponent();
+            if (component) {
+                component.call('deleteConversation', conversationId);
+            }
+        } else {
+            // User cancelled - close menu
+            const menu = document.getElementById(`conv-menu-${conversationId}`);
+            if (menu) menu.style.display = 'none';
+        }
+    };

@@ -338,6 +338,18 @@
               </svg>
               <span>Mark as Unread</span>
             </button>
+            <button type="button" 
+                    class="conv-menu-item conv-menu-item--danger"
+                    onclick="event.stopPropagation(); window._confirmDeleteConversation({{ $conversation->id }}, '{{ $other->name }}')"
+                    title="Delete this conversation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+              <span>Delete Conversation</span>
+            </button>
             {{-- Future menu items will go here --}}
           </div>
         </div>
@@ -426,6 +438,26 @@
             <span class="lm-dot"></span><span class="lm-dot"></span><span class="lm-dot"></span>
           </div>
         </div>
+
+        {{-- Start of Conversation Header (Microsoft Teams style) --}}
+        @if(count($messages) === 0 || !$hasMoreMessages)
+        <div class="conversation-start-header">
+          <div class="conv-start-avatar">
+            @if($selectedConversation->otherUser()->profile_image)
+              <img src="{{ Storage::url($selectedConversation->otherUser()->profile_image) }}" 
+                   alt="{{ $selectedConversation->otherUser()->name }}"
+                   class="conv-start-avatar-img">
+            @else
+              <div class="conv-start-avatar-initials" style="background:{{ \App\Helpers\AvatarColor::gradient($selectedConversation->otherUser()->id) }}">
+                {{ strtoupper(substr($selectedConversation->otherUser()->name, 0, 1)) }}
+              </div>
+            @endif
+          </div>
+          <h3 class="conv-start-title">{{ $selectedConversation->otherUser()->name }}</h3>
+          <p class="conv-start-subtitle">This is the start of your conversation</p>
+          <p class="conv-start-cta">Say hi to {{ $selectedConversation->otherUser()->name }}! 👋</p>
+        </div>
+        @endif
 
         @php
           $prevDate      = null;
