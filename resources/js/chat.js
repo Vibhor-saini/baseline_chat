@@ -118,17 +118,49 @@
     let _sidebarTypingTimer    = null;
     let _activeConvIdForTyping = null;
 
-    function showTypingIndicator(userName, conversationId, avatarUrl) {
+    function showTypingIndicator(userName, conversationId, avatarUrl, avatarColor) {
+        console.log('[Typing] Received:', { userName, conversationId, avatarUrl, avatarColor });
+        
         _activeConvIdForTyping = String(conversationId);
         const row    = document.getElementById('typing-indicator-row');
         const avatar = document.getElementById('typing-indicator-avatar');
         const label  = document.getElementById('typing-indicator-label');
         if (row) {
             if (avatar) {
+                // Clear previous content
+                avatar.innerHTML = '';
+                
                 if (avatarUrl) {
+                    console.log('[Typing] Using avatar image:', avatarUrl);
                     avatar.innerHTML = `<img src="${avatarUrl}" alt="${userName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
                 } else {
-                    avatar.textContent = userName ? userName.charAt(0).toUpperCase() : '?';
+                    const initial = userName ? userName.charAt(0).toUpperCase() : '?';
+                    
+                    // NEW APPROACH: Get gradient from the conversation item or chat header data attribute
+                    // This ensures we use the SAME gradient from AvatarColor::gradient() everywhere
+                    let userGradient = '';
+                    
+                    // Try to find gradient from chat header (if this conversation is open)
+                    const headerAvatar = document.querySelector('.chat-header-avatar[data-user-avatar-gradient]');
+                    if (headerAvatar) {
+                        userGradient = headerAvatar.getAttribute('data-user-avatar-gradient');
+                        console.log('[Typing] Got gradient from header:', userGradient);
+                    }
+                    
+                    // If not found in header, try sidebar conversation item
+                    if (!userGradient) {
+                        const convItem = document.querySelector(`.conv-item[data-user-avatar-gradient]`);
+                        if (convItem) {
+                            userGradient = convItem.getAttribute('data-user-avatar-gradient');
+                            console.log('[Typing] Got gradient from sidebar:', userGradient);
+                        }
+                    }
+                    
+                    // Use the gradient or fallback
+                    const finalBg = userGradient || avatarColor || 'linear-gradient(135deg, #6264A7 0%, #8b5cf6 100%)';
+                    console.log('[Typing] Final gradient:', finalBg);
+                    
+                    avatar.innerHTML = `<div style="width:28px;height:28px;border-radius:50%;background:${finalBg};color:#fff;font-weight:700;font-size:.68rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${initial}</div>`;
                 }
             }
             if (label)  label.textContent  = `${userName} is typing…`;
@@ -659,9 +691,30 @@
 
     /* ── Livewire dispatch events → guaranteed scroll ─────────────────────── */
     document.addEventListener('livewire:init', () => {
-        Livewire.on('scroll-to-bottom', () => setTimeout(() => scrollToBottom(true), 80));
-        Livewire.on('message-sent',     () => {
-            setTimeout(() => scrollToBottom(true), 80);
+        // Instant scroll on conversation selection - no delay, no animation
+        Livewire.on('scroll-to-bottom', () => {
+            const messagesArea = document.getElementById('messages-container');
+            
+            // Hide messages briefly to prevent visible scroll
+            if (messagesArea) {
+                messagesArea.style.opacity = '0';
+            }
+            
+            // Scroll immediately (multiple attempts for reliability)
+            scrollToBottom(false);
+            requestAnimationFrame(() => {
+                scrollToBottom(false);
+                // Show messages after scroll completes
+                if (messagesArea) {
+                    setTimeout(() => {
+                        messagesArea.style.opacity = '1';
+                    }, 10);
+                }
+            });
+        });
+        
+        Livewire.on('message-sent', () => {
+            setTimeout(() => scrollToBottom(true), 80); // Keep smooth scroll for new messages
             // Reset textarea height after message sends
             const input = document.getElementById('messageInput');
             if (input) {
@@ -1066,7 +1119,7 @@
                     console.log('[Chat] user.typing received:', event);
                     clearTimeout(_remoteTypingTimer);
                     if (event.isTyping) {
-                        showTypingIndicator(event.userName, currentConversationId, event.avatarUrl || '');
+                        showTypingIndicator(event.userName, currentConversationId, event.avatarUrl || '', event.avatarColor || '');
                         _remoteTypingTimer = setTimeout(() => hideTypingIndicator(), 4000);
                     } else {
                         hideTypingIndicator();
@@ -2209,6 +2262,8 @@
             // Avatar
             const avatarImg      = document.getElementById('upcAvatarImg');
             const avatarInitials = document.getElementById('upcAvatarInitials');
+            const avatarDiv      = document.getElementById('upcAvatar');
+            
             if (user.avatar_url) {
                 avatarImg.src                = user.avatar_url;
                 avatarImg.alt                = user.name;
@@ -2218,6 +2273,11 @@
                 avatarImg.style.display      = 'none';
                 avatarInitials.style.display = 'flex';
                 avatarInitials.textContent   = user.initials;
+                
+                // Set user-specific gradient from backend
+                if (user.avatar_gradient) {
+                    avatarDiv.style.background = user.avatar_gradient;
+                }
             }
 
             // Status ring
@@ -3128,51 +3188,97 @@
     /* ── end Conversation Context Menu ────────────────────────────────────── */
 
     /**
-     * Confirm delete conversation with native browser dialog
+     * Delete conversation modal (Microsoft Teams style)
      */
+    let _pendingDeleteConversationId = null;
+
     window._confirmDeleteConversation = function(conversationId, userName) {
-        const confirmed = confirm(
-            `Delete conversation with ${userName}?\n\n` +
-            `This will:\n` +
-            `• Remove conversation from your list\n` +
-            `• Delete all messages\n` +
-            `• Cannot be undone\n\n` +
-            `Are you sure?`
-        );
+        // Close the menu first
+        const menu = document.getElementById(`conv-menu-${conversationId}`);
+        if (menu) menu.style.display = 'none';
 
-        if (confirmed) {
-            console.log('[Delete] Deleting conversation:', conversationId);
-            
-            // Close the menu first
-            const menu = document.getElementById(`conv-menu-${conversationId}`);
-            if (menu) menu.style.display = 'none';
+        // Store conversation ID for later
+        _pendingDeleteConversationId = conversationId;
 
-            // Find the Livewire component
-            const root = document.querySelector('.teams-chat-root');
-            if (!root) {
-                console.error('[Delete] Chat root not found');
-                return;
-            }
-
-            const el = root.closest('[wire\\:id]') || root.querySelector('[wire\\:id]');
-            if (!el) {
-                console.error('[Delete] Livewire element not found');
-                return;
-            }
-
-            const wireId = el.getAttribute('wire:id');
-            console.log('[Delete] Found Livewire component:', wireId);
-
-            const component = Livewire.find(wireId);
-            if (component) {
-                console.log('[Delete] Calling deleteConversation...');
-                component.call('deleteConversation', conversationId);
-            } else {
-                console.error('[Delete] Component not found with wireId:', wireId);
-            }
-        } else {
-            // User cancelled - close menu
-            const menu = document.getElementById(`conv-menu-${conversationId}`);
-            if (menu) menu.style.display = 'none';
+        // Show modal
+        const overlay = document.getElementById('deleteModalOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            // Focus on cancel button for accessibility
+            setTimeout(() => {
+                const cancelBtn = overlay.querySelector('.delete-modal-btn--cancel');
+                if (cancelBtn) cancelBtn.focus();
+            }, 100);
         }
     };
+
+    window._closeDeleteModal = function() {
+        const overlay = document.getElementById('deleteModalOverlay');
+        if (overlay) overlay.style.display = 'none';
+        _pendingDeleteConversationId = null;
+    };
+
+    window._executeDeleteConversation = function() {
+        if (!_pendingDeleteConversationId) {
+            console.error('[Delete] No conversation ID stored');
+            return;
+        }
+
+        console.log('[Delete] Deleting conversation:', _pendingDeleteConversationId);
+
+        // Find the Livewire component
+        const root = document.querySelector('.teams-chat-root');
+        if (!root) {
+            console.error('[Delete] Chat root not found');
+            window._closeDeleteModal();
+            return;
+        }
+
+        const el = root.closest('[wire\\:id]') || root.querySelector('[wire\\:id]');
+        if (!el) {
+            console.error('[Delete] Livewire element not found');
+            window._closeDeleteModal();
+            return;
+        }
+
+        const wireId = el.getAttribute('wire:id');
+        console.log('[Delete] Found Livewire component:', wireId);
+
+        const component = Livewire.find(wireId);
+        if (component) {
+            console.log('[Delete] Calling deleteConversation...');
+            component.call('deleteConversation', _pendingDeleteConversationId);
+            window._closeDeleteModal();
+        } else {
+            console.error('[Delete] Component not found with wireId:', wireId);
+            window._closeDeleteModal();
+        }
+    };
+
+    // Setup delete modal event listeners when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmBtn = document.getElementById('deleteModalConfirmBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', window._executeDeleteConversation);
+        }
+
+        // Close modal on overlay click (outside modal)
+        const overlay = document.getElementById('deleteModalOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    window._closeDeleteModal();
+                }
+            });
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('deleteModalOverlay');
+                if (overlay && overlay.style.display !== 'none') {
+                    window._closeDeleteModal();
+                }
+            }
+        });
+    });

@@ -16,6 +16,7 @@ class UserTyping implements ShouldBroadcastNow
     public int    $userId;
     public string $userName;
     public string $avatarUrl;
+    public string $avatarColor; // Add avatar gradient color
     public bool   $isTyping;
     public int    $recipientUserId;
 
@@ -24,6 +25,7 @@ class UserTyping implements ShouldBroadcastNow
         int    $userId,
         string $userName,
         string $avatarUrl,
+        string $avatarColor,
         bool   $isTyping,
         int    $recipientUserId,
     ) {
@@ -31,6 +33,7 @@ class UserTyping implements ShouldBroadcastNow
         $this->userId          = $userId;
         $this->userName        = $userName;
         $this->avatarUrl       = $avatarUrl;
+        $this->avatarColor     = $avatarColor;
         $this->isTyping        = $isTyping;
         $this->recipientUserId = $recipientUserId;
     }

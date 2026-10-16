@@ -209,6 +209,24 @@ class Index extends Component
             ->latest('last_message_at')
             ->get()
             ->all();          // <── plain array, never Collection
+
+        // Post-process: Hide latestMessage if it's before the user's deletion point
+        foreach ($this->conversations as $conv) {
+            // Check if this conversation was deleted by user
+            $deletionRecord = DB::table('conversation_user')
+                ->where('conversation_id', $conv->id)
+                ->where('user_id', $userId)
+                ->whereNotNull('last_seen_message_id')
+                ->first();
+
+            // If deleted and latest message is old (before deletion), hide it
+            if ($deletionRecord && $conv->latestMessage) {
+                if ($conv->latestMessage->id <= $deletionRecord->last_seen_message_id) {
+                    // This message is from before deletion - hide it
+                    $conv->setRelation('latestMessage', null);
+                }
+            }
+        }
     }
 
     public function loadPendingRequests(): void
@@ -396,6 +414,18 @@ class Index extends Component
                 ->exists(),
             403
         );
+
+        // ── Un-delete conversation if user is opening a deleted one ────────
+        // This happens when user searches and opens a previously deleted conversation
+        DB::table('conversation_user')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $authId)
+            ->where('is_deleted', true)
+            ->update([
+                'is_deleted' => false,
+                'deleted_at' => null,
+                'updated_at' => now(),
+            ]);
 
         // ── Save current draft before switching ───────────────────────────
         if ($this->selectedConversationId && trim($this->body) !== '') {
@@ -1489,6 +1519,16 @@ class Index extends Component
             ? $this->selectedConversation->user_two_id
             : $this->selectedConversation->user_one_id;
 
+        $avatarColor = \App\Helpers\AvatarColor::gradient(auth()->id());
+        
+        // Debug log
+        \Illuminate\Support\Facades\Log::info('[Typing] Broadcasting with color:', [
+            'userId' => auth()->id(),
+            'userName' => auth()->user()->name,
+            'avatarColor' => $avatarColor,
+            'isTyping' => $isTyping,
+        ]);
+
         broadcast(new UserTyping(
             $this->selectedConversation->id,
             auth()->id(),
@@ -1496,6 +1536,7 @@ class Index extends Component
             auth()->user()->profile_image
                 ? \Illuminate\Support\Facades\Storage::url(auth()->user()->profile_image)
                 : '',
+            $avatarColor, // Add avatar color
             $isTyping,
             $recipientId,
         ))->toOthers();

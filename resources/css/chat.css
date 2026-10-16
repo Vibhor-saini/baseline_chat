@@ -1053,6 +1053,8 @@
     min-height: 0;
     position: relative;
     z-index: 1;
+    overflow-anchor: none; /* Prevent auto-scroll on DOM changes */
+    transition: opacity 0.1s ease; /* Smooth fade in/out */
 }
 
 .msg-row {
@@ -5082,7 +5084,8 @@
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #7c5cfc, #5e3de8);
+    /* Default gradient - will be overridden by JS with user-specific color */
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5846,3 +5849,206 @@
 /* Copied feedback state */
 .link-popup-item--copied { color: #57c75a !important; }
 .link-popup-item--copied svg { color: #57c75a !important; }
+
+
+/* ═══════════════════════════════════════════════════════
+   DELETE CONFIRMATION MODAL (Microsoft Teams Style)
+/* ═══════════════════════════════════════════════════════
+   DELETE CONFIRMATION MODAL (Microsoft Teams Style)
+═══════════════════════════════════════════════════════ */
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; /* Add padding for mobile safety */
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.delete-modal {
+    background: var(--bg-float);
+    border: 1px solid var(--border-dim);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    width: 90%;
+    max-width: 440px;
+    max-height: 90vh; /* Prevent overflow on small screens */
+    overflow-y: auto; /* Allow scrolling if needed */
+    animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.delete-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.delete-modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.delete-modal-close {
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.delete-modal-body {
+    padding: 20px 24px;
+}
+
+.delete-modal-desc {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.delete-modal-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.delete-modal-link:hover {
+    color: var(--accent-bright);
+    text-decoration: underline;
+}
+
+.delete-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.delete-modal-btn {
+    padding: 8px 20px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.delete-modal-btn--cancel {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-dim);
+}
+
+.delete-modal-btn--cancel:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-accent);
+}
+
+.delete-modal-btn--delete {
+    background: var(--danger);
+    color: white;
+    border: 1px solid transparent;
+}
+
+.delete-modal-btn--delete:hover {
+    background: #ff2847;
+    box-shadow: 0 4px 12px rgba(255, 79, 106, 0.3);
+}
+
+.delete-modal-btn--delete:active {
+    transform: scale(0.98);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+    .delete-modal-overlay {
+        padding: 16px;
+    }
+    
+    .delete-modal {
+        width: 100%;
+        max-width: none;
+        border-radius: 16px;
+    }
+    
+    .delete-modal-header {
+        padding: 18px 20px;
+    }
+    
+    .delete-modal-title {
+        font-size: 1rem;
+    }
+    
+    .delete-modal-body {
+        padding: 18px 20px;
+    }
+    
+    .delete-modal-desc {
+        font-size: 0.875rem;
+    }
+    
+    .delete-modal-footer {
+        padding: 14px 20px;
+        gap: 8px;
+    }
+    
+    .delete-modal-btn {
+        padding: 10px 18px;
+        font-size: 0.875rem;
+        flex: 1; /* Make buttons equal width on mobile */
+    }
+}
+
+@media (max-width: 360px) {
+    .delete-modal-footer {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+    
+    .delete-modal-btn {
+        width: 100%;
+    }
+}

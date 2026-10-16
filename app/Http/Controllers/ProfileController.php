@@ -86,6 +86,8 @@ class ProfileController extends Controller
                 ? Storage::url($user->profile_image)
                 : null,
             'initials'     => strtoupper(substr($user->name, 0, 1)),
+            // Avatar gradient - consistent across all UI locations
+            'avatar_gradient' => \App\Helpers\AvatarColor::gradient($user->id),
             // Raw DB status — JS uses this to restore the real status
             // once it confirms the user IS in the presence channel.
             'db_status'       => $status,

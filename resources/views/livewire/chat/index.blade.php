@@ -235,6 +235,7 @@
              role="listitem" tabindex="0"
              aria-label="Conversation with {{ $other->name }}"
              data-user-id="{{ $other->id }}"
+             data-user-avatar-gradient="{{ \App\Helpers\AvatarColor::gradient($other->id) }}"
              wire:key="conv-{{ $conversation->id }}">
           <div class="conv-avatar-wrap" wire:ignore>
               <button type="button"
@@ -386,6 +387,41 @@
 
   </aside>
 
+  {{-- ─────────────────── DELETE CONFIRMATION MODAL ─────────────────── --}}
+  <div class="delete-modal-overlay" id="deleteModalOverlay" style="display:none">
+    <div class="delete-modal" role="dialog" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc">
+      <div class="delete-modal-header">
+        <h3 class="delete-modal-title" id="deleteModalTitle">Delete this chat?</h3>
+        <button type="button" 
+                class="delete-modal-close" 
+                onclick="window._closeDeleteModal()"
+                aria-label="Close dialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="delete-modal-body">
+        <p class="delete-modal-desc" id="deleteModalDesc">
+          This will only delete the chat for you. 
+          <a href="#" class="delete-modal-link" onclick="event.preventDefault()">Learn more</a>
+        </p>
+      </div>
+      <div class="delete-modal-footer">
+        <button type="button" 
+                class="delete-modal-btn delete-modal-btn--cancel" 
+                onclick="window._closeDeleteModal()">
+          Cancel
+        </button>
+        <button type="button" 
+                class="delete-modal-btn delete-modal-btn--delete" 
+                id="deleteModalConfirmBtn">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
   {{-- ─────────────────── MAIN PANEL ─────────────────── --}}
   <main class="teams-main" id="teamsMain">
 
@@ -400,6 +436,7 @@
         <div class="chat-header-avatar upc-trigger"
              data-user-id="{{ $selectedConversation->otherUser()->id }}"
              data-uid="{{ $selectedConversation->otherUser()->id }}"
+             data-user-avatar-gradient="{{ \App\Helpers\AvatarColor::gradient($selectedConversation->otherUser()->id) }}"
              style="cursor:pointer;position:relative;overflow:hidden;"
              title="View profile">
           @if($selectedConversation->otherUser()->profile_image)
