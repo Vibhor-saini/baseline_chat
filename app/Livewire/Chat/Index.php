@@ -99,6 +99,15 @@ class Index extends Component
     public ?int   $editingMessageId = null;
     public string $editBody         = '';
 
+    /** Files tab state ─────────────────── */
+    public string $activeTab = 'chat';
+    public array  $conversationFiles = [];
+    public array  $selectedFileIds = [];
+    
+    /** Photos tab state ─────────────────── */
+    public array  $conversationPhotos = [];
+    public array  $selectedPhotoIds = [];
+
     /** Message search within conversation ── */
     public string $msgSearch        = '';
     public array  $msgSearchResults = [];
@@ -491,7 +500,222 @@ class Index extends Component
         $this->markMessagesDelivered($conversationId);
         $this->markMessagesRead($conversationId);
         $this->loadConversations();
+        $this->loadConversationFiles($conversationId);
+        $this->loadConversationPhotos($conversationId);
         $this->dispatch('scroll-to-bottom');
+    }
+
+    /**
+     * Load all files (images & attachments) from the selected conversation
+     */
+    public function loadConversationFiles(int $conversationId): void
+    {
+        $authId = auth()->id();
+        
+        // Get deletion record to filter old files (same as messages)
+        $deletionRecord = DB::table('conversation_user')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $authId)
+            ->whereNotNull('last_seen_message_id')
+            ->first();
+
+        $fileQuery = Message::where('conversation_id', $conversationId)
+            ->whereIn('type', ['image', 'file'])
+            ->whereNotNull('file_path');
+
+        // Filter files sent after deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $fileQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+
+        $files = $fileQuery
+            ->with('sender:id,name')
+            ->latest()
+            ->get();
+
+        $this->conversationFiles = $files->map(function ($message) {
+            $filePath = $message->file_path;
+            $fileName = $message->file_name ?? basename($filePath);
+            $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+            $fileSize = 0;
+
+            try {
+                if (Storage::disk('public')->exists($filePath)) {
+                    $fileSize = Storage::disk('public')->size($filePath);
+                }
+            } catch (\Exception $e) {
+                // Ignore file size errors
+            }
+
+            return [
+                'id' => $message->id,
+                'name' => $fileName,
+                'extension' => strtolower($extension),
+                'size' => $fileSize,
+                'size_formatted' => $this->formatFileSize($fileSize),
+                'url' => Storage::url($filePath),
+                'type' => $message->type,
+                'sent_at' => $message->created_at->format('M j, Y'),
+                'sender_name' => $message->sender->name ?? 'Unknown',
+            ];
+        })->all();
+    }
+
+    /**
+     * Format file size in human-readable format
+     */
+    private function formatFileSize(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2) . ' GB';
+        } elseif ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2) . ' MB';
+        } elseif ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2) . ' KB';
+        }
+        return $bytes . ' B';
+    }
+
+    /**
+     * Download selected files as a ZIP
+     */
+    public function downloadSelectedFiles(): void
+    {
+        if (empty($this->selectedFileIds)) {
+            return;
+        }
+
+        // For now, we'll just trigger individual downloads via JavaScript
+        // A proper implementation would create a ZIP file on the server
+        $this->dispatch('download-files', fileIds: $this->selectedFileIds);
+    }
+
+    /**
+     * Clear file selection
+     */
+    public function clearSelection(): void
+    {
+        $this->selectedFileIds = [];
+    }
+
+    /**
+     * Load all photos (image messages) from the selected conversation
+     */
+    public function loadConversationPhotos(int $conversationId): void
+    {
+        $authId = auth()->id();
+        
+        // Get deletion record to filter old photos
+        $deletionRecord = DB::table('conversation_user')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $authId)
+            ->whereNotNull('last_seen_message_id')
+            ->first();
+
+        $photoQuery = Message::where('conversation_id', $conversationId)
+            ->where('type', 'image')
+            ->whereNotNull('file_path');
+
+        // Filter photos sent after deletion
+        if ($deletionRecord && $deletionRecord->last_seen_message_id) {
+            $photoQuery->where('id', '>', $deletionRecord->last_seen_message_id);
+        }
+
+        $photos = $photoQuery
+            ->with('sender:id,name')
+            ->latest()
+            ->get();
+
+        $this->conversationPhotos = $photos->map(function ($message) {
+            $filePath = $message->file_path;
+            $fileName = $message->file_name ?? basename($filePath);
+
+            return [
+                'id' => $message->id,
+                'message_id' => $message->id, // For lightbox navigation
+                'name' => $fileName,
+                'url' => Storage::url($filePath),
+                'thumbnail_url' => Storage::url($filePath), // For now, same as full image
+                'sent_at' => $message->created_at->format('M j, Y'),
+                'sender_name' => $message->sender->name ?? 'Unknown',
+            ];
+        })->all();
+    }
+
+    /**
+     * Download selected photos
+     */
+    public function downloadSelectedPhotos(): void
+    {
+        if (empty($this->selectedPhotoIds)) {
+            return;
+        }
+
+        $this->dispatch('download-files', fileIds: $this->selectedPhotoIds);
+    }
+
+    /**
+     * Clear photo selection
+     */
+    public function clearPhotoSelection(): void
+    {
+        $this->selectedPhotoIds = [];
+    }
+
+    /**
+     * Delete selected photos permanently from database and storage
+     */
+    public function deleteSelectedPhotos(): void
+    {
+        if (empty($this->selectedPhotoIds)) {
+            return;
+        }
+
+        $authId = auth()->id();
+
+        // Get messages that user owns
+        $messages = Message::whereIn('id', $this->selectedPhotoIds)
+            ->where('sender_id', $authId)
+            ->where('type', 'image')
+            ->get();
+
+        if ($messages->isEmpty()) {
+            return;
+        }
+
+        $conversationId = $this->selectedConversationId;
+
+        // Delete each message
+        foreach ($messages as $message) {
+            // Delete file from storage
+            if ($message->file_path) {
+                try {
+                    Storage::disk('public')->delete($message->file_path);
+                } catch (\Exception $e) {
+                    // Continue
+                }
+            }
+
+            // Broadcast deletion
+            broadcast(new MessageDeleted(
+                $message->id,
+                $message->conversation_id,
+                $message->sender_id
+            ));
+
+            // Delete from database
+            $message->forceDelete();
+        }
+
+        // Clear selection
+        $this->selectedPhotoIds = [];
+
+        // Reload everything
+        if ($conversationId) {
+            $this->loadConversationPhotos($conversationId);
+            $this->loadConversationFiles($conversationId);
+            $this->selectConversation($conversationId);
+        }
     }
 
     /**
@@ -845,6 +1069,14 @@ class Index extends Component
         // Draft sent — remove from store
         unset($this->draftBodies[(string) $this->selectedConversation->id]);
 
+        // Refresh files and photos list if image/file was sent
+        if ($type === 'image') {
+            $this->loadConversationPhotos($this->selectedConversation->id);
+        }
+        if ($type === 'file' || $type === 'image') {
+            $this->loadConversationFiles($this->selectedConversation->id);
+        }
+
         $this->dispatch('message-sent');
     }
 
@@ -909,6 +1141,14 @@ class Index extends Component
         // ordering stays correct after the next natural loadConversations() call.
         if ($this->selectedConversation) {
             $this->selectedConversation->last_message_at = $now;
+        }
+
+        // Refresh files/photos if incoming message has attachment
+        if ($message->type === 'image') {
+            $this->loadConversationPhotos($incomingConvId);
+        }
+        if ($message->type === 'file' || $message->type === 'image') {
+            $this->loadConversationFiles($incomingConvId);
         }
 
         $this->dispatch('scroll-to-bottom');

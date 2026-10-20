@@ -452,10 +452,36 @@
           @endif
         </div>
         <div class="chat-header-info">
-          <h2 class="chat-header-name upc-trigger"
-              data-uid="{{ $selectedConversation->otherUser()->id }}"
-              style="cursor:pointer"
-              title="View profile">{{ $selectedConversation->otherUser()->name }}</h2>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2 class="chat-header-name upc-trigger"
+                data-uid="{{ $selectedConversation->otherUser()->id }}"
+                style="cursor:pointer;margin:0;"
+                title="View profile">{{ $selectedConversation->otherUser()->name }}</h2>
+            
+            {{-- Tabs inline with name (Microsoft Teams style) --}}
+            <div class="chat-header-tabs">
+              <button type="button" 
+                      class="chat-header-tab {{ $activeTab === 'chat' ? 'chat-header-tab--active' : '' }}"
+                      wire:click="$set('activeTab', 'chat')"
+                      aria-label="Chat">
+                Chat
+              </button>
+              <button type="button" 
+                      class="chat-header-tab {{ $activeTab === 'files' ? 'chat-header-tab--active' : '' }}"
+                      wire:click="$set('activeTab', 'files')"
+                      aria-label="Files">
+                Files
+              </button>
+              <button type="button" 
+                      class="chat-header-tab {{ $activeTab === 'photos' ? 'chat-header-tab--active' : '' }}"
+                      wire:click="$set('activeTab', 'photos')"
+                      aria-label="Photos">
+                Photos
+              </button>
+            </div>
+          </div>
+          
+          {{-- Status below name and tabs --}}
           <span class="chat-header-status"
                 id="chat-header-status"
                 data-presence-uid="{{ $selectedConversation->otherUser()->id }}"
@@ -480,6 +506,8 @@
         </button>
       </div>
 
+      {{-- Chat Content (Messages) --}}
+      @if($activeTab === 'chat')
       {{-- Messages Area --}}
       <div class="messages-area" id="messages-container" role="log" aria-live="polite" aria-label="Messages">
 
@@ -1095,6 +1123,229 @@
           </button>
         </form>
       </div>
+
+      @endif
+      {{-- End Chat Tab --}}
+
+      {{-- Files Tab Content --}}
+      @if($activeTab === 'files')
+      <div class="files-area">
+        
+        {{-- Files Toolbar --}}
+        <div class="files-toolbar">
+          <div class="files-toolbar-left">
+            @if(count($selectedFileIds) > 0)
+              <span class="files-selected-count">{{ count($selectedFileIds) }} selected</span>
+              <button type="button" 
+                      wire:click="downloadSelectedFiles" 
+                      class="files-toolbar-btn files-toolbar-btn--primary"
+                      title="Download selected files">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+              <button type="button" 
+                      wire:click="clearSelection" 
+                      class="files-toolbar-btn"
+                      title="Clear selection">
+                Clear
+              </button>
+            @else
+              <span class="files-count">{{ count($conversationFiles) }} {{ count($conversationFiles) === 1 ? 'file' : 'files' }}</span>
+            @endif
+          </div>
+        </div>
+
+        {{-- Files List --}}
+        <div class="files-list">
+          @forelse($conversationFiles as $file)
+            <div class="file-item {{ in_array($file['id'], $selectedFileIds) ? 'file-item--selected' : '' }}"
+                 wire:key="file-{{ $file['id'] }}">
+              
+              {{-- Checkbox for multi-select --}}
+              <label class="file-checkbox">
+                <input type="checkbox" 
+                       wire:model.live="selectedFileIds" 
+                       value="{{ $file['id'] }}"
+                       aria-label="Select {{ $file['name'] }}">
+                <span class="file-checkbox-custom"></span>
+              </label>
+
+              {{-- File icon based on type --}}
+              <div class="file-icon file-icon--{{ $file['extension'] ?? 'default' }}">
+                @if(in_array($file['extension'] ?? '', ['jpg', 'jpeg', 'png', 'gif', 'webp']))
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                @elseif(in_array($file['extension'] ?? '', ['pdf']))
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="15" y2="17"/>
+                  </svg>
+                @elseif(in_array($file['extension'] ?? '', ['doc', 'docx']))
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                  </svg>
+                @else
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                    <polyline points="13 2 13 9 20 9"/>
+                  </svg>
+                @endif
+              </div>
+
+              {{-- File info --}}
+              <div class="file-info">
+                <div class="file-name" title="{{ $file['name'] }}">{{ $file['name'] }}</div>
+                <div class="file-meta">
+                  <span class="file-size">{{ $file['size_formatted'] }}</span>
+                  <span class="file-meta-sep">•</span>
+                  <span class="file-date">{{ $file['sent_at'] }}</span>
+                  <span class="file-meta-sep">•</span>
+                  <span class="file-sender">{{ $file['sender_name'] }}</span>
+                </div>
+              </div>
+
+              {{-- Download button --}}
+              <a href="{{ $file['url'] }}" 
+                 download="{{ $file['name'] }}"
+                 class="file-download-btn"
+                 title="Download {{ $file['name'] }}"
+                 aria-label="Download {{ $file['name'] }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </a>
+            </div>
+          @empty
+            <div class="files-empty">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                <polyline points="13 2 13 9 20 9"/>
+              </svg>
+              <p class="files-empty-text">No files shared yet</p>
+              <p class="files-empty-hint">Files sent in this conversation will appear here</p>
+            </div>
+          @endforelse
+        </div>
+
+      </div>
+      @endif
+      {{-- End Files Tab --}}
+
+      {{-- Photos Tab Content --}}
+      @if($activeTab === 'photos')
+      <div class="photos-area">
+        
+        {{-- Photos Toolbar --}}
+        <div class="photos-toolbar">
+          <div class="photos-toolbar-left">
+            @if(count($selectedPhotoIds) > 0)
+              <span class="photos-selected-count">{{ count($selectedPhotoIds) }} selected</span>
+              <button type="button" 
+                      wire:click="downloadSelectedPhotos" 
+                      class="photos-toolbar-btn photos-toolbar-btn--primary"
+                      title="Download selected photos">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+              </button>
+              <button type="button" 
+                      wire:click="deleteSelectedPhotos" 
+                      wire:confirm="Are you sure you want to permanently delete {{ count($selectedPhotoIds) }} photo(s)? This cannot be undone."
+                      class="photos-toolbar-btn photos-toolbar-btn--danger"
+                      title="Delete selected photos permanently">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+                Delete
+              </button>
+              <button type="button" 
+                      wire:click="clearPhotoSelection" 
+                      class="photos-toolbar-btn"
+                      title="Clear selection">
+                Clear
+              </button>
+            @else
+              <span class="photos-count">{{ count($conversationPhotos) }} {{ count($conversationPhotos) === 1 ? 'photo' : 'photos' }}</span>
+            @endif
+          </div>
+        </div>
+
+        {{-- Photos Grid --}}
+        <div class="photos-grid">
+          @forelse($conversationPhotos as $photo)
+            <div class="photo-item {{ in_array($photo['id'], $selectedPhotoIds) ? 'photo-item--selected' : '' }}"
+                 wire:key="photo-{{ $photo['id'] }}">
+              
+              {{-- Checkbox overlay --}}
+              <label class="photo-checkbox" onclick="event.stopPropagation()">
+                <input type="checkbox" 
+                       wire:model.defer="selectedPhotoIds" 
+                       value="{{ $photo['id'] }}"
+                       aria-label="Select photo">
+                <span class="photo-checkbox-custom"></span>
+              </label>
+
+              {{-- Photo thumbnail --}}
+              <div class="photo-thumbnail" 
+                   style="background-image: url('{{ $photo['thumbnail_url'] }}');"
+                   onclick="window._openPhotoLightbox({{ $photo['message_id'] }})"
+                   title="Click to view"
+                   role="button"
+                   tabindex="0">
+              </div>
+
+              {{-- Photo info overlay --}}
+              <div class="photo-info-overlay">
+                <span class="photo-date">{{ $photo['sent_at'] }}</span>
+                <a href="{{ $photo['url'] }}" 
+                   download="{{ $photo['name'] }}"
+                   class="photo-download-btn"
+                   onclick="event.stopPropagation()"
+                   title="Download"
+                   aria-label="Download photo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          @empty
+            <div class="photos-empty">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <p class="photos-empty-text">No photos shared yet</p>
+              <p class="photos-empty-hint">Photos sent in this conversation will appear here</p>
+            </div>
+          @endforelse
+        </div>
+
+      </div>
+      @endif
+      {{-- End Photos Tab --}}
 
     {{-- ══ INCOMING REQUEST PREVIEW ══ --}}
     @elseif($activeScreen === 'request-preview' && $selectedRequest)

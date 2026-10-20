@@ -3282,3 +3282,94 @@
             }
         });
     });
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     | MULTIPLE FILES DOWNLOAD
+     ════════════════════════════════════════════════════════════════════════*/
+
+    /**
+     * Download multiple files sequentially.
+     * Browser limitation: can't download all at once, so we queue them with delays.
+     */
+    window.addEventListener('download-files', (event) => {
+        const fileIds = event.detail.fileIds || [];
+        if (fileIds.length === 0) return;
+
+        console.log('[Files] Downloading files:', fileIds);
+
+        // Find all file items and their download links
+        const filesToDownload = [];
+        fileIds.forEach(fileId => {
+            const fileItem = document.querySelector(`[wire\\:key="file-${fileId}"]`);
+            if (fileItem) {
+                const downloadLink = fileItem.querySelector('.file-download-btn');
+                if (downloadLink && downloadLink.href) {
+                    filesToDownload.push({
+                        id: fileId,
+                        url: downloadLink.href,
+                        name: downloadLink.download || `file-${fileId}`
+                    });
+                }
+            }
+        });
+
+        if (filesToDownload.length === 0) {
+            console.error('[Files] No valid download links found');
+            return;
+        }
+
+        // Download files sequentially with small delay to prevent browser blocking
+        let index = 0;
+        const downloadNext = () => {
+            if (index >= filesToDownload.length) {
+                console.log('[Files] All downloads initiated');
+                return;
+            }
+
+            const file = filesToDownload[index];
+            console.log(`[Files] Downloading ${index + 1}/${filesToDownload.length}: ${file.name}`);
+
+            // Create temporary anchor and trigger download
+            const anchor = document.createElement('a');
+            anchor.href = file.url;
+            anchor.download = file.name;
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+
+            index++;
+            // Small delay between downloads (browsers may block rapid downloads)
+            setTimeout(downloadNext, 500);
+        };
+
+        downloadNext();
+    });
+
+
+    /* ═══════════════════════════════════════════════════════════════════════
+     | PHOTO LIGHTBOX (from Photos tab)
+     ════════════════════════════════════════════════════════════════════════*/
+
+    /**
+     * Open lightbox from Photos tab - reuses existing image lightbox
+     */
+    window._openPhotoLightbox = function(messageId) {
+        // Find the image message in the DOM
+        const messageEl = document.getElementById(`msg-${messageId}`);
+        if (!messageEl) {
+            console.warn('[PhotoLightbox] Message not found in chat:', messageId);
+            return;
+        }
+
+        // Find the image element within the message
+        const imgEl = messageEl.querySelector('.msg-image-content, .msg-img');
+        if (!imgEl) {
+            console.warn('[PhotoLightbox] Image element not found');
+            return;
+        }
+
+        // Trigger the existing lightbox by simulating a click
+        imgEl.click();
+    };
+

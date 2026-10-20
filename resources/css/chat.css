@@ -6052,3 +6052,591 @@
         width: 100%;
     }
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   CHAT TABS (Microsoft Teams Style - Inline with Header)
+═══════════════════════════════════════════════════════ */
+.chat-header-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.chat-header-tab {
+    position: relative;
+    background: none;
+    border: none;
+    padding: 4px 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.15s;
+    border-radius: 4px;
+}
+
+.chat-header-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.chat-header-tab--active {
+    color: var(--text-primary);
+    background: var(--accent-dim);
+}
+
+/* Keep status visible - don't hide it */
+
+/* ═══════════════════════════════════════════════════════
+   FILES AREA
+═══════════════════════════════════════════════════════ */
+.files-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-base);
+}
+
+.files-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.files-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.files-selected-count {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.files-count {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+}
+
+.files-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border-dim);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.files-toolbar-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-accent);
+}
+
+.files-toolbar-btn--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.files-toolbar-btn--primary:hover {
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+}
+
+.files-toolbar-btn svg {
+    flex-shrink: 0;
+}
+
+.files-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+
+.file-item:hover {
+    background: var(--bg-float);
+    border-color: var(--border-dim);
+}
+
+.file-item--selected {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+}
+
+.file-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.file-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-dim);
+    border-radius: 4px;
+    background: transparent;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.file-checkbox input[type="checkbox"]:checked + .file-checkbox-custom {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.file-checkbox input[type="checkbox"]:checked + .file-checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 3px;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--bg-overlay);
+    color: var(--accent);
+}
+
+.file-icon--pdf {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.file-icon--doc,
+.file-icon--docx {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.file-icon--jpg,
+.file-icon--jpeg,
+.file-icon--png,
+.file-icon--gif,
+.file-icon--webp {
+    background: rgba(124, 92, 252, 0.15);
+    color: var(--accent);
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.file-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.file-meta-sep {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.file-size,
+.file-date,
+.file-sender {
+    white-space: nowrap;
+}
+
+.file-download-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.file-download-btn:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+.files-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.files-empty svg {
+    margin-bottom: 16px;
+}
+
+.files-empty-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 8px;
+}
+
+.files-empty-hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .chat-tabs {
+        padding: 0 16px;
+    }
+    
+    .files-toolbar {
+        padding: 12px 16px;
+    }
+    
+    .files-list {
+        padding: 12px 16px;
+    }
+    
+    .file-item {
+        padding: 10px 12px;
+        gap: 12px;
+    }
+    
+    .file-icon {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .file-name {
+        font-size: 0.875rem;
+    }
+    
+    .file-meta {
+        font-size: 0.75rem;
+    }
+    
+    .file-sender {
+        display: none; /* Hide sender name on mobile to save space */
+    }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHOTOS AREA (Grid Layout)
+═══════════════════════════════════════════════════════ */
+.photos-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-base);
+}
+
+.photos-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.photos-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.photos-selected-count {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.photos-count {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+}
+
+.photos-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border-dim);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.photos-toolbar-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-accent);
+}
+
+.photos-toolbar-btn--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.photos-toolbar-btn--primary:hover {
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+}
+
+.photos-toolbar-btn--danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.photos-toolbar-btn--danger:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.photos-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    align-content: start; /* Photos start from top, no blank space below */
+}
+
+.photo-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 2px solid transparent;
+}
+
+.photo-item:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.photo-item--selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.photo-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    cursor: pointer;
+}
+
+.photo-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.photo-checkbox-custom {
+    width: 24px;
+    height: 24px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    transition: all 0.15s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-checkbox input[type="checkbox"]:checked + .photo-checkbox-custom {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.photo-checkbox input[type="checkbox"]:checked + .photo-checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 4px;
+    width: 6px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.photo-thumbnail {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg-overlay);
+}
+
+.photo-info-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 12px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.photo-item:hover .photo-info-overlay {
+    opacity: 1;
+}
+
+.photo-date {
+    font-size: 0.75rem;
+    color: white;
+    font-weight: 500;
+}
+
+.photo-download-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+}
+
+.photo-download-btn:hover {
+    background: var(--accent);
+    transform: scale(1.1);
+}
+
+.photos-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.photos-empty svg {
+    margin-bottom: 16px;
+}
+
+.photos-empty-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 8px;
+}
+
+.photos-empty-hint {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Mobile responsive for photos */
+@media (max-width: 768px) {
+    .photos-grid {
+        padding: 12px 16px;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    
+    .photos-toolbar {
+        padding: 12px 16px;
+    }
+    
+    .photo-checkbox-custom {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .photo-info-overlay {
+        padding: 6px 8px;
+    }
+}
+
