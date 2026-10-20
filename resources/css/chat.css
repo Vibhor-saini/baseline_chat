@@ -6090,8 +6090,100 @@
 /* Keep status visible - don't hide it */
 
 /* ═══════════════════════════════════════════════════════
-   FILES AREA
+   UNIFIED TOOLBAR (Files & Photos)
 ═══════════════════════════════════════════════════════ */
+.files-toolbar,
+.photos-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.files-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.files-count {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.photos-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.photos-count {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.toolbar-count {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border-dim);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.toolbar-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-accent);
+}
+
+.toolbar-btn--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.toolbar-btn--primary:hover {
+    background: var(--accent-bright);
+    border-color: var(--accent-bright);
+}
+
+.toolbar-btn--danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.toolbar-btn--danger:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.toolbar-btn svg {
+    flex-shrink: 0;
+}
 .files-area {
     flex: 1;
     display: flex;
@@ -6156,6 +6248,17 @@
 .files-toolbar-btn--primary:hover {
     background: var(--accent-bright);
     border-color: var(--accent-bright);
+}
+
+.files-toolbar-btn--danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.files-toolbar-btn--danger:hover {
+    background: var(--danger);
+    color: white;
 }
 
 .files-toolbar-btn svg {

@@ -506,6 +506,26 @@ class Index extends Component
     }
 
     /**
+     * Set active tab and clear selections when switching
+     */
+    public function setActiveTab(string $tab): void
+    {
+        // Clear selections when switching tabs
+        $this->selectedFileIds = [];
+        $this->selectedPhotoIds = [];
+        $this->activeTab = $tab;
+
+        // Load data for the new tab if needed
+        if ($this->selectedConversationId) {
+            if ($tab === 'files') {
+                $this->loadConversationFiles($this->selectedConversationId);
+            } elseif ($tab === 'photos') {
+                $this->loadConversationPhotos($this->selectedConversationId);
+            }
+        }
+    }
+
+    /**
      * Load all files (images & attachments) from the selected conversation
      */
     public function loadConversationFiles(int $conversationId): void
@@ -519,8 +539,9 @@ class Index extends Component
             ->whereNotNull('last_seen_message_id')
             ->first();
 
+        // Only show 'file' type messages, NOT 'image' type
         $fileQuery = Message::where('conversation_id', $conversationId)
-            ->whereIn('type', ['image', 'file'])
+            ->where('type', 'file') // Changed from whereIn to where
             ->whereNotNull('file_path');
 
         // Filter files sent after deletion
@@ -599,6 +620,75 @@ class Index extends Component
     }
 
     /**
+     * Delete selected files permanently from database and storage
+     */
+    public function deleteSelectedFiles(): void
+    {
+        \Log::info('[DeleteFiles] Called with IDs:', $this->selectedFileIds);
+        
+        if (empty($this->selectedFileIds)) {
+            \Log::warning('[DeleteFiles] No files selected');
+            return;
+        }
+
+        $authId = auth()->id();
+        \Log::info('[DeleteFiles] Auth ID:', ['auth_id' => $authId]);
+
+        // Get messages that user owns
+        $messages = Message::whereIn('id', $this->selectedFileIds)
+            ->where('sender_id', $authId)
+            ->where('type', 'file')
+            ->get();
+
+        \Log::info('[DeleteFiles] Found messages:', ['count' => $messages->count()]);
+
+        if ($messages->isEmpty()) {
+            \Log::warning('[DeleteFiles] No messages found or not owned by user');
+            return;
+        }
+
+        $conversationId = $this->selectedConversationId;
+
+        // Delete each message
+        foreach ($messages as $message) {
+            \Log::info('[DeleteFiles] Deleting message:', ['id' => $message->id, 'file' => $message->file_path]);
+            
+            // Delete file from storage
+            if ($message->file_path) {
+                try {
+                    Storage::disk('public')->delete($message->file_path);
+                    \Log::info('[DeleteFiles] File deleted from storage:', ['path' => $message->file_path]);
+                } catch (\Exception $e) {
+                    \Log::error('[DeleteFiles] Storage delete failed:', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Broadcast deletion
+            broadcast(new MessageDeleted(
+                $message->id,
+                $message->conversation_id,
+                $message->sender_id
+            ));
+
+            // Delete from database
+            $message->forceDelete();
+            \Log::info('[DeleteFiles] Message force deleted from DB');
+        }
+
+        // Clear selection
+        $this->selectedFileIds = [];
+
+        // Reload everything
+        if ($conversationId) {
+            $this->loadConversationFiles($conversationId);
+            $this->loadConversationPhotos($conversationId);
+            $this->selectConversation($conversationId);
+        }
+        
+        \Log::info('[DeleteFiles] Completed successfully');
+    }
+
+    /**
      * Load all photos (image messages) from the selected conversation
      */
     public function loadConversationPhotos(int $conversationId): void
@@ -667,11 +757,15 @@ class Index extends Component
      */
     public function deleteSelectedPhotos(): void
     {
+        \Log::info('[DeletePhotos] Called with IDs:', $this->selectedPhotoIds);
+        
         if (empty($this->selectedPhotoIds)) {
+            \Log::warning('[DeletePhotos] No photos selected');
             return;
         }
 
         $authId = auth()->id();
+        \Log::info('[DeletePhotos] Auth ID:', ['auth_id' => $authId]);
 
         // Get messages that user owns
         $messages = Message::whereIn('id', $this->selectedPhotoIds)
@@ -679,7 +773,10 @@ class Index extends Component
             ->where('type', 'image')
             ->get();
 
+        \Log::info('[DeletePhotos] Found messages:', ['count' => $messages->count()]);
+
         if ($messages->isEmpty()) {
+            \Log::warning('[DeletePhotos] No messages found or not owned by user');
             return;
         }
 
@@ -687,12 +784,15 @@ class Index extends Component
 
         // Delete each message
         foreach ($messages as $message) {
+            \Log::info('[DeletePhotos] Deleting message:', ['id' => $message->id, 'file' => $message->file_path]);
+            
             // Delete file from storage
             if ($message->file_path) {
                 try {
                     Storage::disk('public')->delete($message->file_path);
+                    \Log::info('[DeletePhotos] File deleted from storage:', ['path' => $message->file_path]);
                 } catch (\Exception $e) {
-                    // Continue
+                    \Log::error('[DeletePhotos] Storage delete failed:', ['error' => $e->getMessage()]);
                 }
             }
 
@@ -705,6 +805,7 @@ class Index extends Component
 
             // Delete from database
             $message->forceDelete();
+            \Log::info('[DeletePhotos] Message force deleted from DB');
         }
 
         // Clear selection
@@ -716,6 +817,8 @@ class Index extends Component
             $this->loadConversationFiles($conversationId);
             $this->selectConversation($conversationId);
         }
+        
+        \Log::info('[DeletePhotos] Completed successfully');
     }
 
     /**

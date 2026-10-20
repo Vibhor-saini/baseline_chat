@@ -2924,6 +2924,34 @@
                 if (e.key === '-')                  setZoom(_zoom - ZOOM_STEP);
             });
         });
+
+        /**
+         * Open lightbox directly with photo data (for Photos tab)
+         */
+        window._openPhotoLightbox = function(photoUrl, messageId, sender, time) {
+            // Set single photo in images array
+            _images = [{
+                src: photoUrl,
+                sender: sender || 'Unknown',
+                time: time || '',
+                msgId: messageId || ''
+            }];
+            
+            _current = 0;
+            
+            // Build strip with single image
+            buildStrip();
+            
+            // Open overlay
+            const overlay = document.getElementById('imgLightboxOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // Load the image
+            loadImage(0);
+        };
+
     })();
 
     /* ════════════════════════════════════════════════════════
@@ -3347,29 +3375,94 @@
     });
 
 
-    /* ═══════════════════════════════════════════════════════════════════════
-     | PHOTO LIGHTBOX (from Photos tab)
-     ════════════════════════════════════════════════════════════════════════*/
+/* ═══════════════════════════════════════════════════════════════════════
+ | DELETE FILES & PHOTOS MODALS
+ ════════════════════════════════════════════════════════════════════════*/
 
-    /**
-     * Open lightbox from Photos tab - reuses existing image lightbox
-     */
-    window._openPhotoLightbox = function(messageId) {
-        // Find the image message in the DOM
-        const messageEl = document.getElementById(`msg-${messageId}`);
-        if (!messageEl) {
-            console.warn('[PhotoLightbox] Message not found in chat:', messageId);
-            return;
+window._openDeleteFilesModal = function(count) {
+    const overlay = document.getElementById('deleteFilesModalOverlay');
+    const countSpan = document.getElementById('deleteFilesCount');
+    if (overlay) overlay.style.display = 'flex';
+    if (countSpan) countSpan.textContent = count === 1 ? '1 file' : `${count} files`;
+};
+
+window._closeDeleteFilesModal = function() {
+    const overlay = document.getElementById('deleteFilesModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+};
+
+window._confirmDeleteFiles = function() {
+    console.log('[DeleteFiles] Confirming delete...');
+    const root = document.querySelector('.teams-chat-root');
+    console.log('[DeleteFiles] Root found:', !!root);
+    const el = root?.closest('[wire\\:id]') || root?.querySelector('[wire\\:id]');
+    console.log('[DeleteFiles] Livewire element found:', !!el);
+    const wireId = el?.getAttribute('wire:id');
+    console.log('[DeleteFiles] Wire ID:', wireId);
+    const component = wireId ? Livewire.find(wireId) : null;
+    console.log('[DeleteFiles] Component found:', !!component);
+    
+    if (component) {
+        console.log('[DeleteFiles] Calling deleteSelectedFiles...');
+        component.call('deleteSelectedFiles');
+        window._closeDeleteFilesModal();
+    } else {
+        console.error('[DeleteFiles] No component found!');
+        window._closeDeleteFilesModal();
+    }
+};
+
+window._openDeletePhotosModal = function(count) {
+    const overlay = document.getElementById('deletePhotosModalOverlay');
+    const countSpan = document.getElementById('deletePhotosCount');
+    if (overlay) overlay.style.display = 'flex';
+    if (countSpan) countSpan.textContent = count === 1 ? '1 photo' : `${count} photos`;
+};
+
+window._closeDeletePhotosModal = function() {
+    const overlay = document.getElementById('deletePhotosModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+};
+
+window._confirmDeletePhotos = function() {
+    console.log('[DeletePhotos] Confirming delete...');
+    const root = document.querySelector('.teams-chat-root');
+    console.log('[DeletePhotos] Root found:', !!root);
+    const el = root?.closest('[wire\\:id]') || root?.querySelector('[wire\\:id]');
+    console.log('[DeletePhotos] Livewire element found:', !!el);
+    const wireId = el?.getAttribute('wire:id');
+    console.log('[DeletePhotos] Wire ID:', wireId);
+    const component = wireId ? Livewire.find(wireId) : null;
+    console.log('[DeletePhotos] Component found:', !!component);
+    
+    if (component) {
+        console.log('[DeletePhotos] Calling deleteSelectedPhotos...');
+        component.call('deleteSelectedPhotos');
+        window._closeDeletePhotosModal();
+    } else {
+        console.error('[DeletePhotos] No component found!');
+        window._closeDeletePhotosModal();
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    ['deleteFilesModalOverlay', 'deletePhotosModalOverlay'].forEach(id => {
+        const overlay = document.getElementById(id);
+        if (overlay) {
+            overlay.addEventListener('click', e => {
+                if (e.target === overlay) {
+                    id === 'deleteFilesModalOverlay' ? window._closeDeleteFilesModal() : window._closeDeletePhotosModal();
+                }
+            });
         }
+    });
 
-        // Find the image element within the message
-        const imgEl = messageEl.querySelector('.msg-image-content, .msg-img');
-        if (!imgEl) {
-            console.warn('[PhotoLightbox] Image element not found');
-            return;
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            const filesOverlay = document.getElementById('deleteFilesModalOverlay');
+            const photosOverlay = document.getElementById('deletePhotosModalOverlay');
+            if (filesOverlay?.style.display !== 'none') window._closeDeleteFilesModal();
+            if (photosOverlay?.style.display !== 'none') window._closeDeletePhotosModal();
         }
-
-        // Trigger the existing lightbox by simulating a click
-        imgEl.click();
-    };
-
+    });
+});
