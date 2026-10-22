@@ -4,30 +4,30 @@
 
         /* ── Design tokens (matches chat UI) ── */
         :root {
-            --dash-bg:          #080810;
-            --dash-surface:     #111120;
-            --dash-raised:      #161628;
-            --dash-overlay:     #1c1c32;
-            --dash-hover:       #212138;
-            --border-sub:       rgba(255,255,255,.05);
-            --border-dim:       rgba(255,255,255,.08);
-            --border-acc:       rgba(130,110,255,.3);
-            --accent:           #7c5cfc;
-            --accent-b:         #9b7eff;
-            --accent-dim:       rgba(124,92,252,.12);
-            --accent-glow:      rgba(124,92,252,.22);
-            --teal:             #38d9c0;
-            --teal-dim:         rgba(56,217,192,.1);
-            --green:            #23e07a;
-            --green-dim:        rgba(35,224,122,.12);
-            --amber:            #ffb547;
-            --amber-dim:        rgba(255,181,71,.1);
-            --red:              #ff5f72;
-            --text-1:           #eeeef5;
-            --text-2:           #8a8aaa;
-            --text-3:           #4e4e6e;
-            --shadow-card:      0 4px 24px rgba(0,0,0,.45);
-            --shadow-glow:      0 0 32px var(--accent-glow);
+            --dash-bg:          #1f1f1f;
+            --dash-surface:     #2d2d30;
+            --dash-raised:      #3e3e42;
+            --dash-overlay:     #2b2b2b;
+            --dash-hover:       #37373d;
+            --border-sub:       rgba(255,255,255,.08);
+            --border-dim:       rgba(255,255,255,.12);
+            --border-acc:       rgba(98,100,167,.3);
+            --accent:           #6264a7;
+            --accent-b:         #7b7dd6;
+            --accent-dim:       rgba(98,100,167,.15);
+            --accent-glow:      rgba(98,100,167,.25);
+            --teal:             #00bcf2;
+            --teal-dim:         rgba(0,188,242,.15);
+            --green:            #92c353;
+            --green-dim:        rgba(146,195,83,.15);
+            --amber:            #ffaa44;
+            --amber-dim:        rgba(255,170,68,.15);
+            --red:              #f85149;
+            --text-1:           #ffffff;
+            --text-2:           #b4b4b4;
+            --text-3:           #8a8a8a;
+            --shadow-card:      0 4px 16px rgba(0,0,0,.5);
+            --shadow-glow:      0 0 16px var(--accent-glow);
         }
 
         /* ── Page wrapper ── */

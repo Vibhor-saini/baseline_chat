@@ -10,19 +10,19 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:          #13131a;
-            --panel:       #1e1e2a;
-            --surface:     #252535;
-            --border:      #32324a;
+            --bg:          #1f1f1f;
+            --panel:       #2d2d30;
+            --surface:     #3e3e42;
+            --border:      #464649;
             --accent:      #6264a7;
             --accent-h:    #7b7dd6;
-            --accent-dim:  rgba(98,100,167,.18);
-            --accent-glow: rgba(98,100,167,.35);
-            --text-1:      #f0f0f8;
-            --text-2:      #8888aa;
-            --text-3:      #4a4a6a;
-            --danger:      #e05b5b;
-            --online:      #57c75a;
+            --accent-dim:  rgba(98,100,167,.15);
+            --accent-glow: rgba(98,100,167,.3);
+            --text-1:      #ffffff;
+            --text-2:      #b4b4b4;
+            --text-3:      #8a8a8a;
+            --danger:      #f85149;
+            --online:      #92c353;
         }
 
         html, body {

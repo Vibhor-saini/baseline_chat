@@ -5,6 +5,7 @@ namespace App\Livewire\Chat;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
@@ -40,6 +41,13 @@ class Index extends Component
     */
 
     public array $conversations   = [];
+    public array $favorites       = [];
+    public array $favoriteConvIds = [];  // plain int[] — survives Livewire dehydration
+    
+    // Section toggle states
+    public bool $showFavorites = true;
+    public bool $showChats = true;
+    
     #[Locked]
     public array $messages        = [];
     public array $searchResults   = [];
@@ -48,6 +56,10 @@ class Index extends Component
 
     // Sidebar conversation search
     public string $conversationSearch = '';
+    
+    // Unread filter
+    #[Url(as: 'unread')]
+    public bool $showUnreadOnly = false;
 
     public ?Conversation $selectedConversation   = null;
     public ?int          $selectedConversationId = null;
@@ -209,7 +221,7 @@ class Index extends Component
             });
         }
 
-        $this->conversations = $query
+        $allConversations = $query
             ->with(['userOne', 'userTwo', 'latestMessage.sender'])
             ->withCount(['messages as unread_count' => function ($q) use ($userId) {
                 $q->where('sender_id', '!=', $userId)
@@ -219,8 +231,44 @@ class Index extends Component
             ->get()
             ->all();          // <── plain array, never Collection
 
+        // Load favorite conversation IDs for this user into a plain int[]
+        // Stored as a separate property so it survives Livewire dehydration/rehydration
+        // (Eloquent models in arrays are re-hydrated via find() which loses selectRaw columns)
+        $this->favoriteConvIds = DB::table('conversation_user')
+            ->where('user_id', $userId)
+            ->where('is_favorite', true)
+            ->pluck('conversation_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        // Separate favorites and regular chats
+        $favorites = [];
+        $regular = [];
+
+        foreach ($allConversations as $conv) {
+            if (in_array($conv->id, $this->favoriteConvIds, true)) {
+                $favorites[] = $conv;
+            } else {
+                $regular[] = $conv;
+            }
+        }
+
+        $this->favorites = $favorites;
+        $this->conversations = $regular;
+
+        // Filter by unread if checkbox is checked
+        if ($this->showUnreadOnly) {
+            $this->favorites = array_values(array_filter($this->favorites, function ($conv) {
+                return isset($conv->unread_count) && $conv->unread_count > 0;
+            }));
+            $this->conversations = array_values(array_filter($this->conversations, function ($conv) {
+                return isset($conv->unread_count) && $conv->unread_count > 0;
+            }));
+        }
+
         // Post-process: Hide latestMessage if it's before the user's deletion point
-        foreach ($this->conversations as $conv) {
+        foreach (array_merge($this->favorites, $this->conversations) as $conv) {
             // Check if this conversation was deleted by user
             $deletionRecord = DB::table('conversation_user')
                 ->where('conversation_id', $conv->id)
@@ -369,6 +417,14 @@ class Index extends Component
      * Update conversation list when sidebar search changes.
      */
     public function updatedConversationSearch(): void
+    {
+        $this->loadConversations();
+    }
+
+    /**
+     * Update conversation list when unread filter changes.
+     */
+    public function updatedShowUnreadOnly(): void
     {
         $this->loadConversations();
     }
@@ -918,6 +974,47 @@ class Index extends Component
     }
 
     /**
+     * Toggle favorite status for a conversation.
+     */
+    public function toggleFavorite(int $conversationId): void
+    {
+        $authId = auth()->id();
+        
+        // Verify user has access to this conversation
+        $conversation = Conversation::where('id', $conversationId)
+            ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->first();
+
+        if (!$conversation) return;
+
+        // Get current favorite status
+        $record = DB::table('conversation_user')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $authId)
+            ->first();
+
+        $currentStatus = $record ? $record->is_favorite : false;
+
+        // Toggle the favorite status
+        DB::table('conversation_user')->updateOrInsert(
+            [
+                'conversation_id' => $conversationId,
+                'user_id' => $authId,
+            ],
+            [
+                'is_favorite' => !$currentStatus,
+                'updated_at' => now(),
+            ]
+        );
+
+        // Refresh conversations to update the UI
+        $this->loadConversations();
+
+        // Close the menu
+        $this->dispatch('close-conv-menu', conversationId: $conversationId);
+    }
+
+    /**
      * Called from JS after every Livewire commit, passing the array of user IDs
      * currently online (from the presence channel Set).
      *
@@ -1181,6 +1278,92 @@ class Index extends Component
         }
 
         $this->dispatch('message-sent');
+    }
+
+    /**
+     * Send a file/photo to any accepted conversation by dropping it on the
+     * sidebar. Called from JS drag-and-drop: the file is uploaded via Livewire's
+     * standard WithFileUploads pipeline into $dropAttachment, then this method
+     * stores it and creates the Message — without switching the active conversation.
+     */
+    public $dropAttachment = null;
+
+    public function sendDroppedFile(int $conversationId): void
+    {
+        $authId = auth()->id();
+
+        // ── Authorization: caller must be a participant ────────────────────
+        $conversation = Conversation::where('id', $conversationId)
+            ->where('status', 'accepted')
+            ->where(fn ($q) => $q->where('user_one_id', $authId)
+                                 ->orWhere('user_two_id', $authId))
+            ->first();
+
+        if (! $conversation) {
+            $this->dispatch('drop-send-error', message: 'Conversation not found.');
+            return;
+        }
+
+        if (! $this->dropAttachment) {
+            $this->dispatch('drop-send-error', message: 'No file received.');
+            return;
+        }
+
+        // ── Validate ───────────────────────────────────────────────────────
+        $this->validate([
+            'dropAttachment' => [
+                'required',
+                'file',
+                'max:5120',
+                'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,zip,rar,txt,pptx',
+            ],
+        ]);
+
+        $mime     = $this->dropAttachment->getMimeType();
+        $type     = str_starts_with($mime, 'image/') ? 'image' : 'file';
+        $filePath = $this->dropAttachment->store('chat-files', 'public');
+        $this->dropAttachment = null;
+
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id'       => $authId,
+            'body'            => '',
+            'type'            => $type,
+            'file_path'       => $filePath,
+            'reply_to_id'     => null,
+        ]);
+
+        $message->load('sender', 'forwardedFrom.sender', 'replyTo.sender');
+
+        $conversation->update(['last_message_at' => now()]);
+
+        // Un-delete conversation for recipient if they had deleted it
+        $recipientId = $conversation->user_one_id === $authId
+            ? $conversation->user_two_id
+            : $conversation->user_one_id;
+
+        DB::table('conversation_user')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $recipientId)
+            ->where('is_deleted', true)
+            ->update(['is_deleted' => false, 'deleted_at' => null]);
+
+        // If the dropped-on conversation is the currently open one, append it live
+        if ((int) $this->selectedConversationId === $conversation->id) {
+            $this->messages[] = $message;
+            if ($type === 'image') $this->loadConversationPhotos($conversation->id);
+            if ($type !== 'text')  $this->loadConversationFiles($conversation->id);
+            $this->dispatch('message-sent');
+        }
+
+        $this->loadConversations();
+        broadcast(new MessageSent($message))->toOthers();
+
+        $this->dispatch('drop-send-success',
+            conversationId: $conversationId,
+            fileName: basename($filePath),
+            fileType: $type
+        );
     }
 
     /**

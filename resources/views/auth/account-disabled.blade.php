@@ -9,18 +9,18 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg:          #13131a;
-            --panel:       #1e1e2a;
-            --surface:     #252535;
-            --border:      #32324a;
+            --bg:          #1f1f1f;
+            --panel:       #2d2d30;
+            --surface:     #3e3e42;
+            --border:      #464649;
             --accent:      #6264a7;
             --accent-h:    #7b7dd6;
-            --accent-dim:  rgba(98,100,167,.18);
-            --text-1:      #f0f0f8;
-            --text-2:      #8888aa;
-            --text-3:      #4a4a6a;
-            --danger:      #e05b5b;
-            --danger-dim:  rgba(224,91,91,.12);
+            --accent-dim:  rgba(98,100,167,.15);
+            --text-1:      #ffffff;
+            --text-2:      #b4b4b4;
+            --text-3:      #8a8a8a;
+            --danger:      #f85149;
+            --danger-dim:  rgba(248,81,73,.12);
         }
 
         html, body {

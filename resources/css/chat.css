@@ -1,76 +1,76 @@
-/* ── Reset & Root ─────────────────────────────────────── */
+﻿/* â”€â”€ Reset & Root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-    /* Core palette — obsidian + electric violet */
-    --bg-deepest:      #080810;
-    --bg-base:         #0d0d18;
-    --bg-raised:       #111120;
-    --bg-float:        #161628;
-    --bg-overlay:      #1c1c32;
-    --bg-hover:        #212138;
-    --bg-active:       #27273f;
+    /* Core palette â€” Dark theme like Microsoft Teams */
+    --bg-deepest:      #1f1f1f;
+    --bg-base:         #252526;
+    --bg-raised:       #2d2d30;
+    --bg-float:        #3e3e42;
+    --bg-overlay:      #2b2b2b;
+    --bg-hover:        #37373d;
+    --bg-active:       #094771;
 
     /* Borders */
-    --border-subtle:   rgba(255,255,255,.05);
-    --border-dim:      rgba(255,255,255,.08);
-    --border-accent:   rgba(130,110,255,.35);
+    --border-subtle:   rgba(255,255,255,.08);
+    --border-dim:      rgba(255,255,255,.12);
+    --border-accent:   rgba(98,100,167,.35);
 
-    /* Accent — electric violet → cyan */
-    --accent:          #7c5cfc;
-    --accent-bright:   #9b7eff;
-    --accent-dim:      rgba(124,92,252,.12);
-    --accent-glow:     rgba(124,92,252,.25);
-    --accent2:         #38d9c0;
-    --accent2-dim:     rgba(56,217,192,.1);
+    /* Accent â€” Microsoft Teams Purple/Blue */
+    --accent:          #6264a7;
+    --accent-bright:   #7b7dd6;
+    --accent-dim:      rgba(98,100,167,.15);
+    --accent-glow:     rgba(98,100,167,.25);
+    --accent2:         #00bcf2;
+    --accent2-dim:     rgba(0,188,242,.1);
 
     /* Text */
-    --text-primary:    #eeeef5;
-    --text-secondary:  #8a8aaa;
-    --text-muted:      #4e4e6e;
-    --text-inv:        #fff;
+    --text-primary:    #ffffff;
+    --text-secondary:  #b4b4b4;
+    --text-muted:      #8a8a8a;
+    --text-inv:        #000000;
 
     /* Status */
-    --online:          #23e07a;
-    --busy:            #ff5f72;
-    --away:            #ffb547;
-    --dnd:             #ff5f72;
+    --online:          #92c353;
+    --busy:            #c4314b;
+    --away:            #ffaa44;
+    --dnd:             #c4314b;
 
     /* Bubbles */
-    --bubble-mine-from: #7c5cfc;
-    --bubble-mine-to:   #5e3de8;
-    --bubble-theirs:    #161628;
+    --bubble-mine-from: #6264a7;
+    --bubble-mine-to:   #5558a1;
+    --bubble-theirs:    #3e3e42;
 
     /* Danger */
-    --danger:          #ff4f6a;
-    --danger-dim:      rgba(255,79,106,.12);
+    --danger:          #f85149;
+    --danger-dim:      rgba(248,81,73,.12);
 
     /* Layout */
     --sidebar-w:       300px;
     --topbar-h:        64px;
     --header-h:        64px;
-    --radius:          16px;
-    --radius-sm:       10px;
-    --radius-xs:       7px;
+    --radius:          8px;
+    --radius-sm:       6px;
+    --radius-xs:       4px;
 
     /* Shadows */
     --shadow-sm:       0 2px 8px rgba(0,0,0,.4);
-    --shadow-md:       0 4px 20px rgba(0,0,0,.5);
-    --shadow-lg:       0 12px 48px rgba(0,0,0,.65);
-    --shadow-accent:   0 0 24px rgba(124,92,252,.2);
+    --shadow-md:       0 4px 16px rgba(0,0,0,.5);
+    --shadow-lg:       0 8px 24px rgba(0,0,0,.6);
+    --shadow-accent:   0 0 12px rgba(98,100,167,.3);
 
     font-family: 'DM Sans', system-ui, sans-serif;
 }
 
-/* ── Scrollbars ───────────────────────────────────────── */
+/* â”€â”€ Scrollbars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.15); }
 
-/* ── Root wrapper ─────────────────────────────────────── */
+/* â”€â”€ Root wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .teams-chat-root {
     width: 100%;
     height: 100%;
@@ -93,12 +93,12 @@
     background-size: 180px;
     pointer-events: none;
     z-index: 0;
-    opacity: .4;
+    opacity: .3;
 }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TOP BAR
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .teams-topbar-wrapper {
     padding: 10px 10px 0;
     background: transparent;
@@ -368,7 +368,7 @@
     50% { box-shadow: 0 0 0 4px rgba(255,79,106,0); }
 }
 
-/* ── Profile button + dropdown ──────────────────────── */
+/* â”€â”€ Profile button + dropdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-wrap { position: relative; }
 
 .profile-btn {
@@ -630,23 +630,23 @@
 
 .status-active { background: var(--bg-active); font-weight: 600; }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LAYOUT
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .teams-layout {
     display: flex;
     flex: 1;
     min-height: 0;
     overflow: hidden;
     margin: 10px;
-    gap: 10px;
+    gap: 0;
     position: relative;
     z-index: 1;
 }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SIDEBAR
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .teams-sidebar {
     width: var(--sidebar-w);
     min-width: var(--sidebar-w);
@@ -660,6 +660,7 @@
     overflow: hidden;
     transition: transform .3s cubic-bezier(.16,1,.3,1);
     box-shadow: var(--shadow-md);
+    margin-left: 10px;
 }
 
 .sidebar-header {
@@ -805,11 +806,127 @@
     color: var(--text-primary);
 }
 
+/* Unread Filter */
+.unread-filter-wrap {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.unread-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.unread-filter-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--border-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    appearance: none;
+    background: transparent;
+    transition: all 0.15s;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.unread-filter-checkbox:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.unread-filter-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.unread-filter-checkbox:hover {
+    border-color: var(--accent);
+}
+
+.unread-filter-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
 /* Conversation list */
 .conversations-list {
     flex: 1;
     overflow-y: auto;
     padding: 8px;
+}
+
+/* Section headers (Favourites, Chats) */
+.conv-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 12px 8px 12px;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.conv-section-header svg {
+    opacity: .6;
+}
+
+/* Toggle button variant */
+.conv-section-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background .15s;
+    border-radius: 6px;
+    text-align: left;
+}
+
+.conv-section-toggle:hover {
+    background: rgba(255,255,255,.04);
+}
+
+/* Chevron animation */
+.section-chevron {
+    transition: transform .2s ease;
+    flex-shrink: 0;
+}
+
+.chevron-right {
+    transform: rotate(0deg);
+}
+
+.chevron-down {
+    transform: rotate(90deg);
+}
+
+/* Section content wrapper */
+.conv-section-content {
+    animation: sectionSlideIn .2s ease;
+}
+
+@keyframes sectionSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .conv-item {
@@ -923,9 +1040,117 @@
     font-size: .85rem;
 }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SIDEBAR RESIZE HANDLE
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+.sidebar-resize-handle {
+    width: 10px;
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background-color 0.2s;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.resizing {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.resize-handle-line {
+    width: 2px;
+    height: 60px;
+    background: var(--border-dim);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: background-color 0.2s, height 0.2s;
+}
+
+.sidebar-resize-handle:hover .resize-handle-line,
+.sidebar-resize-handle.resizing .resize-handle-line {
+    background: var(--accent);
+    height: 80px;
+}
+
+.resize-handle-icon {
+    position: absolute;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.sidebar-resize-handle:hover .resize-handle-icon,
+.sidebar-resize-handle.resizing .resize-handle-icon {
+    opacity: 1;
+    color: var(--accent);
+}
+
+/* â”€â”€ Collapsed state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+
+/* When sidebar is collapsed, hide it completely */
+.teams-sidebar.sidebar-collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    margin-left: 0;
+    border-width: 0;
+    pointer-events: none;
+    transition: width .25s cubic-bezier(.16,1,.3,1),
+                min-width .25s cubic-bezier(.16,1,.3,1),
+                margin-left .25s cubic-bezier(.16,1,.3,1);
+}
+
+/* Collapsed handle becomes a visible grab-tab on the left edge */
+.sidebar-resize-handle.sidebar-handle-collapsed {
+    width: 18px;
+    background: rgba(17,17,32,.9);
+    border: 1px solid var(--border-dim);
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: background-color 0.2s, width 0.2s;
+    margin-left: 10px;
+}
+
+.sidebar-resize-handle.sidebar-handle-collapsed:hover {
+    width: 22px;
+    background: rgba(30,30,52,.98);
+}
+
+/* In collapsed state show a single â€ºâ€º chevron instead of â€¹ â€º */
+.sidebar-resize-handle.sidebar-handle-collapsed .resize-handle-line {
+    width: 2px;
+    height: 40px;
+    background: var(--accent);
+}
+
+.sidebar-resize-handle.sidebar-handle-collapsed .resize-handle-icon {
+    opacity: 1;
+    color: var(--accent);
+}
+
+/* Resize cursor for body when dragging */
+body.sidebar-resizing {
+    cursor: col-resize !important;
+    user-select: none;
+}
+
+body.sidebar-resizing * {
+    cursor: col-resize !important;
+    user-select: none;
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN CHAT
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .teams-main {
     flex: 1;
     min-width: 0;
@@ -939,6 +1164,7 @@
     overflow: hidden;
     box-shadow: var(--shadow-md);
     position: relative;
+    margin-right: 10px;
 }
 
 /* Chat header */
@@ -1009,10 +1235,10 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    /* Initial color — JS overrides this via inline style when presence is known */
+    /* Initial color â€” JS overrides this via inline style when presence is known */
     background: #4e4e6e;
     transition: background .3s, box-shadow .3s;
-    /* No hardcoded animation — JS sets color directly */
+    /* No hardcoded animation â€” JS sets color directly */
 }
 
 @keyframes onlinePulse {
@@ -1175,13 +1401,75 @@
 
 .empty-messages p { font-size: .82rem; }
 
+/* Scroll to bottom button */
+.scroll-to-bottom-btn {
+    position: absolute;
+    bottom: 84px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-dim);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    transition: background .15s, color .15s, transform .2s, box-shadow .15s;
+    animation: scrollBtnIn .2s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes scrollBtnIn {
+    from { opacity: 0; transform: translateY(10px) scale(.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.scroll-to-bottom-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+.scroll-to-bottom-btn:active {
+    transform: translateY(0) scale(.95);
+}
+
+/* Unread count badge on the button */
+.scroll-to-bottom-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 99px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .62rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg-raised);
+    animation: badgePop .2s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes badgePop {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
 /* Input area */
 .chat-input-area {
     flex-shrink: 0;
-    border-top: 1px solid var(--border-subtle);
-    background: rgba(11,11,22,.7);
-    backdrop-filter: blur(10px);
-    padding: 10px 14px 14px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    background: #252526;
+    padding: 14px 16px 16px;
     position: relative;
     z-index: 1;
 }
@@ -1224,16 +1512,16 @@
     align-items:flex-end;
     gap:10px;
     width:100%;
-    border:1px solid #34344a;
-    border-radius:18px;
-    background:#1b1b2b;
-    padding:10px 8px 10px 14px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    background:#2d2d30;
+    padding:12px 12px 12px 16px;
     transition:border-color .2s, box-shadow .2s;
 }
 
 .input-form:focus-within{
     border-color:#6264A7;
-    box-shadow:0 0 0 3px rgba(98,100,167,.15);
+    box-shadow:0 0 0 2px rgba(98,100,167,.2);
 }
 
 .message-input{
@@ -1244,8 +1532,8 @@
     border:none;
     outline:none;
     box-shadow:none;
-    color:#fff;
-    font-size:.92rem;
+    color:#ffffff;
+    font-size:.94rem;
     font-weight:400;
     resize:none;
     overflow-y:hidden;
@@ -1265,14 +1553,14 @@
 
 /* .message-input::placeholder { color: var(--text-muted); } */
 .message-input::placeholder{
-    color:#7d809b;
+    color:#8a8a8a;
 }
 
 .send-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), #5e3de8);
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: #6264a7;
     border: none;
     color: #fff;
     display: flex;
@@ -1280,33 +1568,34 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: opacity .15s, transform .15s, box-shadow .15s;
-    box-shadow: 0 0 16px var(--accent-glow);
+    transition: background .15s, transform .1s;
 }
 
 .send-btn:hover {
-    opacity: .9;
-    transform: scale(1.07);
-    box-shadow: 0 0 24px var(--accent-glow);
+    background: #7b7dd6;
+    transform: translateY(-1px);
 }
 
-.send-btn:active { transform: scale(.93); }
+.send-btn:active { 
+    transform: translateY(0);
+    background: #5558a1;
+}
 
 /* Input right-side action buttons */
 .input-actions {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     flex-shrink: 0;
 }
 
 .input-action-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
     background: none;
     border: none;
-    color: #7d809b;
+    color: #b4b4b4;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1317,13 +1606,13 @@
 }
 
 .input-action-btn:hover {
-    color: #a89cf7;
-    background: rgba(98,100,167,.15);
+    color: #ffffff;
+    background: rgba(255,255,255,.08);
 }
 
 .input-action-btn:active {
-    color: #fff;
-    background: rgba(98,100,167,.25);
+    color: #ffffff;
+    background: rgba(255,255,255,.12);
 }
 
 /* Empty state */
@@ -1374,9 +1663,9 @@
     line-height: 1.65;
 }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    REQUEST SECTION
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .request-section {
     padding: 14px;
     border-bottom: 1px solid var(--border-subtle);
@@ -1555,9 +1844,9 @@
 .message-input:disabled { opacity: .45; cursor: not-allowed; }
 .send-btn:disabled { opacity: .35; cursor: not-allowed; }
 
-/* ══════════════════════════════════════════════════════
-   RESPONSIVE — Tablet  (≤1024px)
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RESPONSIVE â€” Tablet  (â‰¤1024px)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (max-width: 1024px) {
     :root { --sidebar-w: 260px; }
     .topbar-title { display: none; }
@@ -1566,19 +1855,29 @@
     .profile-btn { padding: 5px; }
     .search-kbd-hint { display: none; }
     .global-search-input { padding-right: 14px; }
+
+    /* â”€â”€ Allow resize on tablet, but with constraints â”€â”€ */
+    .sidebar-resize-handle {
+        display: flex;
+    }
 }
 
-/* ══════════════════════════════════════════════════════
-   RESPONSIVE — Mobile  (≤900px)
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RESPONSIVE â€” Mobile  (â‰¤900px)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (max-width: 900px) {
-    /* ── Global touch optimizations ── */
+    /* â”€â”€ Global touch optimizations â”€â”€ */
     * { -webkit-tap-highlight-color: transparent; }
     button, a, [role="button"] { touch-action: manipulation; }
 
     :root { --sidebar-w: 100%; }
 
-    /* ── Topbar ── */
+    /* â”€â”€ Hide resize handle on mobile â”€â”€ */
+    .sidebar-resize-handle {
+        display: none;
+    }
+
+    /* â”€â”€ Topbar â”€â”€ */
     .teams-topbar { padding: 0 8px; gap: 4px; height: 54px; }
     .topbar-brand-icon { width: 30px; height: 30px; border-radius: 8px; }
     .topbar-brand { gap: 8px; }
@@ -1594,7 +1893,7 @@
         font-size: .82rem;
         height: 38px;
     }
-    /* Search results dropdown — full width on mobile */
+    /* Search results dropdown â€” full width on mobile */
     .global-search-results {
         left: 0;
         right: 0;
@@ -1608,7 +1907,7 @@
     .topbar-left { flex-shrink: 0; }
     .topbar-right { flex-shrink: 0; }
 
-    /* ── Layout ── */
+    /* â”€â”€ Layout â”€â”€ */
     .teams-layout {
         position: relative;
         margin: 6px;
@@ -1620,14 +1919,14 @@
         overflow: hidden;
     }
 
-    /* ── Sidebar — full screen, slides left when chat opens ── */
+    /* â”€â”€ Sidebar â€” full screen, slides left when chat opens â”€â”€ */
     .teams-sidebar {
         position: absolute;
         inset: 0;
         z-index: 2;
         width: 100%;
         border-radius: 14px;
-        /* GPU layer — eliminates paint during transition */
+        /* GPU layer â€” eliminates paint during transition */
         will-change: transform;
         transform: translateX(0) translateZ(0);
         transition: transform .32s cubic-bezier(.25,.46,.45,.94);
@@ -1645,7 +1944,7 @@
         z-index: 1;
     }
 
-    /* ── Main chat area — hidden off-screen right, slides in when chat opens ── */
+    /* â”€â”€ Main chat area â€” hidden off-screen right, slides in when chat opens â”€â”€ */
     .teams-main {
         position: absolute;
         inset: 0;
@@ -1669,25 +1968,25 @@
         pointer-events: auto;
     }
 
-    /* ── Chat header ── */
+    /* â”€â”€ Chat header â”€â”€ */
     .mobile-back-btn { display: flex !important; }
     .chat-header { padding: 0 12px; gap: 10px; }
     .chat-header-actions .icon-btn:not(:last-child) { display: none; }
     .chat-header-name { font-size: .9rem; }
 
-    /* ── Messages area ── */
+    /* â”€â”€ Messages area â”€â”€ */
     .messages-area { padding: 16px 12px; }
     .msg-body-wrap { max-width: 86%; }
 
-    /* ── Message action bar — tap to show on mobile ── */
+    /* â”€â”€ Message action bar â€” tap to show on mobile â”€â”€ */
     /* On mobile we use .mobile-actions-visible (set by tap JS) instead of hover.
-       We do NOT force opacity:1 always — that clutters every message. */
+       We do NOT force opacity:1 always â€” that clutters every message. */
     .msg-actions.mobile-actions-visible {
         opacity: 1 !important;
         pointer-events: auto !important;
     }
 
-    /* ── Input area — iOS safe area support ── */
+    /* â”€â”€ Input area â€” iOS safe area support â”€â”€ */
     .chat-input-area {
         padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
     }
@@ -1700,13 +1999,13 @@
     }
     .send-btn { width: 40px; height: 40px; }
 
-    /* ── Reply bar ── */
+    /* â”€â”€ Reply bar â”€â”€ */
     .reply-bar { padding: 8px 10px; }
 
-    /* ── Attachment preview ── */
+    /* â”€â”€ Attachment preview â”€â”€ */
     .attach-preview { margin: 0 10px 8px; }
 
-    /* ── Forward modal — full width ── */
+    /* â”€â”€ Forward modal â€” full width â”€â”€ */
     .forward-modal-box {
         width: calc(100vw - 24px);
         max-width: 100%;
@@ -1714,7 +2013,7 @@
         border-radius: 20px;
     }
 
-    /* ── Request preview card — reduce padding ── */
+    /* â”€â”€ Request preview card â€” reduce padding â”€â”€ */
     .request-preview-screen { padding: 16px; }
     .request-preview-card {
         padding: 24px 20px;
@@ -1724,14 +2023,14 @@
     .request-preview-actions .btn-accept,
     .request-preview-actions .btn-reject { width: 100%; }
 
-    /* ── Emoji picker — full width on small screens ── */
+    /* â”€â”€ Emoji picker â€” full width on small screens â”€â”€ */
     .msg-emoji-picker {
         width: calc(100vw - 20px) !important;
         left: 10px !important;
         right: 10px !important;
     }
 
-    /* ── Profile dropdown — safe positioning ── */
+    /* â”€â”€ Profile dropdown â€” safe positioning â”€â”€ */
     .profile-dropdown {
         right: 0;
         left: auto;
@@ -1739,25 +2038,25 @@
         max-width: 300px;
     }
 
-    /* ── Sent-requests banner ── */
+    /* â”€â”€ Sent-requests banner â”€â”€ */
     .sent-requests-btn { padding: 10px 14px; }
 
-    /* ── Date separator ── */
+    /* â”€â”€ Date separator â”€â”€ */
     .date-separator-label { font-size: .7rem; padding: 3px 10px; }
 
-    /* ── Forwarded card inside bubble ── */
+    /* â”€â”€ Forwarded card inside bubble â”€â”€ */
     .fwd-chat-card { max-width: 100%; }
     .fwd-chat-card-header { flex-wrap: wrap; gap: 4px; }
     .fwd-chat-time { font-size: .65rem; }
 
-    /* ── Message images max width ── */
+    /* â”€â”€ Message images max width â”€â”€ */
     .msg-image { max-width: 100%; width: 100%; }
     .msg-img-wrap { max-width: 220px; }
 
-    /* ── Lightbox ── */
+    /* â”€â”€ Lightbox â”€â”€ */
     .lightbox-content { margin: 10px; }
 
-    /* ── Profile panel — same as desktop, just constrained width ── */
+    /* â”€â”€ Profile panel â€” same as desktop, just constrained width â”€â”€ */
     .profile-panel {
         right: 0;
         left: auto;
@@ -1765,16 +2064,16 @@
         max-width: min(300px, calc(100vw - 16px));
     }
 
-    /* ── User profile card modal ── */
+    /* â”€â”€ User profile card modal â”€â”€ */
     .upc-card {
         width: calc(100vw - 24px);
         max-width: 340px;
     }
 }
 
-/* ══════════════════════════════════════════════════════
-   RESPONSIVE — Small mobile  (≤480px)
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RESPONSIVE â€” Small mobile  (â‰¤480px)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (max-width: 480px) {
     .global-search-input { font-size: .78rem; }
     .teams-topbar-wrapper { padding: 6px 6px 0; }
@@ -1790,9 +2089,9 @@
     .request-preview-card { padding: 20px 16px; }
 }
 
-/* ══════════════════════════════════════════════════════
-   RESPONSIVE — Landscape on mobile  (short + narrow)
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RESPONSIVE â€” Landscape on mobile  (short + narrow)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (max-width: 896px) and (orientation: landscape) and (max-height: 500px) {
     .teams-topbar-wrapper { padding: 4px 6px 0; }
     .chat-header { --header-h: 48px; min-height: 48px; }
@@ -1888,9 +2187,9 @@
     gap:14px;
 }
 
-/* ══════════════════════════════════════════════════════
-   TYPING INDICATOR — CHAT WINDOW
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   TYPING INDICATOR â€” CHAT WINDOW
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .typing-indicator-row {
     display: flex;
@@ -1954,9 +2253,9 @@
     white-space: nowrap;
 }
 
-/* ══════════════════════════════════════════════════════
-   TYPING INDICATOR — SIDEBAR
-══════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   TYPING INDICATOR â€” SIDEBAR
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .conv-preview--typing {
     color: #6264A7 !important;
@@ -1987,11 +2286,11 @@
 .sidebar-typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
 
-/* ══════════════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    REPLY TO MESSAGE
-   ══════════════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Reply quote block inside the message bubble ──────────────────────── */
+/* â”€â”€ Reply quote block inside the message bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .reply-quote {
     display: block;
     width: 100%;
@@ -2011,7 +2310,7 @@
     background: rgba(0,0,0,.35);
 }
 
-/* Mine bubble quote — lighter left border matches accent */
+/* Mine bubble quote â€” lighter left border matches accent */
 .reply-quote--mine {
     border-left-color: rgba(255,255,255,.55);
     background: rgba(0,0,0,.18);
@@ -2051,7 +2350,7 @@
     opacity: .7;
 }
 
-/* ── Reply preview strip above the input ──────────────────────────────── */
+/* â”€â”€ Reply preview strip above the input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .reply-preview-bar {
     display: flex;
     align-items: center;
@@ -2121,7 +2420,7 @@
     color: var(--danger);
 }
 
-/* ── Scroll-to highlight flash ─────────────────────────────────────────── */
+/* â”€â”€ Scroll-to highlight flash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes highlightFlash {
     0%   { background: rgba(124,92,252,.22); }
     60%  { background: rgba(124,92,252,.22); }
@@ -2134,11 +2433,11 @@
 }
 
 
-/* ════════════════════════════════════════════════════════
-   PROFILE PANEL — Teams-style floating popup
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   PROFILE PANEL â€” Teams-style floating popup
    All rules scoped inside .profile-dropdown so they don't
    bleed into other components.
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Override dropdown width for the richer panel */
 .profile-dropdown {
@@ -2147,7 +2446,7 @@
     max-height: calc(100vh - 80px);
 }
 
-/* ── Status dot colors ─────────────────────────────────── */
+/* â”€â”€ Status dot colors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .status-icon-online  { background: var(--online) !important; box-shadow: 0 0 6px var(--online); }
 .status-icon-busy    { background: var(--busy)   !important; box-shadow: 0 0 6px var(--busy); }
 .status-icon-away    { background: var(--away)   !important; box-shadow: 0 0 6px var(--away); }
@@ -2167,7 +2466,7 @@
     border-radius: 2px;
 }
 
-/* ── Hero section (avatar + name) ─────────────────────── */
+/* â”€â”€ Hero section (avatar + name) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-panel-hero {
     display: flex;
     flex-direction: column;
@@ -2178,7 +2477,7 @@
     border-bottom: 1px solid var(--border-subtle);
 }
 
-/* ── Clickable avatar upload area ─────────────────────── */
+/* â”€â”€ Clickable avatar upload area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-avatar-upload {
     position: relative;
     width: 80px;
@@ -2239,7 +2538,7 @@
     opacity: 1;
 }
 
-/* ── Name / role row under avatar ─────────────────────── */
+/* â”€â”€ Name / role row under avatar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-panel-name-wrap {
     text-align: center;
 }
@@ -2254,7 +2553,7 @@
     margin-top: 4px;
 }
 
-/* ── img avatar in profile-btn ────────────────────────── */
+/* â”€â”€ img avatar in profile-btn â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-avatar--img {
     background: none;
     border: 2px solid var(--border-accent);
@@ -2262,7 +2561,7 @@
     box-shadow: 0 0 12px var(--accent-glow);
 }
 
-/* ── conv-avatar image variant ────────────────────────── */
+/* â”€â”€ conv-avatar image variant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .conv-avatar--img {
     width: 38px;
     height: 38px;
@@ -2272,7 +2571,7 @@
     border: 2px solid var(--border-subtle);
 }
 
-/* ── msg-avatar image variant ─────────────────────────── */
+/* â”€â”€ msg-avatar image variant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-avatar-img {
     width: 100%;
     height: 100%;
@@ -2281,7 +2580,7 @@
     display: block;
 }
 
-/* ── Section wrapper ──────────────────────────────────── */
+/* â”€â”€ Section wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-panel-section {
     padding: 14px 20px;
     border-bottom: 1px solid var(--border-subtle);
@@ -2300,7 +2599,7 @@
     margin-bottom: 10px;
 }
 
-/* ── Status picker ─────────────────────────────────────── */
+/* â”€â”€ Status picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-status-picker {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2344,7 +2643,7 @@
     display: inline-block;
 }
 
-/* ── Edit form ─────────────────────────────────────────── */
+/* â”€â”€ Edit form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-panel-form {
     display: flex;
     flex-direction: column;
@@ -2404,7 +2703,7 @@
     box-shadow: 0 0 0 3px var(--danger-dim) !important;
 }
 
-/* ── Save button ───────────────────────────────────────── */
+/* â”€â”€ Save button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-save-btn {
     width: 100%;
     padding: 9px 16px;
@@ -2443,7 +2742,7 @@
     to { transform: rotate(360deg); }
 }
 
-/* ── Feedback messages ─────────────────────────────────── */
+/* â”€â”€ Feedback messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-success-msg {
     display: flex;
     align-items: center;
@@ -2471,7 +2770,7 @@
     margin-top: 0;
 }
 
-/* ── Footer (sign out) ─────────────────────────────────── */
+/* â”€â”€ Footer (sign out) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .profile-panel-footer {
     padding: 10px 16px 14px;
 }
@@ -2498,15 +2797,15 @@
 }
 
 
-/* ════════════════════════════════════════════════════════
-   MESSAGE DETAIL STYLES — msg-sender-name, msg-continued,
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   MESSAGE DETAIL STYLES â€” msg-sender-name, msg-continued,
    msg-avatar-hidden, msg-time-wrap, msg-tick, date-separator,
    bubble-deleted, deleted-text, msg-image, msg-file, msg-caption,
    msg-actions, fwd-label, unread-badge, conv-bottom-row, draft-label,
    attachment-preview, attach-btn, file-input-hidden, tick SVGs
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Sender name above group ───────────────────────────── */
+/* â”€â”€ Sender name above group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-sender-name {
     font-size: .72rem;
     font-weight: 700;
@@ -2517,7 +2816,7 @@
     text-overflow: ellipsis;
 }
 
-/* ── Continued message (same sender, < 2 min gap) ─────── */
+/* â”€â”€ Continued message (same sender, < 2 min gap) â”€â”€â”€â”€â”€â”€â”€ */
 .msg-continued .msg-avatar {
     visibility: hidden;
 }
@@ -2526,7 +2825,7 @@
     visibility: hidden;
 }
 
-/* ── Date separator ────────────────────────────────────── */
+/* â”€â”€ Date separator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .date-separator {
     display: flex;
     align-items: center;
@@ -2556,7 +2855,7 @@
     border-radius: 999px;
 }
 
-/* ── Deleted bubble ─────────────────────────────────────── */
+/* â”€â”€ Deleted bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bubble-deleted {
     background: var(--bg-raised) !important;
     border: 1px dashed var(--border-dim) !important;
@@ -2577,7 +2876,7 @@
     opacity: .6;
 }
 
-/* ── Image message ──────────────────────────────────────── */
+/* â”€â”€ Image message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-img-wrap {
     display: block;
     border-radius: 12px;
@@ -2598,7 +2897,7 @@
 
 .msg-image:hover { opacity: .88; }
 
-/* ── File attachment message ────────────────────────────── */
+/* â”€â”€ File attachment message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-file-wrap {
     display: flex;
     align-items: center;
@@ -2644,7 +2943,7 @@
     flex-shrink: 0;
 }
 
-/* ── Caption under image / file ─────────────────────────── */
+/* â”€â”€ Caption under image / file â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-caption {
     font-size: .82rem;
     color: var(--text-primary);
@@ -2653,7 +2952,7 @@
     word-break: break-word;
 }
 
-/* ── Timestamp + tick row ───────────────────────────────── */
+/* â”€â”€ Timestamp + tick row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-time-wrap {
     display: flex;
     align-items: center;
@@ -2697,7 +2996,7 @@
 .tick--delivered path { stroke: rgba(200,200,220,.7); }
 .tick--read path      { stroke: #4fc3f7; }
 
-/* ── Forwarded label ────────────────────────────────────── */
+/* â”€â”€ Forwarded label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .fwd-label {
     display: flex;
     align-items: center;
@@ -2712,7 +3011,7 @@
     justify-content: flex-end;
 }
 
-/* ── Message action buttons (hover menu) ─────────────────── */
+/* â”€â”€ Message action buttons (hover menu) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-actions {
     display: none;
     align-items: center;
@@ -2769,9 +3068,9 @@
     color: var(--danger);
 }
 
-/* ════════════════════════════════════════════════════════
-   SIDEBAR — unread badge, conv-bottom-row, draft label
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SIDEBAR â€” unread badge, conv-bottom-row, draft label
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .conv-bottom-row {
     display: flex;
@@ -2839,6 +3138,21 @@
     padding: 6px;
     min-width: 200px;
     z-index: 500;
+    animation: menuSlideIn .15s ease;
+}
+
+/* Chat Header Menu (positioned from header) */
+.chat-header-menu {
+    position: fixed;
+    top: calc(var(--header-h) + 4px);
+    right: 16px;
+    background: var(--bg-float);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    min-width: 200px;
+    z-index: 99999;
     animation: menuSlideIn .15s ease;
 }
 
@@ -2980,7 +3294,7 @@
     white-space: nowrap;
 }
 
-/* ── Sent-requests banner in sidebar ────────────────────── */
+/* â”€â”€ Sent-requests banner in sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sent-requests-banner {
     padding: 8px 10px 4px;
     flex-shrink: 0;
@@ -3026,7 +3340,7 @@
     box-shadow: 0 0 8px var(--accent-glow);
 }
 
-/* ── Request header (with chevron) ─────────────────────── */
+/* â”€â”€ Request header (with chevron) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .request-header-right {
     display: flex;
     align-items: center;
@@ -3038,9 +3352,9 @@
     border-radius: 10px;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    ATTACHMENT PREVIEW & FILE INPUT
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .file-input-hidden {
     position: absolute;
@@ -3125,9 +3439,9 @@
     color: var(--danger);
 }
 
-/* ════════════════════════════════════════════════════════
-   SEARCH — action buttons, clear button, status badges
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SEARCH â€” action buttons, clear button, status badges
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .search-clear-btn {
     position: absolute;
@@ -3203,9 +3517,9 @@
     color: var(--away);
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    FORWARD MODAL
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .modal-backdrop {
     position: fixed;
@@ -3356,9 +3670,9 @@
     font-size: .83rem;
 }
 
-/* ════════════════════════════════════════════════════════
-   FORWARD MODAL — Teams-style redesign
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FORWARD MODAL â€” Teams-style redesign
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .fwd-modal-box {
     width: 100%;
@@ -3751,14 +4065,14 @@
     cursor: pointer !important;
 }
 
-/* ── In-chat forwarded message card (Teams-style) ── */
+/* â”€â”€ In-chat forwarded message card (Teams-style) â”€â”€ */
 .fwd-chat-card {
     border-radius: 8px;
     border: 1px solid var(--border-dim);
     overflow: hidden;
     background: var(--bg-overlay);
     border-left: 3px solid var(--accent);
-    /* No margin — let the bubble padding handle spacing */
+    /* No margin â€” let the bubble padding handle spacing */
 }
 
 /* When bubble contains only a forwarded card, collapse its own padding */
@@ -3837,7 +4151,7 @@
     white-space: normal;
 }
 
-/* ── Teams-style message action bar ────────────────────────── */
+/* â”€â”€ Teams-style message action bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 /* Override chat.css base styles too */
 .msg-actions {
@@ -3895,7 +4209,7 @@
     background: var(--bg-hover) !important;
     color: initial !important;
 }
-/* Active state — highlights which emoji the user already reacted with */
+/* Active state â€” highlights which emoji the user already reacted with */
 .msg-quick-react.active {
     background: var(--accent-dim) !important;
     border-radius: 6px;
@@ -3956,7 +4270,7 @@
     margin: 4px 8px;
 }
 
-/* ── Emoji picker panel ──────────────────────────────────── */
+/* â”€â”€ Emoji picker panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .msg-emoji-picker {
     display: none;
     position: fixed;
@@ -4066,9 +4380,9 @@
 .mep-cat:hover,
 .mep-cat--active { background: var(--bg-hover); }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PENDING REQUESTS PAGE (main panel)
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .pending-page {
     flex: 1;
@@ -4214,25 +4528,25 @@
 
 .pending-empty p { font-size: .82rem; }
 
-/* ════════════════════════════════════════════════════════
-   CHAT HEADER — online/offline status dot variants
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CHAT HEADER â€” online/offline status dot variants
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .status-online  { background: var(--online) !important; box-shadow: 0 0 6px var(--online); }
 .status-offline { background: var(--text-muted) !important; box-shadow: none; animation: none !important; }
 
-/* ════════════════════════════════════════════════════════
-   PRESENCE DOT — offline (no class = grey)
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   PRESENCE DOT â€” offline (no class = grey)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .presence-dot:not(.presence-online) {
     background: var(--bg-hover);
     box-shadow: none;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    NAV REQUEST BADGE (PendingCount component)
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .nav-request-badge {
     min-width: 18px;
@@ -4250,9 +4564,9 @@
     animation: badgePulse 2s ease infinite;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TEAMS-STYLE HOVER: action buttons always accessible
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* On touch devices where hover doesn't work, show actions on focus */
 .msg-action-btn:focus-visible {
@@ -4260,9 +4574,9 @@
     outline-offset: 2px;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    EMOJI REACTION PILLS (below message bubble)
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .msg-reactions {
     display: flex;
@@ -4317,9 +4631,9 @@
 }
 
 
-/* ════════════════════════════════════════════════════════
-   FIX 1 — Date separator: always centered, no left-align
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FIX 1 â€” Date separator: always centered, no left-align
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Override any conflicting layout rules from the inline <style> block */
 .messages-area .date-separator {
@@ -4362,9 +4676,9 @@
     flex-shrink: 0 !important;
 }
 
-/* ════════════════════════════════════════════════════════
-   FIX 2 — Ticks & timestamp: always visible (not hover-only)
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FIX 2 â€” Ticks & timestamp: always visible (not hover-only)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .msg-time-wrap {
     opacity: 1 !important;         /* always show, override the hover-only rule */
@@ -4375,10 +4689,10 @@
     margin-top: 4px !important;
 }
 
-/* ════════════════════════════════════════════════════════
-   FIX 3 — Profile success banner: CSS-only auto-fade
-   No Alpine $wire.set → no re-render → no blank page
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FIX 3 â€” Profile success banner: CSS-only auto-fade
+   No Alpine $wire.set â†’ no re-render â†’ no blank page
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 @keyframes profile-success-fade {
     0%   { opacity: 1; max-height: 60px; margin-bottom: 0; }
@@ -4392,29 +4706,34 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   TEAMS-STYLE PROFILE PANEL  (.profile-panel / pp-*)
+   PREMIUM PROFILE PANEL  (.profile-panel / pp-*)
    Floating card that opens from the topbar profile button.
-   Does NOT push or cover the main chat area.
    ════════════════════════════════════════════════════════════════════════════ */
 
 /* ── Container ─────────────────────────────────────────────────────────── */
 .profile-panel {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     right: 0;
-    width: 300px;
+    width: 320px;
     max-height: calc(100vh - 90px);
     overflow-y: auto;
-    background: var(--bg-float, #161628);
-    border: 1px solid var(--border-dim, rgba(255,255,255,.08));
-    border-radius: 14px;
+    overflow-x: hidden;
+    background: #0f0f1e;
+    border: 1px solid rgba(124,92,252,.22);
+    border-radius: 20px;
     z-index: 400;
-    box-shadow: 0 16px 56px rgba(0,0,0,.7), 0 2px 12px rgba(0,0,0,.4);
+    box-shadow:
+        0 24px 80px rgba(0,0,0,.85),
+        0 4px 24px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.06);
     opacity: 0;
-    transform: translateY(-6px) scale(.97);
+    transform: translateY(-10px) scale(.96);
     pointer-events: none;
-    transition: opacity .18s cubic-bezier(.16,1,.3,1),
-                transform .18s cubic-bezier(.16,1,.3,1);
+    transition: opacity .2s cubic-bezier(.16,1,.3,1),
+                transform .2s cubic-bezier(.16,1,.3,1);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124,92,252,.3) transparent;
 }
 
 .profile-panel--open {
@@ -4423,98 +4742,141 @@
     pointer-events: auto;
 }
 
-/* ── Header row ────────────────────────────────────────────────────────── */
-.pp-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 14px 14px;
-    background: linear-gradient(135deg, rgba(124,92,252,.12), rgba(56,217,192,.05));
-    border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+/* ── Hero Banner ────────────────────────────────────────────────────────── */
+.pp-hero {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 24px;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,92,252,.35) 0%, transparent 70%),
+        linear-gradient(180deg, rgba(124,92,252,.18) 0%, rgba(56,217,192,.06) 60%, transparent 100%);
+    border-bottom: 1px solid rgba(124,92,252,.15);
+    overflow: hidden;
+    text-align: center;
 }
 
-/* ── Avatar section ────────────────────────────────────────────────────── */
+/* Decorative animated blobs */
+.pp-hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(40px);
+    opacity: .45;
+}
+
+.pp-hero-blob--1 {
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, #7c5cfc 0%, transparent 70%);
+    top: -60px;
+    left: -40px;
+    animation: pp-blob-drift 8s ease-in-out infinite;
+}
+
+.pp-hero-blob--2 {
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, #38d9c0 0%, transparent 70%);
+    top: -40px;
+    right: -30px;
+    animation: pp-blob-drift 10s ease-in-out infinite reverse;
+}
+
+@keyframes pp-blob-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%       { transform: translate(10px, 8px) scale(1.08); }
+    66%       { transform: translate(-8px, 4px) scale(.94); }
+}
+
+/* ── Avatar section ─────────────────────────────────────────────────────── */
 .pp-avatar-section {
     position: relative;
     flex-shrink: 0;
+    margin-bottom: 14px;
 }
 
 .pp-avatar-label {
     display: block;
     cursor: pointer;
     position: relative;
-    width: 52px;
-    height: 52px;
+    width: 76px;
+    height: 76px;
 }
 
 .pp-avatar-wrap {
     position: relative;
-    width: 52px;
-    height: 52px;
+    width: 76px;
+    height: 76px;
 }
 
 .pp-avatar-img {
-    width: 52px;
-    height: 52px;
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
     object-fit: cover;
     display: block;
-    border: 2px solid var(--border-accent, rgba(130,110,255,.35));
-    transition: border-color .2s;
+    border: 3px solid rgba(124,92,252,.5);
+    box-shadow:
+        0 0 0 4px rgba(124,92,252,.12),
+        0 8px 28px rgba(0,0,0,.5);
+    transition: border-color .2s, box-shadow .2s;
 }
 
 .pp-avatar-initials {
-    width: 52px;
-    height: 52px;
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent, #7c5cfc), #5e3de8);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.6rem;
     color: #fff;
-    border: 2px solid var(--border-accent, rgba(130,110,255,.35));
-    transition: border-color .2s;
+    border: 3px solid rgba(124,92,252,.5);
+    box-shadow:
+        0 0 0 4px rgba(124,92,252,.12),
+        0 8px 28px rgba(0,0,0,.5);
+    transition: border-color .2s, box-shadow .2s;
 }
 
 .pp-avatar-label:hover .pp-avatar-img,
 .pp-avatar-label:hover .pp-avatar-initials {
-    border-color: var(--accent-bright, #9b7eff);
+    border-color: rgba(155,126,255,.8);
+    box-shadow:
+        0 0 0 4px rgba(124,92,252,.2),
+        0 8px 32px rgba(124,92,252,.3);
 }
 
-/* Status ring around avatar */
+/* Status ring */
 .pp-avatar-status-ring {
     position: absolute;
-    bottom: 1px;
-    right: 1px;
-    width: 13px;
-    height: 13px;
+    bottom: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    border: 2px solid var(--bg-float, #161628);
-    transition: background .3s;
+    border: 2.5px solid #0f0f1e;
+    transition: background .3s, box-shadow .3s;
 }
 
-.pp-status-ring--available { background: #23e07a; box-shadow: 0 0 5px #23e07a; }
-.pp-status-ring--busy      { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
-.pp-status-ring--away      { background: #ffb547; box-shadow: 0 0 5px #ffb547; }
-.pp-status-ring--dnd       { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
+.pp-status-ring--available { background: #23e07a; box-shadow: 0 0 8px rgba(35,224,122,.7); }
+.pp-status-ring--busy      { background: #ff5f72; box-shadow: 0 0 8px rgba(255,95,114,.7); }
+.pp-status-ring--away      { background: #ffb547; box-shadow: 0 0 8px rgba(255,181,71,.7); }
+.pp-status-ring--dnd       { background: #ff5f72; box-shadow: 0 0 8px rgba(255,95,114,.7); }
 
 /* Camera overlay */
 .pp-avatar-overlay {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: rgba(0,0,0,.55);
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(2px);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
     color: #fff;
-    font-size: .6rem;
-    font-weight: 600;
     opacity: 0;
     transition: opacity .2s;
     pointer-events: none;
@@ -4522,125 +4884,111 @@
 
 .pp-avatar-label:hover .pp-avatar-overlay { opacity: 1; }
 
-/* Upload loading overlay */
+/* Upload loading */
 .pp-upload-loading {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: rgba(0,0,0,.6);
+    background: rgba(0,0,0,.65);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2;
 }
 
-/* Remove Avatar Button */
-.pp-remove-avatar-btn {
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--danger, #ff5f72);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: .72rem;
-    font-weight: 600;
-    cursor: pointer;
+/* ── Hero info ──────────────────────────────────────────────────────────── */
+.pp-hero-info {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    z-index: 3;
-    box-shadow: 0 2px 8px rgba(0,0,0,.3);
-    transition: all .15s;
-    white-space: nowrap;
-}
-
-.pp-remove-avatar-btn:hover {
-    background: var(--danger-bright, #ff4560);
-    transform: translateX(-50%) scale(1.05);
-    box-shadow: 0 4px 12px rgba(255, 95, 114, .4);
-}
-
-.pp-remove-avatar-btn:active {
-    transform: translateX(-50%) scale(0.98);
-}
-
-.pp-remove-avatar-btn svg {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-}
-
-/* ── Header info ───────────────────────────────────────────────────────── */
-.pp-header-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.pp-header-name {
-    font-size: .9rem;
-    font-weight: 700;
-    color: var(--text-primary, #eeeef5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.pp-header-meta {
-    display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 5px;
-    margin-top: 3px;
+    position: relative;
+}
+
+.pp-hero-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #eeeef5;
+    letter-spacing: -.01em;
+}
+
+.pp-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex-wrap: wrap;
+    justify-content: center;
 }
 
 .pp-status-label {
+    font-size: .75rem;
+    color: rgba(255,255,255,.5);
+    font-weight: 500;
+}
+
+/* Remove avatar button */
+.pp-remove-avatar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+    background: rgba(255,95,114,.12);
+    border: 1px solid rgba(255,95,114,.25);
+    border-radius: 20px;
+    color: #ff5f72;
     font-size: .72rem;
-    color: var(--text-secondary, #8a8aaa);
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .1s;
+    font-family: inherit;
+}
+
+.pp-remove-avatar-btn:hover {
+    background: rgba(255,95,114,.22);
+    border-color: rgba(255,95,114,.5);
+    transform: scale(1.04);
 }
 
 /* Close button */
 .pp-close-btn {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    color: var(--text-muted, #4e4e6e);
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    color: rgba(255,255,255,.4);
     cursor: pointer;
-    padding: 4px;
-    border-radius: 6px;
+    padding: 6px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background .15s, color .15s;
+    transition: background .15s, color .15s, border-color .15s;
+    z-index: 2;
 }
 
 .pp-close-btn:hover {
-    background: var(--bg-hover, #212138);
-    color: var(--text-primary, #eeeef5);
+    background: rgba(255,255,255,.12);
+    border-color: rgba(255,255,255,.18);
+    color: #eeeef5;
 }
 
-/* ── Status dot in header ─────────────────────────────────────────────── */
+/* ── Status dot in header ───────────────────────────────────────────────── */
 .pp-status-dot {
     display: inline-block;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
-    transition: background .3s;
+    transition: background .3s, box-shadow .3s;
 }
 
-.pp-status-dot--available { background: #23e07a; box-shadow: 0 0 5px #23e07a; }
-.pp-status-dot--busy      { background: #ff5f72; box-shadow: 0 0 5px #ff5f72; }
-.pp-status-dot--away      { background: #ffb547; box-shadow: 0 0 5px #ffb547; }
-.pp-status-dot--dnd       {
-    background: #ff5f72;
-    box-shadow: 0 0 5px #ff5f72;
-    position: relative;
-}
+.pp-status-dot--available { background: #23e07a; box-shadow: 0 0 6px rgba(35,224,122,.7); }
+.pp-status-dot--busy      { background: #ff5f72; box-shadow: 0 0 6px rgba(255,95,114,.7); }
+.pp-status-dot--away      { background: #ffb547; box-shadow: 0 0 6px rgba(255,181,71,.7); }
+.pp-status-dot--dnd       { background: #ff5f72; box-shadow: 0 0 6px rgba(255,95,114,.7); position: relative; }
 .pp-status-dot--dnd::after {
     content: '';
     position: absolute;
@@ -4653,93 +5001,122 @@
     display: block;
 }
 
-/* ── Sections ─────────────────────────────────────────────────────────── */
+/* Admin badge */
+.badge-admin {
+    background: linear-gradient(135deg, rgba(124,92,252,.3), rgba(56,217,192,.2));
+    border: 1px solid rgba(124,92,252,.4);
+    color: #b29fff;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* ── Sections ───────────────────────────────────────────────────────────── */
 .pp-section {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
 }
 
 .pp-section:last-child { border-bottom: none; }
 
 .pp-section-label {
-    font-size: .65rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .63rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--text-muted, #4e4e6e);
-    margin-bottom: 8px;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,.3);
+    margin-bottom: 10px;
 }
 
 .pp-divider {
     height: 1px;
-    background: var(--border-subtle, rgba(255,255,255,.04));
-    margin: 0;
+    background: rgba(255,255,255,.05);
 }
 
-/* ── Status grid ──────────────────────────────────────────────────────── */
+/* ── Status grid ────────────────────────────────────────────────────────── */
 .pp-status-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 5px;
+    gap: 6px;
 }
 
 .pp-status-btn {
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 7px 9px;
-    background: var(--bg-raised, #111120);
-    border: 1px solid var(--border-subtle, rgba(255,255,255,.04));
-    border-radius: 8px;
-    color: var(--text-secondary, #8a8aaa);
+    padding: 8px 10px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 10px;
+    color: rgba(255,255,255,.5);
     font-size: .77rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background .15s, border-color .15s, color .15s, opacity .15s;
+    transition: background .15s, border-color .15s, color .15s, transform .1s;
     font-family: inherit;
     text-align: left;
     position: relative;
+    overflow: hidden;
+}
+
+.pp-status-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--status-color, #7c5cfc), transparent);
+    opacity: 0;
+    transition: opacity .2s;
 }
 
 .pp-status-btn:hover {
-    background: var(--bg-hover, #212138);
-    border-color: var(--border-dim, rgba(255,255,255,.08));
-    color: var(--text-primary, #eeeef5);
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.14);
+    color: #eeeef5;
+    transform: translateY(-1px);
 }
 
 .pp-status-btn--active {
-    background: var(--accent-dim, rgba(124,92,252,.12)) !important;
-    border-color: var(--border-accent, rgba(130,110,255,.35)) !important;
-    color: var(--text-primary, #eeeef5) !important;
+    background: rgba(var(--status-color-rgb, 124,92,252),.12) !important;
+    border-color: var(--status-color, rgba(124,92,252,.5)) !important;
+    color: #eeeef5 !important;
     font-weight: 600;
+    box-shadow: 0 0 12px rgba(124,92,252,.12), inset 0 1px 0 rgba(255,255,255,.06);
 }
 
-.pp-status-btn--loading {
-    opacity: .65;
-    cursor: not-allowed;
+.pp-status-btn--active::before { opacity: .06; }
+
+.pp-status-btn--loading { opacity: .6; cursor: not-allowed; }
+.pp-status-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.pp-status-btn-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
 }
 
-.pp-status-btn:disabled { opacity: .55; cursor: not-allowed; }
-
-.pp-status-btn-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Status icon dots inside buttons */
+/* Status icon dots */
 .pp-sicon {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
     display: inline-block;
     position: relative;
 }
 
-.pp-sicon--available { background: #23e07a; box-shadow: 0 0 4px #23e07a; }
-.pp-sicon--busy      { background: #ff5f72; box-shadow: 0 0 4px #ff5f72; }
-.pp-sicon--away      { background: #ffb547; box-shadow: 0 0 4px #ffb547; }
-.pp-sicon--dnd {
-    background: #ff5f72;
-    box-shadow: 0 0 4px #ff5f72;
-}
+.pp-sicon--available { background: #23e07a; box-shadow: 0 0 5px rgba(35,224,122,.8); }
+.pp-sicon--busy      { background: #ff5f72; box-shadow: 0 0 5px rgba(255,95,114,.8); }
+.pp-sicon--away      { background: #ffb547; box-shadow: 0 0 5px rgba(255,181,71,.8); }
+.pp-sicon--dnd       { background: #ff5f72; box-shadow: 0 0 5px rgba(255,95,114,.8); }
 .pp-sicon--dnd::after {
     content: '';
     position: absolute;
@@ -4752,92 +5129,100 @@
     border-radius: 1px;
 }
 
-/* ── Form fields ──────────────────────────────────────────────────────── */
+/* ── Form fields ────────────────────────────────────────────────────────── */
 .pp-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
+    margin-bottom: 10px;
 }
+
+.pp-field:last-of-type { margin-bottom: 0; }
 
 .pp-field-label {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: .68rem;
+    font-size: .67rem;
     font-weight: 600;
-    color: var(--text-secondary, #8a8aaa);
+    color: rgba(255,255,255,.35);
     text-transform: uppercase;
-    letter-spacing: .05em;
+    letter-spacing: .07em;
 }
 
 .pp-char-count {
     font-size: .62rem;
-    color: var(--text-muted, #4e4e6e);
+    color: rgba(255,255,255,.22);
     font-weight: 400;
     text-transform: none;
     letter-spacing: 0;
 }
 
 .pp-input {
-    background: var(--bg-raised, #111120);
-    border: 1px solid var(--border-dim, rgba(255,255,255,.08));
-    border-radius: 8px;
-    color: var(--text-primary, #eeeef5);
-    font-size: .83rem;
-    padding: 8px 11px;
-    transition: border-color .15s, box-shadow .15s;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    color: #eeeef5;
+    font-size: .84rem;
+    padding: 9px 12px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
     outline: none;
     width: 100%;
     font-family: inherit;
 }
 
 .pp-input:focus {
-    border-color: var(--accent, #7c5cfc);
-    box-shadow: 0 0 0 3px var(--accent-dim, rgba(124,92,252,.12));
+    background: rgba(124,92,252,.07);
+    border-color: rgba(124,92,252,.55);
+    box-shadow: 0 0 0 3px rgba(124,92,252,.1);
 }
 
-.pp-input--textarea { resize: none; line-height: 1.45; }
+.pp-input--textarea {
+    resize: none;
+    line-height: 1.5;
+}
 
 .pp-input--error {
-    border-color: var(--danger, #ff4f6a) !important;
-    box-shadow: 0 0 0 3px var(--danger-dim, rgba(255,79,106,.12)) !important;
+    border-color: rgba(255,79,106,.6) !important;
+    box-shadow: 0 0 0 3px rgba(255,79,106,.1) !important;
 }
 
-.pp-input::placeholder { color: var(--text-muted, #4e4e6e); }
+.pp-input::placeholder { color: rgba(255,255,255,.2); }
 
 .pp-field-error {
     font-size: .72rem;
-    color: var(--danger, #ff4f6a);
+    color: #ff4f6a;
     margin-top: 2px;
 }
 
-/* ── Alert messages ───────────────────────────────────────────────────── */
+/* ── Alerts ─────────────────────────────────────────────────────────────── */
 .pp-alert {
     display: flex;
     align-items: center;
     gap: 7px;
     padding: 8px 11px;
-    border-radius: 8px;
+    border-radius: 9px;
     font-size: .78rem;
     font-weight: 600;
+    margin-bottom: 8px;
 }
 
 .pp-alert--error {
-    background: var(--danger-dim, rgba(255,79,106,.12));
+    background: rgba(255,79,106,.1);
     border: 1px solid rgba(255,79,106,.25);
-    color: var(--danger, #ff4f6a);
+    color: #ff4f6a;
 }
 
 .pp-alert--success {
-    background: rgba(35,224,122,.1);
-    border: 1px solid rgba(35,224,122,.3);
+    background: rgba(35,224,122,.08);
+    border: 1px solid rgba(35,224,122,.25);
     color: #23e07a;
 }
 
 @keyframes pp-success-fade {
     0%   { opacity: 1; max-height: 50px; }
     70%  { opacity: 1; max-height: 50px; }
-    100% { opacity: 0; max-height: 0;    overflow: hidden; }
+    100% { opacity: 0; max-height: 0; overflow: hidden; }
 }
 
 .pp-alert--autohide {
@@ -4845,48 +5230,64 @@
     overflow: hidden;
 }
 
-/* ── Save button ──────────────────────────────────────────────────────── */
+/* ── Save button ────────────────────────────────────────────────────────── */
 .pp-save-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
     width: 100%;
-    padding: 9px 14px;
-    background: linear-gradient(135deg, var(--accent, #7c5cfc), #5e3de8);
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #7c5cfc, #5e3de8);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #fff;
-    font-size: .83rem;
+    font-size: .84rem;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity .15s, transform .1s;
-    box-shadow: 0 0 16px var(--accent-glow, rgba(124,92,252,.25));
+    transition: opacity .15s, transform .1s, box-shadow .2s;
+    box-shadow: 0 4px 20px rgba(124,92,252,.35), 0 1px 0 rgba(255,255,255,.1) inset;
     font-family: inherit;
-    margin-top: 2px;
+    margin-top: 4px;
+    position: relative;
+    overflow: hidden;
 }
 
-.pp-save-btn:hover { opacity: .9; }
+.pp-save-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.pp-save-btn:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(124,92,252,.5);
+}
+
 .pp-save-btn:active { transform: scale(.98); }
+
 .pp-save-btn:disabled,
-.pp-save-btn--loading { opacity: .55; cursor: not-allowed; }
+.pp-save-btn--loading { opacity: .5; cursor: not-allowed; transform: none; }
 
 .pp-save-btn-text,
-.pp-save-btn-saving { display: flex; align-items: center; gap: 6px; }
+.pp-save-btn-saving { display: flex; align-items: center; gap: 6px; position: relative; }
 
-/* ── Spinner ──────────────────────────────────────────────────────────── */
+/* ── Spinner ────────────────────────────────────────────────────────────── */
 .pp-spinner {
-    animation: pp-spin .8s linear infinite;
+    animation: pp-spin .75s linear infinite;
     flex-shrink: 0;
 }
 
 @keyframes pp-spin { to { transform: rotate(360deg); } }
 
-.pp-spinner--xs { width: 12px; height: 12px; }
+.pp-spinner--xs { width: 11px; height: 11px; }
 
-/* ── Change Password section ──────────────────────────────────────────── */
+/* ── Change Password ────────────────────────────────────────────────────── */
 .pp-section--password {
-    padding: 0 14px 4px;
+    padding: 10px 16px 12px;
 }
 
 .pp-pw-toggle {
@@ -4894,12 +5295,12 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 10px 11px;
-    background: rgba(255,255,255,.03);
-    border: 1px solid var(--border-subtle, rgba(255,255,255,.04));
-    border-radius: 9px;
-    color: var(--text-secondary, #8a8aaa);
-    font-size: .82rem;
+    padding: 9px 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 10px;
+    color: rgba(255,255,255,.45);
+    font-size: .81rem;
     font-weight: 600;
     cursor: pointer;
     transition: background .15s, border-color .15s, color .15s;
@@ -4908,8 +5309,8 @@
 
 .pp-pw-toggle:hover {
     background: rgba(124,92,252,.08);
-    border-color: var(--border-accent, rgba(130,110,255,.35));
-    color: var(--text-primary, #eeeef5);
+    border-color: rgba(124,92,252,.3);
+    color: #eeeef5;
 }
 
 .pp-pw-toggle-left {
@@ -4918,15 +5319,11 @@
     gap: 8px;
 }
 
-.pp-pw-chevron {
-    transition: transform .2s ease;
-    flex-shrink: 0;
-}
-
+.pp-pw-chevron { transition: transform .2s ease; flex-shrink: 0; }
 .pp-pw-chevron--open { transform: rotate(180deg); }
 
 .pp-pw-form {
-    padding: 14px 2px 4px;
+    padding: 12px 0 2px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -4944,28 +5341,27 @@
     justify-content: center;
     gap: 7px;
     width: 100%;
-    margin-top: 6px;
+    margin-top: 8px;
     padding: 10px;
-    background: linear-gradient(135deg, var(--accent, #7c5cfc), #5e3de8);
+    background: linear-gradient(135deg, #7c5cfc, #5e3de8);
     border: none;
-    border-radius: 9px;
+    border-radius: 10px;
     color: #fff;
-    font-size: .84rem;
+    font-size: .83rem;
     font-weight: 700;
     cursor: pointer;
     transition: opacity .15s, transform .1s;
     font-family: inherit;
-    box-shadow: 0 0 16px var(--accent-glow, rgba(124,92,252,.25));
+    box-shadow: 0 4px 20px rgba(124,92,252,.3);
 }
 
 .pp-pw-submit-btn:hover   { opacity: .9; transform: translateY(-1px); }
 .pp-pw-submit-btn:active  { transform: scale(.98); }
 .pp-pw-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-/* ── Footer ───────────────────────────────────────────────────────────── */
+/* ── Footer ─────────────────────────────────────────────────────────────── */
 .pp-footer {
-    padding: 10px 14px 12px;
-    border-top: 1px solid var(--border-subtle, rgba(255,255,255,.04));
+    padding: 8px 16px 14px;
 }
 
 .pp-signout-btn {
@@ -4973,12 +5369,12 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 8px 11px;
+    padding: 9px 12px;
     background: none;
-    border: 1px solid var(--border-subtle, rgba(255,255,255,.04));
-    border-radius: 8px;
-    color: var(--danger, #ff4f6a);
-    font-size: .8rem;
+    border: 1px solid rgba(255,95,114,.15);
+    border-radius: 10px;
+    color: #ff5f72;
+    font-size: .81rem;
     font-weight: 600;
     cursor: pointer;
     transition: background .15s, border-color .15s;
@@ -4986,21 +5382,18 @@
 }
 
 .pp-signout-btn:hover {
-    background: var(--danger-dim, rgba(255,79,106,.12));
-    border-color: rgba(255,79,106,.3);
+    background: rgba(255,95,114,.1);
+    border-color: rgba(255,95,114,.35);
 }
 
-/* ── Topbar status dot — color variants ───────────────────────────────── */
-.profile-status-dot--available { background: #23e07a !important; box-shadow: 0 0 6px #23e07a !important; }
-.profile-status-dot--busy      { background: #ff5f72 !important; box-shadow: 0 0 6px #ff5f72 !important; }
-.profile-status-dot--away      { background: #ffb547 !important; box-shadow: 0 0 6px #ffb547 !important; }
-.profile-status-dot--dnd       { background: #ff5f72 !important; box-shadow: 0 0 6px #ff5f72 !important; }
+/* ── Topbar status dot — color variants ─────────────────────────────────── */
+.profile-status-dot--available { background: #23e07a !important; box-shadow: 0 0 6px rgba(35,224,122,.7) !important; }
+.profile-status-dot--busy      { background: #ff5f72 !important; box-shadow: 0 0 6px rgba(255,95,114,.7) !important; }
+.profile-status-dot--away      { background: #ffb547 !important; box-shadow: 0 0 6px rgba(255,181,71,.7) !important; }
+.profile-status-dot--dnd       { background: #ff5f72 !important; box-shadow: 0 0 6px rgba(255,95,114,.7) !important; }
 
-/* ── Topbar avatar with image ─────────────────────────────────────────── */
-.profile-avatar--has-img {
-    background: none !important;
-    box-shadow: none !important;
-}
+/* ── Topbar avatar ──────────────────────────────────────────────────────── */
+.profile-avatar--has-img { background: none !important; box-shadow: none !important; }
 
 .profile-avatar-img {
     width: 100%;
@@ -5010,16 +5403,13 @@
     display: block;
 }
 
-/* ── Chat header status dot — dynamic color (set inline by JS) ────────── */
+/* ── Chat header status ─────────────────────────────────────────────────── */
 .chat-header-status { color: var(--text-secondary, #8a8aaa) !important; }
 
-/* ── Responsive — profile panel on mobile — handled in main responsive block above ── */
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
     .upc-card { width: calc(100vw - 32px); }
 }
-   USER PROFILE CARD MODAL  (.upc-*)
-   Centered read-only card shown when tapping another user's avatar.
-   ════════════════════════════════════════════════════════════════════════════ */
 
 .upc-overlay {
     position: fixed;
@@ -5178,10 +5568,10 @@
     .upc-card { width: calc(100vw - 32px); }
 }
 
-/* ── Sidebar avatar button wrapper ──────────────────────────────────────
+/* ΓöÇΓöÇ Sidebar avatar button wrapper ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
    Wraps the conv-avatar so clicking it opens the profile card without
    triggering the parent conv-item's wire:click (selectConversation).
-   ─────────────────────────────────────────────────────────────────────*/
+   ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ*/
 .conv-avatar-btn {
     background: none;
     border: none;
@@ -5214,9 +5604,9 @@
     display: flex;
 }
 
-/* ══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    INLINE MESSAGE EDIT (Teams-style)
-══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Wrap the textarea + toolbar */
 .msg-edit-wrap {
@@ -5348,7 +5738,7 @@
     opacity: .8;
 }
 
-/* When bubble is in edit mode — keep it transparent/unstyled */
+/* When bubble is in edit mode â€” keep it transparent/unstyled */
 .msg-bubble:has(.msg-edit-wrap) {
     background: transparent !important;
     border: none !important;
@@ -5356,9 +5746,9 @@
     padding: 0 !important;
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    DELETE CONFIRMATION MODAL  (.del-confirm-*)
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .del-confirm-overlay {
     position: fixed;
@@ -5467,9 +5857,9 @@
     border-color: #dc2626;
 }
 
-/* ════════════════════════════════════════════════════════
-   IMAGE LIGHTBOX  (.ilb-*)  — Teams-style
-   ════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   IMAGE LIGHTBOX  (.ilb-*)  â€” Teams-style
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .ilb-overlay {
     position: fixed;
@@ -5487,7 +5877,7 @@
     to   { opacity: 1; }
 }
 
-/* ── Top bar ── */
+/* â”€â”€ Top bar â”€â”€ */
 .ilb-topbar {
     height: 52px;
     flex-shrink: 0;
@@ -5584,7 +5974,7 @@
     margin: 0 4px;
 }
 
-/* ── Main stage ── */
+/* â”€â”€ Main stage â”€â”€ */
 .ilb-stage {
     flex: 1;
     display: flex;
@@ -5617,7 +6007,7 @@
     pointer-events: none;
 }
 
-/* ── Prev / Next arrows ── */
+/* â”€â”€ Prev / Next arrows â”€â”€ */
 .ilb-nav {
     position: absolute;
     top: 50%;
@@ -5640,7 +6030,7 @@
 .ilb-prev { left: 20px; }
 .ilb-next { right: 20px; }
 
-/* ── Thumbnail strip ── */
+/* â”€â”€ Thumbnail strip â”€â”€ */
 .ilb-strip-wrap {
     height: 80px;
     flex-shrink: 0;
@@ -5694,7 +6084,7 @@
     animation: msgHighlightPulse 1.8s ease forwards;
 }
 
-/* ── Lightbox — mobile responsive ────────────────────────────────── */
+/* â”€â”€ Lightbox â€” mobile responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 900px) {
     /* Account for notch / status bar */
     .ilb-overlay {
@@ -5713,7 +6103,7 @@
         overflow: hidden;
     }
 
-    /* Hide zoom buttons — use pinch-to-zoom on mobile */
+    /* Hide zoom buttons â€” use pinch-to-zoom on mobile */
     #ilbZoomIn,
     #ilbZoomOut,
     .ilb-action-sep { display: none; }
@@ -5722,7 +6112,7 @@
     .ilb-sender { font-size: .82rem; }
     .ilb-meta   { font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
 
-    /* "Show message" — icon only */
+    /* "Show message" â€” icon only */
     .ilb-show-msg span { display: none; }
     .ilb-show-msg { padding: 4px 6px; }
 
@@ -5757,7 +6147,7 @@
         border-radius: 4px;
     }
 
-    /* Hide thumbnail strip — gives full screen to image */
+    /* Hide thumbnail strip â€” gives full screen to image */
     .ilb-strip-wrap { display: none; }
 }
 @keyframes msgHighlightPulse {
@@ -5766,9 +6156,9 @@
     100% { background: transparent; }
 }
 
-/* ════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LINK POPUP MENU  (.link-popup)
-   ════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Inline link style inside bubbles */
 .msg-link {
@@ -5851,11 +6241,11 @@
 .link-popup-item--copied svg { color: #57c75a !important; }
 
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    DELETE CONFIRMATION MODAL (Microsoft Teams Style)
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    DELETE CONFIRMATION MODAL (Microsoft Teams Style)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .delete-modal-overlay {
     position: fixed;
     top: 0;
@@ -6054,9 +6444,9 @@
 }
 
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CHAT TABS (Microsoft Teams Style - Inline with Header)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .chat-header-tabs {
     display: flex;
     align-items: center;
@@ -6089,9 +6479,9 @@
 
 /* Keep status visible - don't hide it */
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    UNIFIED TOOLBAR (Files & Photos)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .files-toolbar,
 .photos-toolbar {
     display: flex;
@@ -6485,9 +6875,9 @@
     }
 }
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PHOTOS AREA (Grid Layout)
-═══════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .photos-area {
     flex: 1;
     display: flex;
@@ -6743,3 +7133,237 @@
     }
 }
 
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DRAG & DROP — Sidebar drop zones + ghost overlay + toast
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Body state while dragging a file ──────────────────────────────────── */
+body.dd-dragging-file .conversations-list {
+    /* Subtle shift to signal "things are droppable" */
+}
+
+body.dd-dragging-file .conv-item {
+    transition: background .15s, box-shadow .15s, transform .12s;
+}
+
+/* ── Hover state on a valid drop target ─────────────────────────────────── */
+.conv-item.dd-over {
+    background: rgba(124, 92, 252, .18) !important;
+    box-shadow:
+        inset 0 0 0 2px rgba(124, 92, 252, .7),
+        0 0 20px rgba(124, 92, 252, .25);
+    transform: scale(1.02);
+    border-radius: 14px;
+    z-index: 2;
+    position: relative;
+}
+
+.conv-item.dd-over .conv-name {
+    color: #c4b0ff;
+    font-weight: 700;
+}
+
+/* Drop icon badge — appears on top of the avatar while dragging over */
+.conv-item.dd-over .conv-avatar-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(124, 92, 252, .55)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E")
+        center / 18px no-repeat;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.conv-avatar-wrap {
+    position: relative; /* ensure ::after positioning works */
+}
+
+/* ── Full-screen drag overlay (shows file name + target) ────────────────── */
+#ddGhostOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 28px 36px;
+}
+
+#ddGhostOverlay.dd-overlay--visible {
+    display: flex;
+}
+
+.dd-ghost-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: rgba(14, 14, 28, .92);
+    border: 1.5px solid rgba(124, 92, 252, .5);
+    border-radius: 16px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, .6),
+        0 0 0 1px rgba(124, 92, 252, .15) inset;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: dd-ghost-in .15s cubic-bezier(.16, 1, .3, 1);
+    max-width: 340px;
+}
+
+@keyframes dd-ghost-in {
+    from { opacity: 0; transform: translateY(10px) scale(.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dd-ghost-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(124, 92, 252, .18);
+    border: 1px solid rgba(124, 92, 252, .3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #a78bfa;
+}
+
+.dd-ghost-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.dd-ghost-name {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #eeeef5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+}
+
+.dd-ghost-hint {
+    font-size: .71rem;
+    color: rgba(255, 255, 255, .38);
+}
+
+.dd-ghost-hint--target {
+    color: #a78bfa;
+    font-weight: 600;
+}
+
+/* ── Upload progress inside conv-item while sending ────────────────────── */
+.conv-item.dd-sending {
+    opacity: .65;
+    pointer-events: none;
+    position: relative;
+}
+
+.conv-item.dd-sending::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 6px;
+    right: 6px;
+    height: 2px;
+    background: linear-gradient(90deg, #7c5cfc, #38d9c0);
+    border-radius: 2px;
+    animation: dd-send-bar 1.2s ease-in-out infinite;
+}
+
+@keyframes dd-send-bar {
+    0%   { transform: scaleX(0); transform-origin: left; }
+    50%  { transform: scaleX(1); transform-origin: left; }
+    51%  { transform: scaleX(1); transform-origin: right; }
+    100% { transform: scaleX(0); transform-origin: right; }
+}
+
+/* ── Toast notification ─────────────────────────────────────────────────── */
+#ddToastContainer {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.dd-toast {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-size: .82rem;
+    font-weight: 600;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: dd-toast-in .2s cubic-bezier(.16, 1, .3, 1);
+    white-space: nowrap;
+    pointer-events: auto;
+}
+
+.dd-toast--success {
+    background: rgba(16, 185, 129, .18);
+    border: 1px solid rgba(16, 185, 129, .4);
+    color: #34d399;
+}
+
+.dd-toast--error {
+    background: rgba(255, 79, 106, .15);
+    border: 1px solid rgba(255, 79, 106, .35);
+    color: #ff5f72;
+}
+
+.dd-toast--uploading {
+    background: rgba(124, 92, 252, .15);
+    border: 1px solid rgba(124, 92, 252, .35);
+    color: #a78bfa;
+}
+
+@keyframes dd-toast-in {
+    from { opacity: 0; transform: translateY(8px) scale(.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dd-toast-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(6px) scale(.95); }
+}
+
+.dd-toast--leaving {
+    animation: dd-toast-out .2s ease forwards;
+}
+
+/* ── Spinner inside toast ─────────────────────────────────────────────── */
+.dd-toast-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: dd-spin .7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes dd-spin { to { transform: rotate(360deg); } }
+
+/* ── Hide drop effects on mobile ────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .conv-item.dd-over {
+        transform: none;
+    }
+    #ddGhostOverlay { display: none !important; }
+}

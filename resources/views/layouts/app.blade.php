@@ -12,21 +12,21 @@
     @livewireStyles
     <style>
         :root {
-            --nav-bg: #1a1a24;
+            --nav-bg: #292929;
             --nav-width: 68px;
-            --content-bg: #1e1e28;
-            --surface: #252532;
-            --surface-2: #2d2d3d;
-            --border: #35354a;
+            --content-bg: #1f1f1f;
+            --surface: #2d2d30;
+            --surface-2: #3e3e42;
+            --border: #464649;
             --accent: #6264a7;
             --accent-h: #7b7dd6;
-            --accent-dim: rgba(98, 100, 167, .18);
-            --text-1: #f0f0f5;
-            --text-2: #9090b0;
-            --text-3: #5a5a78;
-            --online: #57c75a;
-            --danger: #e05b5b;
-            --radius: 10px;
+            --accent-dim: rgba(98, 100, 167, .15);
+            --text-1: #ffffff;
+            --text-2: #b4b4b4;
+            --text-3: #8a8a8a;
+            --online: #92c353;
+            --danger: #f85149;
+            --radius: 8px;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -111,7 +111,7 @@
         .nav-link svg { flex-shrink: 0; }
 
         .nav-link:hover {
-            background: rgba(255,255,255,.06);
+            background: rgba(255,255,255,.08);
             color: var(--text-1);
         }
 
@@ -135,7 +135,7 @@
         .nav-link.danger { color: var(--text-3); }
 
         .nav-link.danger:hover {
-            background: rgba(224,91,91,.12);
+            background: rgba(248,81,73,.12);
             color: var(--danger);
         }
 

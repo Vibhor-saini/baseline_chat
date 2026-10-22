@@ -169,6 +169,10 @@
             flex-shrink: 0;
         }
 
+        .user-avatar-img {
+            object-fit: cover;
+        }
+
         .user-name {
             font-weight: 600;
             color: var(--text-1);
@@ -488,10 +492,21 @@
                             wire:key="user-{{ $user->id }}">
                             <td>
                                 <div class="user-cell">
-                                    <div class="user-avatar"
-                                         style="background: hsl({{ (ord($user->name[0]) * 37) % 360 }}, 50%, 42%)">
-                                        {{ strtoupper(substr($user->name, 0, 1)) }}
-                                    </div>
+                                    @if($user->profile_image)
+                                        <img src="{{ Storage::url($user->profile_image) }}" 
+                                             alt="{{ $user->name }}"
+                                             class="user-avatar user-avatar-img"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="user-avatar" 
+                                             style="display:none; background: {{ \App\Helpers\AvatarColor::gradient($user->id) }}">
+                                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                                        </div>
+                                    @else
+                                        <div class="user-avatar"
+                                             style="background: {{ \App\Helpers\AvatarColor::gradient($user->id) }}">
+                                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                                        </div>
+                                    @endif
                                     <span class="user-name">{{ $user->name }}</span>
                                 </div>
                             </td>

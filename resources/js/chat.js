@@ -78,6 +78,70 @@
         anchor.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'end' });
     }
 
+    /* ── Scroll-to-bottom button ─────────────────────────────────────────── */
+    window._scrollToBottom = function(smooth = true) {
+        scrollToBottom(smooth);
+        // Hide button immediately
+        const btn = document.getElementById('scrollToBottomBtn');
+        const badge = document.getElementById('scrollToBottomBadge');
+        if (btn)   btn.style.display = 'none';
+        if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+        _unreadBelowCount = 0;
+    };
+
+    let _unreadBelowCount = 0;
+
+    function initScrollToBottomObserver() {
+        const container = document.getElementById('messages-container');
+        const btn       = document.getElementById('scrollToBottomBtn');
+        const badge     = document.getElementById('scrollToBottomBadge');
+        if (!container || !btn) return;
+
+        let ticking = false;
+
+        container.addEventListener('scroll', () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                ticking = false;
+                const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+                if (distFromBottom > 120) {
+                    btn.style.display = 'flex';
+                } else {
+                    btn.style.display = 'none';
+                    if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+                    _unreadBelowCount = 0;
+                }
+            });
+        }, { passive: true });
+    }
+
+    // Increment badge count when a new message arrives while user is scrolled up
+    function notifyScrollButtonNewMessage() {
+        const container = document.getElementById('messages-container');
+        const btn       = document.getElementById('scrollToBottomBtn');
+        const badge     = document.getElementById('scrollToBottomBadge');
+        if (!container || !btn) return;
+
+        const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (distFromBottom > 120) {
+            _unreadBelowCount++;
+            if (badge) {
+                badge.style.display = 'flex';
+                badge.textContent = _unreadBelowCount > 99 ? '99+' : _unreadBelowCount;
+            }
+        }
+    }
+
+    // Init on page load and after Livewire navigates
+    document.addEventListener('DOMContentLoaded', () => {
+        initScrollToBottomObserver();
+    });
+    document.addEventListener('livewire:navigated', () => {
+        _unreadBelowCount = 0;
+        initScrollToBottomObserver();
+    });
+
     /* ── Livewire component accessor ─────────────────────────────────────── */
     function getChatComponent() {
         const root = document.querySelector('.teams-chat-root');
@@ -428,23 +492,100 @@
             el.className = classes.join(' ');
         }
 
+        /* ── Avatar colour helper (matches AvatarColor::gradient on server) ── */
+        function avatarGradient(id) {
+            const gradients = [
+                'linear-gradient(135deg,#7c5cfc,#38d9c0)',
+                'linear-gradient(135deg,#f97316,#ec4899)',
+                'linear-gradient(135deg,#06b6d4,#6366f1)',
+                'linear-gradient(135deg,#10b981,#3b82f6)',
+                'linear-gradient(135deg,#f59e0b,#ef4444)',
+                'linear-gradient(135deg,#8b5cf6,#ec4899)',
+                'linear-gradient(135deg,#14b8a6,#7c5cfc)',
+                'linear-gradient(135deg,#f43f5e,#f97316)',
+            ];
+            return gradients[(Number(id) || 0) % gradients.length];
+        }
+
+        /**
+         * Create an <img> for an avatar. Attaches an onerror that swaps itself
+         * back to a coloured-initials div if the file can't be served (404/403).
+         */
+        function makeAvatarImg(src, altText, userId, cssText, className, id) {
+            const img = document.createElement('img');
+            img.src           = src;
+            img.alt           = altText || '';
+            img.dataset.userId = String(userId);
+            if (cssText)   img.style.cssText = cssText;
+            if (className) img.className     = className;
+            if (id)        img.id            = id;
+            img.onerror = function () {
+                this.onerror = null;
+                const initial  = (altText || '?').charAt(0).toUpperCase();
+                const gradient = avatarGradient(userId);
+                const d = document.createElement('div');
+                d.textContent      = initial;
+                d.dataset.userId   = String(userId);
+                d.style.cssText    = this.style.cssText ||
+                    `display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:${gradient};color:#fff;font-weight:700;font-size:.9rem;`;
+                d.style.background = gradient;
+                // Preserve relevant classes for the DOM slot we're filling
+                if (this.className === 'conv-avatar--img') {
+                    d.className = 'conv-avatar';
+                    d.style.cssText = `display:flex;align-items:center;justify-content:center;border-radius:50%;background:${gradient};color:#fff;font-weight:700;font-size:.95rem;width:42px;height:42px;`;
+                }
+                this.replaceWith(d);
+            };
+            return img;
+        }
+
         /* 1. Update avatar images / initials for this user everywhere */
         if (avatarUrl) {
+            /* ── Sidebar conversation avatars (targeted, not by data-user-id query) ── */
+            document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-avatar-btn`).forEach(btn => {
+                const existingImg = btn.querySelector('img.conv-avatar--img');
+                const fallbackDiv = btn.querySelector('div.conv-avatar');
+                if (existingImg) {
+                    // Already showing image — just update src
+                    existingImg.src = avatarUrl;
+                    existingImg.style.display = '';
+                    if (fallbackDiv) fallbackDiv.style.display = 'none';
+                    existingImg.onerror = function () {
+                        this.onerror = null;
+                        this.style.display = 'none';
+                        if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                    };
+                } else if (fallbackDiv) {
+                    // Currently showing initials — inject img before it
+                    const img = makeAvatarImg(avatarUrl, name, uid,
+                        'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;',
+                        'conv-avatar conv-avatar--img');
+                    img.onerror = function () {
+                        this.onerror = null;
+                        this.style.display = 'none';
+                        fallbackDiv.style.display = 'flex';
+                    };
+                    btn.insertBefore(img, fallbackDiv);
+                    fallbackDiv.style.display = 'none';
+                }
+            });
+
+            /* ── All other avatar slots (chat header, profile panel, messages) ── */
             document.querySelectorAll(`[data-user-id="${uid}"]`).forEach(el => {
+                // Skip conv-avatar-btn children — handled above
+                if (el.closest('.conv-avatar-btn')) return;
+
                 const isAvatarImg = el.tagName === 'IMG' && (
                     el.classList.contains('profile-avatar-img') ||
                     el.classList.contains('pp-avatar-img') ||
                     el.classList.contains('msg-avatar-img') ||
-                    el.classList.contains('conv-avatar--img') ||
                     el.id === 'topbarAvatarImg' ||
                     el.id === 'avatarPreviewImg' ||
                     el.closest('.msg-avatar') ||
-                    el.closest('.conv-avatar-wrap') ||
                     el.closest('.chat-header-avatar') ||
                     el.closest('.pp-avatar-wrap')
                 );
                 const isInitialsDiv = el.tagName === 'DIV' && (
-                    el.classList.contains('conv-avatar') ||
                     el.classList.contains('pp-avatar-initials') ||
                     el.id === 'topbarAvatarInitials' ||
                     el.id === 'avatarPreviewImg'
@@ -453,63 +594,157 @@
 
                 if (isAvatarImg) {
                     el.src = avatarUrl;
+                    el.onerror = function () {
+                        this.onerror = null;
+                        const gradient = avatarGradient(uid);
+                        const d = document.createElement('div');
+                        d.textContent    = (name || '?').charAt(0).toUpperCase();
+                        d.dataset.userId = uid;
+                        d.style.cssText  = `display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:${gradient};color:#fff;font-weight:700;font-size:.9rem;`;
+                        this.replaceWith(d);
+                    };
                     el.style.borderRadius = '50%';
-                    el.style.objectFit   = 'cover';
+                    el.style.objectFit    = 'cover';
                 } else if (isHeaderAvatar) {
                     el.innerHTML = '';
-                    const img = document.createElement('img');
-                    img.src = avatarUrl; img.alt = name || '';
-                    img.dataset.userId = uid;
-                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    const img = makeAvatarImg(avatarUrl, name, uid,
+                        'width:100%;height:100%;border-radius:50%;object-fit:cover;');
                     el.appendChild(img);
                 } else if (isInitialsDiv) {
                     if (el.id === 'topbarAvatarInitials') {
-                        // Keep container (status dot inside) — inject img, fix id/class
                         Array.from(el.childNodes).forEach(n => {
                             if (n.nodeType === Node.TEXT_NODE) n.remove();
                         });
-                        const img = document.createElement('img');
-                        img.src = avatarUrl; img.alt = name || '';
-                        img.id = 'topbarAvatarImg';
-                        img.className = 'profile-avatar-img';
-                        img.dataset.userId = uid;
-                        img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                        const img = makeAvatarImg(avatarUrl, name, uid,
+                            'width:100%;height:100%;border-radius:50%;object-fit:cover;',
+                            'profile-avatar-img', 'topbarAvatarImg');
                         el.insertBefore(img, el.firstChild);
                         el.id = ''; el.classList.add('profile-avatar--has-img');
                         el.removeAttribute('data-user-id');
-                    } else if (el.classList.contains('conv-avatar')) {
-                        // Conversation avatar in sidebar — use wire:ignore to prevent Livewire interference
-                        // Check if already converted to image
-                        const existingImg = el.querySelector('img');
-                        if (existingImg) {
-                            // Already an image, just update src
-                            existingImg.src = avatarUrl;
-                        } else {
-                            // Convert initials div to image by updating innerHTML
-                            el.innerHTML = '';
-                            const img = document.createElement('img');
-                            img.src = avatarUrl;
-                            img.alt = name || '';
-                            img.dataset.userId = uid;
-                            img.className = 'conv-avatar--img';
-                            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
-                            el.appendChild(img);
-                            el.classList.add('conv-avatar--has-img');
-                        }
                     } else {
-                        // Other avatar containers
-                        const img = document.createElement('img');
-                        img.src = avatarUrl; img.alt = name || '';
-                        img.dataset.userId = uid;
-                        img.id = el.id || '';
-                        if (el.classList.contains('pp-avatar-initials')) {
-                            img.className = 'pp-avatar-img';
-                            img.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;';
-                        } else {
-                            img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
-                        }
+                        const img = makeAvatarImg(avatarUrl, name, uid,
+                            el.classList.contains('pp-avatar-initials')
+                                ? 'width:76px;height:76px;border-radius:50%;object-fit:cover;border:3px solid rgba(124,92,252,.5);box-shadow:0 0 0 4px rgba(124,92,252,.12),0 8px 28px rgba(0,0,0,.5);'
+                                : 'width:100%;height:100%;border-radius:50%;object-fit:cover;',
+                            el.classList.contains('pp-avatar-initials') ? 'pp-avatar-img' : '',
+                            el.id || '');
                         el.replaceWith(img);
                     }
+                }
+            });
+        } else {
+            /* ── avatarUrl is empty → avatar was REMOVED, revert to initials ── */
+            const initial  = (name || '?').charAt(0).toUpperCase();
+            const gradient = avatarGradient(uid);
+
+            /* Helper: build a styled initials div */
+            function makeInitialsDiv(cssText, extraClass, id) {
+                const d = document.createElement('div');
+                d.textContent      = initial;
+                d.dataset.userId   = uid;
+                d.style.cssText    = cssText;
+                if (extraClass) d.className = extraClass;
+                if (id)         d.id        = id;
+                return d;
+            }
+
+            /* 1a. Sidebar conversation avatars — targeted */
+            document.querySelectorAll(`.conv-item[data-user-id="${uid}"] .conv-avatar-btn`).forEach(btn => {
+                const existingImg = btn.querySelector('img.conv-avatar--img, img.conv-avatar');
+                const fallbackDiv = btn.querySelector('div.conv-avatar');
+                if (existingImg) {
+                    existingImg.style.display = 'none';
+                    if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                }
+            });
+
+            /* 1b. All <img> avatars with this uid → swap with initials div */
+            document.querySelectorAll(`img[data-user-id="${uid}"]`).forEach(img => {
+                // Skip sidebar conv avatars — handled above
+                if (img.closest('.conv-avatar-btn')) return;
+                if (!img.classList.contains('profile-avatar-img') &&
+                    !img.classList.contains('pp-avatar-img') &&
+                    !img.classList.contains('msg-avatar-img') &&
+                    !img.classList.contains('conv-avatar--img') &&
+                    img.id !== 'topbarAvatarImg' &&
+                    img.id !== 'avatarPreviewImg') return;
+
+                /* chat-header-avatar – clear its contents and set initials */
+                const headerAvatar = img.closest('.chat-header-avatar');
+                if (headerAvatar) {
+                    headerAvatar.innerHTML = '';
+                    const d = document.createElement('div');
+                    d.textContent = initial;
+                    d.dataset.userId = uid;
+                    d.style.cssText = `width:100%;height:100%;border-radius:50%;background:${gradient};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;color:#fff;`;
+                    headerAvatar.appendChild(d);
+                    return;
+                }
+
+                /* Topbar avatar */
+                if (img.id === 'topbarAvatarImg') {
+                    const wrap = img.closest('.profile-avatar');
+                    if (wrap) {
+                        img.remove();
+                        wrap.id = 'topbarAvatarInitials';
+                        wrap.dataset.userId = uid;
+                        wrap.classList.remove('profile-avatar--has-img');
+                        // Set initials text (leave status dot in place)
+                        const text = document.createTextNode(initial);
+                        wrap.insertBefore(text, wrap.firstChild);
+                        wrap.style.background = gradient;
+                    }
+                    return;
+                }
+
+                /* Profile panel preview */
+                if (img.classList.contains('pp-avatar-img') || img.id === 'avatarPreviewImg') {
+                    const d = makeInitialsDiv(
+                        `width:76px;height:76px;border-radius:50%;background:${gradient};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.6rem;color:#fff;border:3px solid rgba(124,92,252,.5);box-shadow:0 0 0 4px rgba(124,92,252,.12),0 8px 28px rgba(0,0,0,.5);`,
+                        'pp-avatar-initials',
+                        'avatarPreviewImg'
+                    );
+                    img.replaceWith(d);
+                    return;
+                }
+
+                /* Sidebar conv-avatar img → initials div */
+                if (img.classList.contains('conv-avatar--img')) {
+                    const wrap = img.closest('.conv-avatar');
+                    if (wrap) {
+                        wrap.innerHTML = initial;
+                        wrap.dataset.userId = uid;
+                        wrap.classList.remove('conv-avatar--has-img');
+                        wrap.style.background = gradient;
+                    } else {
+                        const d = makeInitialsDiv(
+                            `display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:${gradient};color:#fff;font-weight:700;font-size:.95rem;`,
+                            'conv-avatar',
+                            ''
+                        );
+                        img.replaceWith(d);
+                    }
+                    return;
+                }
+
+                /* Message bubble avatar */
+                if (img.classList.contains('msg-avatar-img')) {
+                    const d = document.createElement('div');
+                    d.textContent = initial;
+                    d.dataset.userId = uid;
+                    d.style.cssText = `display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${gradient};color:#fff;font-size:.8rem;font-weight:700;flex-shrink:0;`;
+                    img.replaceWith(d);
+                    return;
+                }
+            });
+
+            /* 1b. Already-initials divs that somehow still have stale img inside */
+            document.querySelectorAll(`.conv-avatar[data-user-id="${uid}"] img`).forEach(img => {
+                const wrap = img.closest('.conv-avatar');
+                if (wrap) {
+                    wrap.innerHTML = initial;
+                    wrap.classList.remove('conv-avatar--has-img');
+                    wrap.style.background = gradient;
                 }
             });
         }
@@ -570,7 +805,7 @@
                 const upcQuoteEl     = document.getElementById('upcQuote');
                 if (upcStatusDot)   { upcStatusDot.style.background = color; }
                 if (upcStatusLabel) { upcStatusLabel.textContent = label; upcStatusLabel.style.color = color; }
-                if (upcStatusRing)  { upcStatusRing.style.borderColor = color; }
+                if (upcStatusRing)  { upcStatusRing.style.background = color; upcStatusRing.style.boxShadow = `0 0 8px ${color}`; }
                 if (upcQuoteEl && statusQuote !== undefined) {
                     if (statusQuote) {
                         upcQuoteEl.textContent = statusQuote;
@@ -579,40 +814,79 @@
                         upcQuoteEl.style.display = 'none';
                     }
                 }
+                // Update UPC avatar
+                const upcAvatarImg  = document.getElementById('upcAvatarImg');
+                const upcAvatarWrap = document.getElementById('upcAvatar');
+                if (avatarUrl) {
+                    if (upcAvatarImg) {
+                        upcAvatarImg.src = avatarUrl;
+                        upcAvatarImg.style.display = 'block';
+                    }
+                } else {
+                    // Avatar removed — show initials in UPC modal
+                    if (upcAvatarWrap) {
+                        const initial  = (name || '?').charAt(0).toUpperCase();
+                        const gradient = avatarGradient(uid);
+                        upcAvatarWrap.innerHTML = `<div class="upc-avatar-initials" style="background:${gradient};">${initial}</div>`;
+                    }
+                }
             }
         }
 
         /* 5. MY own topbar + panel elements */
         if (isMe) {
-            // ── Topbar avatar first-time upload ───────────────────────────
+            // ── Topbar avatar ──────────────────────────────────────────────
             if (avatarUrl) {
+                // Upload / new avatar
                 const initialsDiv = document.getElementById('topbarAvatarInitials');
                 if (initialsDiv) {
                     Array.from(initialsDiv.childNodes).forEach(n => {
                         if (n.nodeType === Node.TEXT_NODE) n.remove();
                     });
-                    const img = document.createElement('img');
-                    img.src = avatarUrl; img.alt = name || '';
-                    img.id = 'topbarAvatarImg'; img.className = 'profile-avatar-img';
-                    img.dataset.userId = uid;
-                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                    const img = makeAvatarImg(avatarUrl, name, uid,
+                        'width:100%;height:100%;border-radius:50%;object-fit:cover;',
+                        'profile-avatar-img', 'topbarAvatarImg');
                     initialsDiv.insertBefore(img, initialsDiv.firstChild);
                     initialsDiv.id = ''; initialsDiv.classList.add('profile-avatar--has-img');
                     initialsDiv.removeAttribute('data-user-id');
                 }
 
                 // ── Nav-rail bottom-left avatar ───────────────────────────
-                const navRailImg = document.getElementById('navRailAvatarImg');
+                const navRailImg      = document.getElementById('navRailAvatarImg');
                 const navRailInitials = document.getElementById('navRailAvatarInitials');
                 if (navRailImg) {
                     navRailImg.src = avatarUrl;
                 } else if (navRailInitials) {
-                    // First upload — replace initials span with img
-                    const img = document.createElement('img');
-                    img.src = avatarUrl; img.alt = name || '';
-                    img.id = 'navRailAvatarImg';
-                    img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
+                    const img = makeAvatarImg(avatarUrl, name, uid,
+                        'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;',
+                        '', 'navRailAvatarImg');
                     navRailInitials.replaceWith(img);
+                }
+            } else {
+                // Avatar REMOVED — revert topbar to initials
+                const topbarImg = document.getElementById('topbarAvatarImg');
+                if (topbarImg) {
+                    const wrap = topbarImg.closest('.profile-avatar');
+                    if (wrap) {
+                        topbarImg.remove();
+                        wrap.id = 'topbarAvatarInitials';
+                        wrap.dataset.userId = uid;
+                        wrap.classList.remove('profile-avatar--has-img');
+                        wrap.style.background = avatarGradient(uid);
+                        const text = document.createTextNode((name || '?').charAt(0).toUpperCase());
+                        wrap.insertBefore(text, wrap.firstChild);
+                    }
+                }
+
+                // Nav-rail avatar removal
+                const navRailImg = document.getElementById('navRailAvatarImg');
+                if (navRailImg) {
+                    const initial   = (name || '?').charAt(0).toUpperCase();
+                    const initSpan  = document.createElement('span');
+                    initSpan.id          = 'navRailAvatarInitials';
+                    initSpan.textContent = initial;
+                    initSpan.style.cssText = `display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:${avatarGradient(uid)};color:#fff;font-weight:700;font-size:.9rem;`;
+                    navRailImg.replaceWith(initSpan);
                 }
             }
 
@@ -711,6 +985,15 @@
                     }, 10);
                 }
             });
+
+            // Reset scroll button state on conversation switch
+            _unreadBelowCount = 0;
+            const btn   = document.getElementById('scrollToBottomBtn');
+            const badge = document.getElementById('scrollToBottomBadge');
+            if (btn)   btn.style.display = 'none';
+            if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+            // Re-init observer for the freshly loaded message list
+            initScrollToBottomObserver();
         });
         
         Livewire.on('message-sent', () => {
@@ -1073,7 +1356,16 @@
                         const component = getChatComponent();
                         if (component) {
                             component.call('appendMessage', event.message);
-                            setTimeout(() => scrollToBottom(true), 150);
+                            // If user is near bottom, scroll down; otherwise show badge
+                            const container = document.getElementById('messages-container');
+                            const distFromBottom = container
+                                ? container.scrollHeight - container.scrollTop - container.clientHeight
+                                : 0;
+                            if (distFromBottom > 120) {
+                                notifyScrollButtonNewMessage();
+                            } else {
+                                setTimeout(() => scrollToBottom(true), 150);
+                            }
                         }
                         // Also update sidebar preview immediately (don't wait for Livewire re-render)
                         updateSidebarForNewMessage(event.message);
@@ -3119,6 +3411,48 @@
             document.querySelectorAll('img[data-user-id], img.conv-avatar--img, img.msg-avatar-img').forEach(img => {
                 if (!img.onerror) img.onerror = () => replaceBrokenAvatar(img);
             });
+
+            // Fix corrupted sidebar avatars: .conv-avatar-btn should have either
+            // img.conv-avatar--img (visible) + div.conv-avatar (hidden), or just div.conv-avatar.
+            // If neither pattern matches (e.g. old JS left a stale img inside a div.conv-avatar),
+            // restore the correct structure from the parent .conv-item data attributes.
+            document.querySelectorAll('.conv-item').forEach(item => {
+                const btn      = item.querySelector('.conv-avatar-btn');
+                if (!btn) return;
+
+                const uid      = item.dataset.userId;
+                const gradient = item.dataset.userAvatarGradient || 'linear-gradient(135deg,#7c5cfc,#38d9c0)';
+                const nameEl   = item.querySelector('.conv-name');
+                const initial  = nameEl ? nameEl.textContent.trim().charAt(0).toUpperCase() : '?';
+
+                // Look for the img that was blade-rendered (not JS-injected into wrong place)
+                const bladeImg = btn.querySelector('img.conv-avatar--img, img.conv-avatar');
+                const fallback = btn.querySelector('div.conv-avatar');
+
+                if (bladeImg) {
+                    // Blade img exists — ensure it's visible and fallback is hidden
+                    bladeImg.style.display = '';
+                    if (fallback) fallback.style.display = 'none';
+                    // Attach onerror if missing
+                    if (!bladeImg.onerror) {
+                        bladeImg.onerror = function () {
+                            this.onerror = null;
+                            this.style.display = 'none';
+                            if (fallback) fallback.style.display = 'flex';
+                        };
+                    }
+                } else if (fallback) {
+                    // Only fallback div — check if it has a stale injected img inside it
+                    const staleImg = fallback.querySelector('img');
+                    if (staleImg) {
+                        // Remove the stale img, show the initials
+                        staleImg.remove();
+                        fallback.textContent = initial;
+                        fallback.style.background = gradient;
+                        fallback.style.display = 'flex';
+                    }
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', attachFallbacks);
@@ -3143,6 +3477,28 @@
 
         // Close all other open menus first
         document.querySelectorAll('.conv-menu').forEach(m => {
+            if (m !== menu) m.style.display = 'none';
+        });
+
+        // Toggle current menu
+        const isVisible = menu.style.display !== 'none';
+        menu.style.display = isVisible ? 'none' : 'block';
+    };
+
+    /**
+     * Toggle chat header menu (3-dot in chat header)
+     */
+    window._toggleChatHeaderMenu = function(conversationId) {
+        const menu = document.getElementById(`chat-header-menu-${conversationId}`);
+        if (!menu) return;
+
+        // Close all conversation menus
+        document.querySelectorAll('.conv-menu').forEach(m => {
+            m.style.display = 'none';
+        });
+
+        // Close other header menus (if any)
+        document.querySelectorAll('.chat-header-menu').forEach(m => {
             if (m !== menu) m.style.display = 'none';
         });
 
@@ -3192,9 +3548,15 @@
      * Close all conversation menus when clicking outside
      */
     document.addEventListener('click', (e) => {
-        // Check if click is outside all conv-menu and conv-menu-btn elements
-        if (!e.target.closest('.conv-menu') && !e.target.closest('.conv-menu-btn')) {
+        // Check if click is outside all conv-menu, conv-menu-btn, chat-header-menu, and menu buttons
+        if (!e.target.closest('.conv-menu') && 
+            !e.target.closest('.conv-menu-btn') &&
+            !e.target.closest('.chat-header-menu') &&
+            !e.target.closest('#chatHeaderMenuBtn')) {
             document.querySelectorAll('.conv-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+            document.querySelectorAll('.chat-header-menu').forEach(menu => {
                 menu.style.display = 'none';
             });
         }
@@ -3209,6 +3571,10 @@
             if (conversationId) {
                 const menu = document.getElementById(`conv-menu-${conversationId}`);
                 if (menu) menu.style.display = 'none';
+                
+                // Also close chat header menu if it exists
+                const headerMenu = document.getElementById(`chat-header-menu-${conversationId}`);
+                if (headerMenu) headerMenu.style.display = 'none';
             }
         });
     });
@@ -3466,3 +3832,193 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR RESIZE + COLLAPSE  (Teams-style)
+══════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    /* ── Constants ─────────────────────────────────────── */
+    const MIN_WIDTH       = 200;   // px — minimum before collapse triggers
+    const MAX_WIDTH       = 600;   // px — maximum width
+    const DEFAULT_WIDTH   = 300;   // px — double-click reset
+    const COLLAPSE_THRESH = 160;   // px — drag below this → collapse
+    const STORAGE_KEY     = 'baseline-chat-sidebar-width';
+    const COLLAPSED_KEY   = 'baseline-chat-sidebar-collapsed';
+
+    /* ── State ─────────────────────────────────────────── */
+    let isResizing   = false;
+    let startX       = 0;
+    let startWidth   = 0;
+    let isCollapsed  = false;
+    let preCollapseW = DEFAULT_WIDTH; // width to restore when expanding
+
+    /* ── Helpers ────────────────────────────────────────── */
+    function setSidebarWidth(w) {
+        document.documentElement.style.setProperty('--sidebar-w', w + 'px');
+    }
+
+    function collapseIcon(svg) {
+        // Point right (›) when collapsed — click to expand
+        svg.innerHTML = '<polyline points="9 18 15 12 9 6" />';
+    }
+
+    function expandIcon(svg) {
+        // Point left (‹) when expanded — drag/click collapses
+        svg.innerHTML = '<polyline points="15 18 9 12 15 6" />';
+    }
+
+    function collapse() {
+        const sidebar = document.getElementById('teamsSidebar');
+        const handle  = document.getElementById('sidebarResizeHandle');
+        const icon    = document.getElementById('resizeHandleIcon');
+        if (!sidebar || !handle) return;
+
+        isCollapsed = true;
+        sidebar.classList.add('sidebar-collapsed');
+        handle.classList.add('sidebar-handle-collapsed');
+        handle.title = 'Expand sidebar';
+        if (icon) collapseIcon(icon);
+
+        // Persist
+        localStorage.setItem(COLLAPSED_KEY, '1');
+        localStorage.setItem(STORAGE_KEY, String(preCollapseW));
+    }
+
+    function expand(width) {
+        const sidebar = document.getElementById('teamsSidebar');
+        const handle  = document.getElementById('sidebarResizeHandle');
+        const icon    = document.getElementById('resizeHandleIcon');
+        if (!sidebar || !handle) return;
+
+        const w = width || preCollapseW || DEFAULT_WIDTH;
+        isCollapsed = false;
+
+        // Remove collapsed classes before restoring width
+        sidebar.classList.remove('sidebar-collapsed');
+        handle.classList.remove('sidebar-handle-collapsed');
+        handle.title = 'Drag to resize';
+        if (icon) expandIcon(icon);
+
+        setSidebarWidth(w);
+        // Persist
+        localStorage.removeItem(COLLAPSED_KEY);
+        localStorage.setItem(STORAGE_KEY, String(w));
+    }
+
+    /* ── Init ───────────────────────────────────────────── */
+    function initSidebarResize() {
+        const handle  = document.getElementById('sidebarResizeHandle');
+        const sidebar = document.getElementById('teamsSidebar');
+        if (!handle || !sidebar) return;
+
+        // Guard against double-init
+        if (handle._sidebarResizeInit) return;
+        handle._sidebarResizeInit = true;
+
+        /* ── Restore persisted state ── */
+        const savedCollapsed = localStorage.getItem(COLLAPSED_KEY) === '1';
+        const savedWidth     = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+
+        if (savedWidth >= MIN_WIDTH && savedWidth <= MAX_WIDTH) {
+            preCollapseW = savedWidth;
+        }
+
+        if (savedCollapsed) {
+            // Apply immediately without animation
+            sidebar.style.transition = 'none';
+            handle.style.transition  = 'none';
+            collapse();
+            requestAnimationFrame(() => {
+                sidebar.style.transition = '';
+                handle.style.transition  = '';
+            });
+        } else if (savedWidth >= MIN_WIDTH) {
+            setSidebarWidth(savedWidth);
+        }
+
+        /* ── Mouse down ─────────────────────────────────── */
+        handle.addEventListener('mousedown', (e) => {
+            // If collapsed: single click expands, no drag needed
+            if (isCollapsed) {
+                expand();
+                return;
+            }
+
+            e.preventDefault();
+            isResizing  = true;
+            startX      = e.clientX;
+            startWidth  = sidebar.offsetWidth;
+            preCollapseW = startWidth;
+
+            document.body.classList.add('sidebar-resizing');
+            handle.classList.add('resizing');
+        });
+
+        /* ── Mouse move ─────────────────────────────────── */
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const delta    = e.clientX - startX;
+            const newWidth = startWidth + delta;
+
+            if (newWidth < COLLAPSE_THRESH) {
+                // Give a live preview — shrink sidebar as drag approaches threshold
+                const clamped = Math.max(newWidth, 0);
+                setSidebarWidth(clamped);
+            } else if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+                setSidebarWidth(newWidth);
+            }
+        });
+
+        /* ── Mouse up ───────────────────────────────────── */
+        document.addEventListener('mouseup', (e) => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            document.body.classList.remove('sidebar-resizing');
+            handle.classList.remove('resizing');
+
+            const delta    = e.clientX - startX;
+            const newWidth = startWidth + delta;
+
+            if (newWidth < COLLAPSE_THRESH) {
+                // Snap to collapsed
+                preCollapseW = startWidth; // remember the width before collapse
+                collapse();
+            } else {
+                // Stay at current width, clamp to valid range
+                const clamped = Math.min(Math.max(newWidth, MIN_WIDTH), MAX_WIDTH);
+                preCollapseW  = clamped;
+                setSidebarWidth(clamped);
+                localStorage.setItem(STORAGE_KEY, String(clamped));
+            }
+        });
+
+        /* ── Double-click: reset to default ─────────────── */
+        handle.addEventListener('dblclick', () => {
+            if (isCollapsed) {
+                expand(DEFAULT_WIDTH);
+            } else {
+                preCollapseW = DEFAULT_WIDTH;
+                expand(DEFAULT_WIDTH);
+            }
+        });
+    }
+
+    /* ── Bootstrap ─────────────────────────────────────── */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSidebarResize);
+    } else {
+        initSidebarResize();
+    }
+
+    // Re-run after Livewire page navigations
+    document.addEventListener('livewire:navigated', () => {
+        const handle = document.getElementById('sidebarResizeHandle');
+        if (handle) delete handle._sidebarResizeInit;
+        initSidebarResize();
+    });
+})();
