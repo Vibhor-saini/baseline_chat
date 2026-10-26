@@ -27,7 +27,7 @@
         <svg class="search-icon global-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search peopleâ€¦"
+        <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search people…"
                class="global-search-input" id="globalSearchInput" autocomplete="off"
                aria-label="Search people" aria-autocomplete="list" aria-controls="globalSearchResults"
                aria-expanded="{{ !empty($searchResults) ? 'true' : 'false' }}">
@@ -230,7 +230,7 @@
       </svg>
       <input type="text" 
              wire:model.live.debounce.300ms="conversationSearch" 
-             placeholder="Search conversationsâ€¦"
+             placeholder="Search conversations…"
              class="sidebar-search-input" 
              autocomplete="off"
              aria-label="Search conversations">
@@ -1025,8 +1025,8 @@
             </svg>
           </div>
           <div class="teams-upload-info">
-            <span class="teams-upload-name" id="teamsUploadName">â€¦</span>
-            <span class="teams-upload-sub" id="teamsUploadSub">Uploadingâ€¦</span>
+            <span class="teams-upload-name" id="teamsUploadName">…</span>
+            <span class="teams-upload-sub" id="teamsUploadSub">Uploading…</span>
           </div>
           <button type="button" class="teams-upload-remove" id="teamsUploadRemoveUploading" title="Cancel" aria-label="Cancel upload">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1070,7 +1070,7 @@
 
           {{-- Text input (textarea for multiline: Shift+Enter = newline, Enter = send) --}}
           <textarea wire:model="body"
-                    placeholder="Type a messageâ€¦"
+                    placeholder="Type a message…"
                     class="message-input"
                     id="messageInput"
                     autocomplete="off"
@@ -1318,7 +1318,7 @@
                     wire:loading.attr="disabled">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
               <span wire:loading.remove wire:target="acceptRequest({{ $selectedRequest->id }})">Accept</span>
-              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">Acceptingâ€¦</span>
+              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">Accepting…</span>
             </button>
             <button wire:click="rejectRequest({{ $selectedRequest->id }})"
                     class="rpc-btn rpc-btn--decline"
@@ -1397,7 +1397,7 @@
       <input type="text"
              id="msgSearchInput"
              class="fic-search-input"
-             placeholder="Enter a search keywordâ€¦"
+             placeholder="Enter a search keyword…"
              autocomplete="off"
              aria-label="Search messages">
       <button type="button" class="fic-clear-btn" id="ficClearBtn" style="display:none" aria-label="Clear">Clear</button>
@@ -1687,7 +1687,7 @@
   <div class="pdf-body">
     <div class="pdf-loading" id="pdfLoading">
       <div class="pdf-spinner"></div>
-      <span>Loading PDFâ€¦</span>
+      <span>Loading PDF…</span>
     </div>
     <iframe id="pdfFrame" class="pdf-frame" src="" title="PDF viewer" allowfullscreen></iframe>
   </div>
@@ -1760,7 +1760,7 @@
   {{-- Search --}}
   <div class="mep-search-wrap">
     <input type="text" id="msgEmojiSearch" class="mep-search"
-           placeholder="Search emojiâ€¦" autocomplete="off" aria-label="Search emoji">
+           placeholder="Search emoji…" autocomplete="off" aria-label="Search emoji">
     <svg class="mep-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
