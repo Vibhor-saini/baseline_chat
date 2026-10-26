@@ -293,20 +293,19 @@ class Index extends Component
         }
 
         // Post-process: Hide latestMessage if it's before the user's deletion point
-        foreach (array_merge($this->favorites, $this->conversations) as $conv) {
-            // Check if this conversation was deleted by user
-            $deletionRecord = DB::table('conversation_user')
-                ->where('conversation_id', $conv->id)
-                ->where('user_id', $userId)
-                ->whereNotNull('last_seen_message_id')
-                ->first();
+        // Single bulk query instead of one query per conversation (fixes N+1)
+        $allConvIds   = array_column(array_merge($this->favorites, $this->conversations), 'id');
+        $deletionMap  = DB::table('conversation_user')
+            ->where('user_id', $userId)
+            ->whereIn('conversation_id', $allConvIds)
+            ->whereNotNull('last_seen_message_id')
+            ->pluck('last_seen_message_id', 'conversation_id')
+            ->all();
 
-            // If deleted and latest message is old (before deletion), hide it
-            if ($deletionRecord && $conv->latestMessage) {
-                if ($conv->latestMessage->id <= $deletionRecord->last_seen_message_id) {
-                    // This message is from before deletion - hide it
-                    $conv->setRelation('latestMessage', null);
-                }
+        foreach (array_merge($this->favorites, $this->conversations) as $conv) {
+            $lastSeenId = $deletionMap[$conv->id] ?? null;
+            if ($lastSeenId && $conv->latestMessage && $conv->latestMessage->id <= $lastSeenId) {
+                $conv->setRelation('latestMessage', null);
             }
         }
     }
@@ -1364,8 +1363,9 @@ class Index extends Component
                 ],
             ]);
 
-            $mime = $this->attachment->getMimeType();
-            $type = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            $mime     = $this->attachment->getMimeType();
+            $type     = str_starts_with($mime, 'image/') ? 'image' : 'file';
+            $origName = $this->attachment->getClientOriginalName();
 
             $filePath         = $this->attachment->store('chat-files', 'public');
             $this->attachment = null;
@@ -1377,6 +1377,7 @@ class Index extends Component
             'body'            => trim($this->body),
             'type'            => $type,
             'file_path'       => $filePath,
+            'file_name'       => $origName ?? null,
             'reply_to_id'     => $this->replyingToMessageId,
         ]);
 
@@ -1462,6 +1463,7 @@ class Index extends Component
 
         $mime     = $this->dropAttachment->getMimeType();
         $type     = str_starts_with($mime, 'image/') ? 'image' : 'file';
+        $origName = $this->dropAttachment->getClientOriginalName();
         $filePath = $this->dropAttachment->store('chat-files', 'public');
         $this->dropAttachment = null;
 
@@ -1471,6 +1473,7 @@ class Index extends Component
             'body'            => '',
             'type'            => $type,
             'file_path'       => $filePath,
+            'file_name'       => $origName,
             'reply_to_id'     => null,
         ]);
 
@@ -2124,6 +2127,73 @@ class Index extends Component
 
         $this->loadConversations();
         $this->closeForwardModal();
+    }
+
+    /**
+     * Forward a specific message directly to a conversation by drag-and-drop.
+     * No modal — called directly from JS when user drops a message bubble onto a sidebar conv.
+     */
+    public function forwardMessageDirect(int $messageId, int $targetConversationId): void
+    {
+        $authId = auth()->id();
+
+        $original = Message::withTrashed()->find($messageId);
+        if (! $original) return;
+
+        // Verify source conversation access
+        abort_unless(
+            Conversation::where('id', $original->conversation_id)
+                ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+                ->exists(),
+            403
+        );
+
+        // Verify target conversation access
+        $targetConv = Conversation::where('id', $targetConversationId)
+            ->where('status', 'accepted')
+            ->where(fn($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->first();
+
+        if (! $targetConv) {
+            $this->dispatch('drop-send-error', message: 'Conversation not found.');
+            return;
+        }
+
+        $newMessage = Message::create([
+            'conversation_id'   => $targetConv->id,
+            'sender_id'         => $authId,
+            'body'              => $original->deleted_at ? '' : ($original->body ?? ''),
+            'type'              => $original->deleted_at ? 'text' : $original->type,
+            'file_path'         => $original->deleted_at ? null : $original->file_path,
+            'forwarded_from_id' => $original->id,
+        ]);
+
+        $newMessage->load('sender', 'forwardedFrom.sender');
+        $targetConv->update(['last_message_at' => now()]);
+
+        // Un-delete for recipient
+        $recipientId = $targetConv->user_one_id === $authId
+            ? $targetConv->user_two_id
+            : $targetConv->user_one_id;
+        DB::table('conversation_user')
+            ->where('conversation_id', $targetConv->id)
+            ->where('user_id', $recipientId)
+            ->where('is_deleted', true)
+            ->update(['is_deleted' => false, 'deleted_at' => null]);
+
+        if ((int) $targetConv->id === (int) $this->selectedConversationId) {
+            $this->messages[] = $newMessage;
+            $this->dispatch('message-sent');
+        }
+
+        $this->loadConversations();
+        broadcast(new MessageSent($newMessage))->toOthers();
+
+        $this->dispatch('drop-send-success',
+            conversationId: $targetConv->id,
+            fileName: $original->type !== 'text' ? basename($original->file_path ?? '') : '',
+            fileType: $original->type
+        );
     }
 
     /*

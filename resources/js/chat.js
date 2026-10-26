@@ -4401,3 +4401,311 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 })();
+
+
+/* ══════════════════════════════════════════════════════
+   DRAG-AND-DROP FILE SENDING
+   Two modes:
+   A) OS file  → drag from desktop/explorer → drop on sidebar conv-item → upload & send
+   B) Msg bubble → drag from chat window   → drop on sidebar conv-item → forward message
+══════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    /* ── State ─────────────────────────────────────────── */
+    let _ddFile      = null;   // File object (mode A)
+    let _ddMsgId     = null;   // message id  (mode B)
+    let _ddMsgType   = null;   // message type (mode B)
+    let _ddOverItem  = null;   // currently highlighted conv-item
+    let _isOsDrag    = false;  // true = OS file drag entering the window
+    let _isMsgDrag   = false;  // true = message bubble drag
+    let _enterCount  = 0;      // tracks nested dragenter/dragleave on window
+
+    /* ── DOM helpers ────────────────────────────────────── */
+    function overlay()  { return document.getElementById('ddGhostOverlay'); }
+    function toastCont(){ return document.getElementById('ddToastContainer'); }
+
+    /* ── Ghost overlay ──────────────────────────────────── */
+    function showOverlay(fileName, isImage) {
+        const ov    = overlay(); if (!ov) return;
+        const icon  = document.getElementById('ddGhostIcon');
+        const name  = document.getElementById('ddGhostName');
+        const hint  = document.getElementById('ddGhostHint');
+        if (name) name.textContent = fileName || 'file';
+        if (hint) hint.textContent = 'Drop on a conversation to send';
+        if (icon) {
+            icon.style.color = isImage ? '#a78bfa' : '#7c5cfc';
+            icon.innerHTML = isImage
+                ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`
+                : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+        }
+        ov.classList.add('dd-overlay--visible');
+    }
+
+    function updateOverlayTarget(convName) {
+        const hint = document.getElementById('ddGhostHint');
+        if (!hint) return;
+        hint.textContent = '';
+        if (convName) {
+            const span = document.createElement('span');
+            span.className   = 'dd-ghost-hint--target';
+            span.textContent = `→ ${convName}`;
+            hint.appendChild(span);
+        } else {
+            hint.textContent = 'Drop on a conversation to send';
+        }
+    }
+
+    function hideOverlay() {
+        const ov = overlay();
+        if (ov) ov.classList.remove('dd-overlay--visible');
+    }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    function showToast(msg, type /* 'success'|'error'|'uploading' */, duration = 3000) {
+        const c = toastCont(); if (!c) return;
+        const t = document.createElement('div');
+        t.className = `dd-toast dd-toast--${type}`;
+
+        const iconEl = document.createElement('span');
+        iconEl.setAttribute('aria-hidden', 'true');
+        if (type === 'uploading') {
+            iconEl.className = 'dd-toast-spinner';
+        } else {
+            iconEl.innerHTML = type === 'success'
+                ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+                : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+        }
+
+        const textEl = document.createElement('span');
+        textEl.textContent = msg;   // textContent — no XSS
+
+        t.appendChild(iconEl);
+        t.appendChild(textEl);
+        c.appendChild(t);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                t.classList.add('dd-toast--leaving');
+                setTimeout(() => t.remove(), 220);
+            }, duration);
+        }
+        return t;
+    }
+
+    /* ── Highlight conv-item on hover ────────────────────── */
+    function highlightItem(item) {
+        if (_ddOverItem && _ddOverItem !== item) unhighlightItem(_ddOverItem);
+        if (item) {
+            item.classList.add('dd-over');
+            const name = item.querySelector('.conv-name')?.textContent?.trim() || '';
+            updateOverlayTarget(name);
+            _ddOverItem = item;
+        }
+    }
+
+    function unhighlightItem(item) {
+        if (item) item.classList.remove('dd-over');
+        if (_ddOverItem === item) _ddOverItem = null;
+    }
+
+    function clearAll() {
+        if (_ddOverItem) unhighlightItem(_ddOverItem);
+        document.querySelectorAll('.conv-item.dd-over').forEach(el => el.classList.remove('dd-over'));
+        hideOverlay();
+        document.body.classList.remove('dd-dragging-file');
+        _isOsDrag   = false;
+        _isMsgDrag  = false;
+        _ddFile     = null;
+        _ddMsgId    = null;
+        _ddMsgType  = null;
+        _enterCount = 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MODE A — OS FILE drag into browser window
+    ═══════════════════════════════════════════════════════ */
+
+    // Track when a file from OS enters the browser window
+    window.addEventListener('dragenter', (e) => {
+        if (!e.dataTransfer?.types?.includes('Files')) return;
+        _enterCount++;
+        if (_enterCount === 1) {
+            _isOsDrag = true;
+            _isMsgDrag = false;
+            document.body.classList.add('dd-dragging-file');
+            const file = e.dataTransfer.items?.[0];
+            const isImg = file?.type?.startsWith('image/') || false;
+            const name  = ''; // can't read filename on dragenter for security
+            showOverlay('file', isImg);
+        }
+    }, true);
+
+    window.addEventListener('dragleave', (e) => {
+        if (!_isOsDrag) return;
+        _enterCount--;
+        if (_enterCount <= 0) {
+            clearAll();
+        }
+    }, true);
+
+    window.addEventListener('dragover', (e) => {
+        if (!_isOsDrag) return;
+        e.preventDefault();
+    }, true);
+
+    window.addEventListener('drop', (e) => {
+        // Only handle actual OS file drops — guard against message bubble drops
+        if (!e.dataTransfer?.types?.includes('Files')) return;
+        if (!_isOsDrag) return;
+        e.preventDefault();
+        const file = e.dataTransfer.files?.[0];
+        if (!file) { clearAll(); return; }
+        _ddFile = file;
+        // Check if dropped on a conv-item
+        const item = e.target.closest('.conv-item[data-conv-id]');
+        clearAll();
+        if (item) handleOsFileDrop(file, item);
+    }, true);
+
+    async function handleOsFileDrop(file, convItem) {
+        const convId = parseInt(convItem.dataset.convId, 10);
+        if (!convId) return;
+
+        const convName = convItem.querySelector('.conv-name')?.textContent?.trim() || 'conversation';
+        const toastEl  = showToast(`Sending to ${convName}…`, 'uploading', 0);
+
+        try {
+            const $wire = window._getChatComponent();
+            if (!$wire) throw new Error('Component not found');
+
+            // Step 1: upload file to Livewire's temp storage via dropAttachment
+            await $wire.upload('dropAttachment', file, () => {}, () => { throw new Error('Upload failed'); });
+
+            // Step 2: call the Livewire method to store + send
+            await $wire.call('sendDroppedFile', convId);
+
+            if (toastEl) { toastEl.classList.add('dd-toast--leaving'); setTimeout(() => toastEl.remove(), 220); }
+            showToast(`Sent to ${convName}!`, 'success');
+
+        } catch (err) {
+            if (toastEl) { toastEl.classList.add('dd-toast--leaving'); setTimeout(() => toastEl.remove(), 220); }
+            showToast('Failed to send. Try again.', 'error');
+            console.error('[DD] OS file send failed:', err);
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MODE B — MESSAGE BUBBLE drag from chat → sidebar conv
+    ═══════════════════════════════════════════════════════ */
+
+    // Attach dragstart to message bubbles (delegated, works after Livewire re-renders)
+    document.addEventListener('dragstart', (e) => {
+        const bubble = e.target.closest('.msg-bubble[data-msg-id]');
+        if (!bubble) return;
+
+        // Don't interfere with conv-item reorder drag
+        if (e.target.closest('.conv-item[data-conv-id]')) return;
+
+        // Don't drag deleted message bubbles
+        if (bubble.classList.contains('bubble-deleted')) return;
+
+        const msgId   = bubble.dataset.msgId;
+        const msgType = bubble.dataset.msgType || 'text';
+
+        _ddMsgId   = msgId;
+        _ddMsgType = msgType;
+        _isMsgDrag = true;
+        _isOsDrag  = false;
+        document.body.classList.add('dd-dragging-file');
+
+        // Determine label
+        const isImg  = msgType === 'image';
+        const isFile = msgType === 'file';
+        const label  = isImg ? '📷 Image' : isFile ? '📎 File' : '💬 Message';
+        showOverlay(label, isImg);
+
+        // Blank drag ghost
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/plain', `msg:${msgId}`);
+            try {
+                const blank = document.createElement('canvas');
+                blank.width = 1; blank.height = 1;
+                e.dataTransfer.setDragImage(blank, 0, 0);
+            } catch (_) {}
+        }
+    });
+
+    document.addEventListener('dragend', (e) => {
+        if (!_isMsgDrag) return;
+        clearAll();
+    });
+
+    /* ── Sidebar conv-item hover during ANY drag ─────────── */
+    document.addEventListener('dragover', (e) => {
+        if (!_isOsDrag && !_isMsgDrag) return;
+        const item = e.target.closest('.conv-item[data-conv-id]');
+        if (item) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = _isOsDrag ? 'copy' : 'copy';
+            highlightItem(item);
+        } else {
+            if (_ddOverItem) unhighlightItem(_ddOverItem);
+            updateOverlayTarget('');
+        }
+    });
+
+    document.addEventListener('dragleave', (e) => {
+        if (!_isOsDrag && !_isMsgDrag) return;
+        const item = e.target.closest('.conv-item[data-conv-id]');
+        if (item && !item.contains(e.relatedTarget)) {
+            unhighlightItem(item);
+            updateOverlayTarget('');
+        }
+    });
+
+    document.addEventListener('drop', (e) => {
+        if (!_isMsgDrag) return;   // OS file drop handled by window listener above
+        const item = e.target.closest('.conv-item[data-conv-id]');
+        if (!item) { clearAll(); return; }
+        e.preventDefault();
+
+        const msgId  = _ddMsgId;
+        const convId = parseInt(item.dataset.convId, 10);
+        clearAll();
+
+        if (msgId && convId) handleMsgDrop(msgId, convId, item);
+    });
+
+    async function handleMsgDrop(msgId, convId, convItem) {
+        const convName = convItem.querySelector('.conv-name')?.textContent?.trim() || 'conversation';
+        const toastEl  = showToast(`Forwarding to ${convName}…`, 'uploading', 0);
+
+        try {
+            const $wire = window._getChatComponent();
+            if (!$wire) throw new Error('Component not found');
+
+            await $wire.call('forwardMessageDirect', parseInt(msgId, 10), convId);
+
+            if (toastEl) { toastEl.classList.add('dd-toast--leaving'); setTimeout(() => toastEl.remove(), 220); }
+            showToast(`Forwarded to ${convName}!`, 'success');
+
+        } catch (err) {
+            if (toastEl) { toastEl.classList.add('dd-toast--leaving'); setTimeout(() => toastEl.remove(), 220); }
+            showToast('Failed to forward. Try again.', 'error');
+            console.error('[DD] Message forward failed:', err);
+        }
+    }
+
+    /* ── Listen for Livewire success/error dispatches ─────── */
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('drop-send-success', ({ conversationId, fileName, fileType }) => {
+            // Toast already shown by handleOsFileDrop / handleMsgDrop
+        });
+        Livewire.on('drop-send-error', ({ message }) => {
+            showToast(message || 'Send failed.', 'error');
+        });
+    });
+
+})();

@@ -1,12 +1,12 @@
-{{-- resources/views/livewire/chat/index.blade.php --}}
+﻿{{-- resources/views/livewire/chat/index.blade.php --}}
 <div
     class="teams-chat-root"
     data-conversation="{{ $selectedConversationId }}"
     wire:key="chat-root">
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      TOP BAR
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div class="teams-topbar-wrapper">
   <div class="teams-topbar">
 
@@ -27,7 +27,7 @@
         <svg class="search-icon global-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search people…"
+        <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search peopleâ€¦"
                class="global-search-input" id="globalSearchInput" autocomplete="off"
                aria-label="Search people" aria-autocomplete="list" aria-controls="globalSearchResults"
                aria-expanded="{{ !empty($searchResults) ? 'true' : 'false' }}">
@@ -142,12 +142,12 @@
   </div>
 </div>
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      MAIN LAYOUT
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div class="teams-layout" id="teamsLayout">
 
-  {{-- ─────────────────── SIDEBAR ─────────────────── --}}
+  {{-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
   <aside class="teams-sidebar" id="teamsSidebar">
 
     <div class="sidebar-header">
@@ -230,7 +230,7 @@
       </svg>
       <input type="text" 
              wire:model.live.debounce.300ms="conversationSearch" 
-             placeholder="Search conversations…"
+             placeholder="Search conversationsâ€¦"
              class="sidebar-search-input" 
              autocomplete="off"
              aria-label="Search conversations">
@@ -322,7 +322,7 @@
 
   </aside>
 
-  {{-- ─────────────────── RESIZE HANDLE ─────────────────── --}}
+  {{-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RESIZE HANDLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
   <div class="sidebar-resize-handle" id="sidebarResizeHandle" aria-label="Resize sidebar" role="separator" aria-orientation="vertical">
     <div class="resize-handle-line">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="resize-handle-icon" id="resizeHandleIcon">
@@ -332,7 +332,7 @@
     </div>
   </div>
 
-  {{-- ─────────────────── DELETE CHAT CONFIRMATION MODAL ─────────────────── --}}
+  {{-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ DELETE CHAT CONFIRMATION MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
   <div class="delete-modal-overlay" id="deleteModalOverlay" style="display:none">
     <div class="delete-modal" role="dialog" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalDesc">
       <div class="delete-modal-header">
@@ -367,10 +367,10 @@
     </div>
   </div>
 
-  {{-- ─────────────────── MAIN PANEL ─────────────────── --}}
+  {{-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MAIN PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
   <main class="teams-main" id="teamsMain">
 
-    {{-- ══ ACTIVE CHAT ══ --}}
+    {{-- â•â• ACTIVE CHAT â•â• --}}
     @if($activeScreen === 'chat' && $selectedConversation)
 
       {{-- Chat Header --}}
@@ -458,7 +458,7 @@
       {{-- Messages Area --}}
       <div class="messages-area" id="messages-container" role="log" aria-live="polite" aria-label="Messages">
 
-        {{-- ── Load More sentinel — IntersectionObserver watches this ── --}}
+        {{-- â”€â”€ Load More sentinel â€” IntersectionObserver watches this â”€â”€ --}}
         <div id="load-more-sentinel" class="load-more-sentinel" aria-hidden="true"
              data-has-more="{{ $hasMoreMessages ? 'true' : 'false' }}">
           <div class="load-more-spinner" id="loadMoreSpinner" style="display:none">
@@ -483,7 +483,7 @@
           </div>
           <h3 class="conv-start-title">{{ $selectedConversation->otherUser()->name }}</h3>
           <p class="conv-start-subtitle">This is the start of your conversation</p>
-          <p class="conv-start-cta">Say hi to {{ $selectedConversation->otherUser()->name }}! 👋</p>
+          <p class="conv-start-cta">Say hi to {{ $selectedConversation->otherUser()->name }}! ðŸ‘‹</p>
         </div>
         @endif
 
@@ -507,7 +507,7 @@
             $prevMsgTime  = $message->created_at;
           @endphp
 
-          {{-- ── Date Separator ──────────────────────────────────── --}}
+          {{-- â”€â”€ Date Separator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
           @if($isNewDate)
             @php
               $today     = now()->toDateString();
@@ -557,7 +557,10 @@
               @endif
 
               {{-- Bubble --}}
-              <div class="msg-bubble {{ $isMine ? 'bubble-mine' : 'bubble-theirs' }} {{ $message->deleted_at ? 'bubble-deleted' : '' }}">
+              <div class="msg-bubble {{ $isMine ? 'bubble-mine' : 'bubble-theirs' }} {{ $message->deleted_at ? 'bubble-deleted' : '' }}"
+                   data-msg-id="{{ $message->id }}"
+                   data-msg-type="{{ $message->type }}"
+                   draggable="{{ $message->deleted_at ? 'false' : 'true' }}">
 
                 @if($message->deleted_at)
                   <span class="deleted-text">
@@ -567,7 +570,7 @@
 
                 @else
 
-                  {{-- ── Reply quote block ── --}}
+                  {{-- â”€â”€ Reply quote block â”€â”€ --}}
                   @if($message->reply_to_id && $message->replyTo)
                   <button type="button"
                           class="reply-quote {{ $isMine ? 'reply-quote--mine' : 'reply-quote--theirs' }}"
@@ -578,9 +581,9 @@
                       @if($message->replyTo->deleted_at)
                         <em>This message was deleted</em>
                       @elseif($message->replyTo->type === 'image')
-                        📷 Image
+                        ðŸ“· Image
                       @elseif($message->replyTo->type === 'file')
-                        📎 {{ $message->replyTo->fileName() }}
+                        ðŸ“Ž {{ $message->replyTo->fileName() }}
                       @else
                         {{ \Illuminate\Support\Str::limit($message->replyTo->body, 80) }}
                       @endif
@@ -588,7 +591,7 @@
                   </button>
                   @endif
 
-                  {{-- Forwarded card inside bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ --}}
+                  {{-- Forwarded card inside bubble Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ --}}
                   @if($message->forwarded_from_id && $message->forwardedFrom)
                   {{-- Optional text above the forwarded card.
                        For text messages: strip original body in case of legacy merged data.
@@ -720,7 +723,7 @@
 
                   @else
                     @if($editingMessageId === $message->id)
-                      {{-- ── Inline edit mode ── --}}
+                      {{-- â”€â”€ Inline edit mode â”€â”€ --}}
                       <div class="msg-edit-wrap" wire:key="edit-{{ $message->id }}">
                         <textarea
                           wire:model="editBody"
@@ -788,7 +791,7 @@
                 @endif
                 @endif
 
-                {{-- Timestamp + ticks — hidden by default, visible on hover via CSS --}}
+                {{-- Timestamp + ticks â€” hidden by default, visible on hover via CSS --}}
                 @if(!$message->deleted_at && $editingMessageId !== $message->id)
                 <span class="msg-time-wrap">
                   @if($message->edited_at)
@@ -809,7 +812,7 @@
 
               </div>{{-- /bubble --}}
 
-              {{-- ── Reaction pills ── --}}
+              {{-- â”€â”€ Reaction pills â”€â”€ --}}
               {{-- wire:ignore keeps Livewire's DOM morpher away from this container.
                    It is always managed exclusively by updateReactionsInDOM() in JS,
                    which is called both for real-time broadcasts AND for the sender's
@@ -839,16 +842,16 @@
                 @endif
               </div>
 
-              {{-- ── Teams-style message action bar (hover) ── --}}
+              {{-- â”€â”€ Teams-style message action bar (hover) â”€â”€ --}}
               @if(!$message->deleted_at && $editingMessageId !== $message->id)
               <div class="msg-actions {{ $isMine ? 'msg-actions--mine' : 'msg-actions--theirs' }}"
                    data-msg-id="{{ $message->id }}">
 
                 {{-- Quick-react emojis --}}
-                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="👍" title="👍 Thumbs up" aria-label="React with thumbs up">👍</button>
-                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="❤️" title="❤️ Heart"     aria-label="React with heart">❤️</button>
-                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="😆" title="😆 Haha"      aria-label="React with haha">😆</button>
-                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="😮" title="😮 Wow"       aria-label="React with wow">😮</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="ðŸ‘" title="ðŸ‘ Thumbs up" aria-label="React with thumbs up">ðŸ‘</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="â¤ï¸" title="â¤ï¸ Heart"     aria-label="React with heart">â¤ï¸</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="ðŸ˜†" title="ðŸ˜† Haha"      aria-label="React with haha">ðŸ˜†</button>
+                <button type="button" class="msg-action-btn msg-quick-react" data-emoji="ðŸ˜®" title="ðŸ˜® Wow"       aria-label="React with wow">ðŸ˜®</button>
 
                 {{-- Emoji picker trigger --}}
                 <button type="button" class="msg-action-btn msg-emoji-picker-btn"
@@ -1022,8 +1025,8 @@
             </svg>
           </div>
           <div class="teams-upload-info">
-            <span class="teams-upload-name" id="teamsUploadName">…</span>
-            <span class="teams-upload-sub" id="teamsUploadSub">Uploading…</span>
+            <span class="teams-upload-name" id="teamsUploadName">â€¦</span>
+            <span class="teams-upload-sub" id="teamsUploadSub">Uploadingâ€¦</span>
           </div>
           <button type="button" class="teams-upload-remove" id="teamsUploadRemoveUploading" title="Cancel" aria-label="Cancel upload">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1067,7 +1070,7 @@
 
           {{-- Text input (textarea for multiline: Shift+Enter = newline, Enter = send) --}}
           <textarea wire:model="body"
-                    placeholder="Type a message…"
+                    placeholder="Type a messageâ€¦"
                     class="message-input"
                     id="messageInput"
                     autocomplete="off"
@@ -1182,9 +1185,9 @@
                 <div class="file-name" title="{{ $file['name'] }}">{{ $file['name'] }}</div>
                 <div class="file-meta">
                   <span class="file-size">{{ $file['size_formatted'] }}</span>
-                  <span class="file-meta-sep">•</span>
+                  <span class="file-meta-sep">â€¢</span>
                   <span class="file-date">{{ $file['sent_at'] }}</span>
-                  <span class="file-meta-sep">•</span>
+                  <span class="file-meta-sep">â€¢</span>
                   <span class="file-sender">{{ $file['sender_name'] }}</span>
                 </div>
               </div>
@@ -1277,7 +1280,7 @@
       @endif
       {{-- End Photos Tab --}}
 
-    {{-- ══ INCOMING REQUEST PREVIEW ══ --}}
+    {{-- â•â• INCOMING REQUEST PREVIEW â•â• --}}
     @elseif($activeScreen === 'request-preview' && $selectedRequest)
       <div class="request-preview-screen">
         <div class="request-preview-card">
@@ -1315,7 +1318,7 @@
                     wire:loading.attr="disabled">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
               <span wire:loading.remove wire:target="acceptRequest({{ $selectedRequest->id }})">Accept</span>
-              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">Accepting…</span>
+              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">Acceptingâ€¦</span>
             </button>
             <button wire:click="rejectRequest({{ $selectedRequest->id }})"
                     class="rpc-btn rpc-btn--decline"
@@ -1327,7 +1330,7 @@
         </div>
       </div>
 
-    {{-- ══ SENT REQUESTS ══ --}}
+    {{-- â•â• SENT REQUESTS â•â• --}}
     @elseif($activeScreen === 'sent-requests')
       <div class="pending-page">
         <div class="pending-page-header">
@@ -1366,7 +1369,7 @@
         </div>
       </div>
 
-    {{-- ══ EMPTY STATE ══ --}}
+    {{-- â•â• EMPTY STATE â•â• --}}
     @else
       <div class="empty-state" role="status">
         <div class="empty-state-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
@@ -1377,7 +1380,7 @@
 
   </main>
 
-  {{-- ══ TEAMS-STYLE FIND IN CHAT PANEL ══ --}}
+  {{-- â•â• TEAMS-STYLE FIND IN CHAT PANEL â•â• --}}
   {{-- wire:ignore prevents Livewire morphing from wiping the fic-panel--open class --}}
   <div class="find-in-chat-panel" id="findInChatPanel" aria-hidden="true" role="complementary" aria-label="Find in chat" wire:ignore>
 
@@ -1394,14 +1397,14 @@
       <input type="text"
              id="msgSearchInput"
              class="fic-search-input"
-             placeholder="Enter a search keyword…"
+             placeholder="Enter a search keywordâ€¦"
              autocomplete="off"
              aria-label="Search messages">
       <button type="button" class="fic-clear-btn" id="ficClearBtn" style="display:none" aria-label="Clear">Clear</button>
       <svg class="fic-search-icon" id="ficSearchIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </div>
 
-    {{-- Results body — fully JS-managed --}}
+    {{-- Results body â€” fully JS-managed --}}
     <div class="fic-body" id="ficBody">
       <div class="fic-empty-state" id="ficEmptyState">
         <div class="fic-empty-icon">
@@ -1416,10 +1419,10 @@
 
 </div>
 
-{{-- ══════════════════════════════════════════════════════
 {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+{{-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
      FORWARD MODAL
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â --}}
 @if($showForwardModal)
 <div class="modal-backdrop" wire:click.self="closeForwardModal" role="dialog" aria-modal="true" aria-label="Forward message">
   <div class="fwd-modal-box">
@@ -1565,9 +1568,9 @@
   </div>
 </div>
 @endif
-{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+{{-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
      USER PROFILE CARD MODAL
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â --}}
 <div id="userProfileCardOverlay"
      class="upc-overlay"
      style="display:none"
@@ -1604,9 +1607,9 @@
   </div>
 </div>
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      IMAGE LIGHTBOX  (Teams-style)
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="imgLightboxOverlay" class="ilb-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Image viewer">
 
   {{-- Top bar --}}
@@ -1656,9 +1659,9 @@
 
 </div>
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      PDF VIEWER MODAL
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="pdfViewerOverlay" class="pdf-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="PDF viewer">
 
   {{-- Top bar --}}
@@ -1684,16 +1687,16 @@
   <div class="pdf-body">
     <div class="pdf-loading" id="pdfLoading">
       <div class="pdf-spinner"></div>
-      <span>Loading PDF…</span>
+      <span>Loading PDFâ€¦</span>
     </div>
     <iframe id="pdfFrame" class="pdf-frame" src="" title="PDF viewer" allowfullscreen></iframe>
   </div>
 
 </div>
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      LINK POPUP MENU
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="linkPopupMenu" class="link-popup" style="display:none" role="menu" aria-label="Link options">
   <div class="link-popup-url" id="linkPopupUrl"></div>
   <div class="link-popup-divider"></div>
@@ -1707,9 +1710,9 @@
   </button>
 </div>
 
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      DELETE CONFIRMATION MODAL
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="deleteConfirmOverlay"
      class="del-confirm-overlay"
      style="display:none"
@@ -1744,9 +1747,9 @@
     </div>
   </div>
 </div>
-{{-- ══════════════════════════════════════════════════════
+{{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      EMOJI PICKER PANEL (shared, one instance, positioned by JS)
-══════════════════════════════════════════════════════ --}}
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
 <div id="msgEmojiPicker"
      class="msg-emoji-picker"
      wire:ignore
@@ -1757,7 +1760,7 @@
   {{-- Search --}}
   <div class="mep-search-wrap">
     <input type="text" id="msgEmojiSearch" class="mep-search"
-           placeholder="Search emoji…" autocomplete="off" aria-label="Search emoji">
+           placeholder="Search emojiâ€¦" autocomplete="off" aria-label="Search emoji">
     <svg class="mep-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
     </svg>
@@ -1769,15 +1772,34 @@
 
   {{-- Category tabs --}}
   <div class="mep-cats" role="tablist" aria-label="Emoji categories">
-    <button type="button" class="mep-cat mep-cat--active" data-cat="recent"   title="Recent"   aria-label="Recent">🕐</button>
-    <button type="button" class="mep-cat"                 data-cat="smileys"  title="Smileys"  aria-label="Smileys">😊</button>
-    <button type="button" class="mep-cat"                 data-cat="hand"     title="Gestures" aria-label="Gestures">👋</button>
-    <button type="button" class="mep-cat"                 data-cat="nature"   title="Nature"   aria-label="Nature">🐶</button>
-    <button type="button" class="mep-cat"                 data-cat="food"     title="Food"     aria-label="Food">🍎</button>
-    <button type="button" class="mep-cat"                 data-cat="objects"  title="Objects"  aria-label="Objects">💡</button>
-    <button type="button" class="mep-cat"                 data-cat="symbols"  title="Symbols"  aria-label="Symbols">❤️</button>
+    <button type="button" class="mep-cat mep-cat--active" data-cat="recent"   title="Recent"   aria-label="Recent">ðŸ•</button>
+    <button type="button" class="mep-cat"                 data-cat="smileys"  title="Smileys"  aria-label="Smileys">ðŸ˜Š</button>
+    <button type="button" class="mep-cat"                 data-cat="hand"     title="Gestures" aria-label="Gestures">ðŸ‘‹</button>
+    <button type="button" class="mep-cat"                 data-cat="nature"   title="Nature"   aria-label="Nature">ðŸ¶</button>
+    <button type="button" class="mep-cat"                 data-cat="food"     title="Food"     aria-label="Food">ðŸŽ</button>
+    <button type="button" class="mep-cat"                 data-cat="objects"  title="Objects"  aria-label="Objects">ðŸ’¡</button>
+    <button type="button" class="mep-cat"                 data-cat="symbols"  title="Symbols"  aria-label="Symbols">â¤ï¸</button>
   </div>
 
 </div>
+
+  {{-- â•â• DRAG-AND-DROP: Ghost overlay â•â• --}}
+  <div id="ddGhostOverlay" aria-hidden="true" wire:ignore>
+    <div class="dd-ghost-card">
+      <div class="dd-ghost-icon" id="ddGhostIcon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <div class="dd-ghost-info">
+        <span class="dd-ghost-name" id="ddGhostName">file.jpg</span>
+        <span class="dd-ghost-hint" id="ddGhostHint">Drop on a conversation to send</span>
+      </div>
+    </div>
+  </div>
+
+  {{-- â•â• DRAG-AND-DROP: Toast container â•â• --}}
+  <div id="ddToastContainer" aria-live="polite" wire:ignore></div>
 
 </div>{{-- /teams-chat-root --}}

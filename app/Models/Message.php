@@ -16,6 +16,7 @@ class Message extends Model
         'body',
         'type',          // text | image | file
         'file_path',
+        'file_name',     // original client filename
         'is_read',
         'delivered_at',
         'read_at',
@@ -101,8 +102,7 @@ class Message extends Model
      */
     public function fileName(): ?string
     {
-        return $this->file_path
-            ? basename($this->file_path)
-            : null;
+        return $this->file_name
+            ?? ($this->file_path ? basename($this->file_path) : null);
     }
 }
