@@ -89,6 +89,7 @@
                     <span class="badge-admin">Admin</span>
                 @endif
             </div>
+            <div class="pp-hero-email">{{ auth()->user()->email }}</div>
 
             {{-- Remove avatar (only when image set) --}}
             @if(auth()->user()->profile_image)

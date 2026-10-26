@@ -3,7 +3,9 @@
      role="listitem" tabindex="0"
      aria-label="Conversation with {{ $other->name }}"
      data-user-id="{{ $other->id }}"
+     data-conv-id="{{ $conversation->id }}"
      data-user-avatar-gradient="{{ \App\Helpers\AvatarColor::gradient($other->id) }}"
+     draggable="true"
      wire:key="conv-{{ $conversation->id }}">
   <div class="conv-avatar-wrap" wire:ignore>
       <button type="button"

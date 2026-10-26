@@ -150,6 +150,8 @@
         if (!el) return null;
         return Livewire.find(el.getAttribute('wire:id'));
     }
+    // Expose globally so sub-IIFEs (drag-to-reorder, etc.) can use it
+    window._getChatComponent = getChatComponent;
 
     /* ── Pending count badge ─────────────────────────────────────────────── */
     function refreshPendingCountBadge() {
@@ -1803,34 +1805,35 @@
     document.addEventListener('DOMContentLoaded',   () => { attachTypingListener(); attachInputEmojiBtnListener(); });
 
     function attachInputEmojiBtnListener() {
-        const btn = document.getElementById('inputEmojiBtn');
-        if (!btn || btn._emojiListenerAttached) return;
-        btn._emojiListenerAttached = true;
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const picker = document.getElementById('msgEmojiPicker');
-            const isOpen = picker?.classList.contains('is-open') && _mepCurrentMsgId === null;
-            mepClose();
-            window._closeAllMsgMenus();
-            if (!isOpen) {
-                // Open picker anchored to the button, null msgId = input mode
-                _mepCurrentMsgId = null;
-                const rect = btn.getBoundingClientRect();
-                if (picker) {
-                    picker.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
-                    picker.style.top  = (rect.top - 360 + window.scrollY) + 'px';
-                    if (parseFloat(picker.style.top) < 8) picker.style.top = '8px';
-                    picker.classList.add('is-open');
-                    picker.removeAttribute('aria-hidden');
-                    _mepCurrentCat = 'recent';
-                    mepRenderGrid('recent', '');
-                    const search = document.getElementById('msgEmojiSearch');
-                    if (search) { search.value = ''; search.focus(); }
-                    document.querySelectorAll('.mep-cat').forEach(b => b.classList.toggle('mep-cat--active', b.dataset.cat === 'recent'));
-                }
-            }
-        });
+        // No-op — replaced by delegated listener below
     }
+
+    // Delegated click — survives Livewire re-renders
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#inputEmojiBtn');
+        if (!btn) return;
+        e.stopPropagation();
+        const picker = document.getElementById('msgEmojiPicker');
+        const isOpen = picker?.classList.contains('is-open') && _mepCurrentMsgId === null;
+        mepClose();
+        window._closeAllMsgMenus();
+        if (!isOpen) {
+            _mepCurrentMsgId = null;
+            const rect = btn.getBoundingClientRect();
+            if (picker) {
+                picker.style.position = 'fixed';
+                picker.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+                picker.style.top  = Math.max(8, rect.top - 368) + 'px';
+                picker.classList.add('is-open');
+                picker.removeAttribute('aria-hidden');
+                _mepCurrentCat = 'recent';
+                mepRenderGrid('recent', '');
+                const search = document.getElementById('msgEmojiSearch');
+                if (search) { search.value = ''; search.focus(); }
+                document.querySelectorAll('.mep-cat').forEach(b => b.classList.toggle('mep-cat--active', b.dataset.cat === 'recent'));
+            }
+        }
+    });
 
     /* ── Mobile sidebar UX — WhatsApp-style screen switching ─────────────── */
     let _conversationOpen = false;
@@ -2886,10 +2889,11 @@
         }
 
         // Click outside — close everything
-        const insidePicker = e.target.closest('#msgEmojiPicker');
-        const insideMenu   = e.target.closest('.msg-more-menu');
-        const insideBar    = e.target.closest('.msg-actions');
-        if (!insidePicker) mepClose();
+        const insidePicker    = e.target.closest('#msgEmojiPicker');
+        const insideEmojiBtn  = e.target.closest('#inputEmojiBtn');
+        const insideMenu      = e.target.closest('.msg-more-menu');
+        const insideBar       = e.target.closest('.msg-actions');
+        if (!insidePicker && !insideEmojiBtn) mepClose();
         if (!insideMenu)   window._closeAllMsgMenus();
         if (!insideBar && !insidePicker && !insideMenu) window._hideAllMsgActions && window._hideAllMsgActions();
     });
@@ -3835,6 +3839,88 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ══════════════════════════════════════════════════════
+   READ MORE / SHOW LESS — long message collapse
+══════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    /* Hide the button only when text fully fits within max-height.
+       Button is visible by default (CSS display:inline-block).
+       JS adds --hidden class to suppress it for short messages. */
+    function checkWrap(wrap) {
+        const textEl = wrap.querySelector('.msg-text');
+        const btn    = wrap.querySelector('.msg-read-more');
+        if (!textEl || !btn) return;
+        if (wrap.classList.contains('msg-text-wrap--expanded')) return;
+
+        if (textEl.scrollHeight <= textEl.offsetHeight + 2) {
+            btn.classList.add('msg-read-more--hidden');
+        } else {
+            btn.classList.remove('msg-read-more--hidden');
+        }
+    }
+
+    window._toggleReadMore = function (btn) {
+        const wrap = btn.closest('.msg-text-wrap');
+        if (!wrap) return;
+        const expanded = wrap.classList.toggle('msg-text-wrap--expanded');
+        btn.textContent = expanded ? 'Show less' : 'Read more';
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    };
+
+    function checkAll() {
+        document.querySelectorAll('.msg-text-wrap').forEach(checkWrap);
+    }
+
+    function observeWrap(wrap) {
+        if (wrap._rmObs) return;
+        wrap._rmObs = new ResizeObserver(() => {
+            checkWrap(wrap);
+            wrap._rmObs.disconnect();
+        });
+        wrap._rmObs.observe(wrap);
+    }
+
+    function init() {
+        document.querySelectorAll('.msg-text-wrap').forEach(observeWrap);
+        checkAll();
+    }
+
+    function attachMutationObserver() {
+        const container = document.getElementById('messages-container');
+        if (!container || container._rmMut) return;
+        container._rmMut = new MutationObserver(mutations => {
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+                    node.querySelectorAll('.msg-text-wrap').forEach(observeWrap);
+                });
+            });
+        });
+        container._rmMut.observe(container, { childList: true, subtree: true });
+    }
+
+    document.addEventListener('livewire:updated', () => { init(); attachMutationObserver(); });
+    document.addEventListener('livewire:navigated', () => {
+        document.querySelectorAll('.msg-text-wrap').forEach(w => { delete w._rmObs; });
+        setTimeout(() => { init(); attachMutationObserver(); }, 50);
+    });
+
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('scroll-to-bottom', () => setTimeout(init, 150));
+        Livewire.on('message-sent',     () => setTimeout(init, 150));
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { init(); attachMutationObserver(); });
+    } else {
+        init();
+        attachMutationObserver();
+    }
+})();
+
+
+/* ══════════════════════════════════════════════════════
    SIDEBAR RESIZE + COLLAPSE  (Teams-style)
 ══════════════════════════════════════════════════════ */
 (function () {
@@ -4021,4 +4107,297 @@ document.addEventListener('DOMContentLoaded', function() {
         if (handle) delete handle._sidebarResizeInit;
         initSidebarResize();
     });
+})();
+
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR CONVERSATION DRAG-TO-REORDER
+   Supports same-section reorder AND cross-section move:
+   • Drop into Favourites section  → conv becomes favourite
+   • Drop into Chats section       → conv becomes unfavourite
+   ══════════════════════════════════════════════════════ */
+(function () {
+    'use strict';
+
+    /* ── State ───────────────────────────────────────── */
+    let draggingEl     = null;   // .conv-item being dragged
+    let draggingOrigin = null;   // 'favorites' | 'regular'
+    let dropLine       = null;   // injected .conv-drop-line
+    let dragGhost      = null;   // #convDragGhost
+    let saveTimer      = null;   // debounce for Livewire call
+    let lastDropTarget = null;   // { parent, before, section }
+
+    /* ── Helpers ─────────────────────────────────────── */
+    function getConvId(el) { return el ? el.dataset.convId : null; }
+
+    function getSectionName(el) {
+        const sec = el ? el.closest('.conv-section-content') : null;
+        return sec ? sec.dataset.section : null;   // 'favorites' | 'regular'
+    }
+
+    function getOrderedIds(sectionId) {
+        const sec = document.getElementById(sectionId);
+        if (!sec) return [];
+        return Array.from(sec.querySelectorAll('.conv-item[data-conv-id]'))
+            .map(el => parseInt(el.dataset.convId, 10))
+            .filter(Boolean);
+    }
+
+    function removeDropLine() {
+        if (dropLine && dropLine.parentNode) dropLine.parentNode.removeChild(dropLine);
+        dropLine = null;
+    }
+
+    function insertDropLine(parent, beforeEl) {
+        removeDropLine();
+        dropLine = document.createElement('div');
+        dropLine.className = 'conv-drop-line';
+        dropLine.setAttribute('aria-hidden', 'true');
+        parent.insertBefore(dropLine, beforeEl || null);
+    }
+
+    /* ── Ghost ───────────────────────────────────────── */
+    function ensureGhost() {
+        if (!document.getElementById('convDragGhost')) {
+            const g = document.createElement('div');
+            g.id = 'convDragGhost';
+            g.innerHTML = '<div class="cdg-avatar"></div><span class="cdg-name"></span><span class="cdg-badge"></span>';
+            document.body.appendChild(g);
+        }
+    }
+
+    function showGhost(convItem, targetSection) {
+        ensureGhost();
+        dragGhost = document.getElementById('convDragGhost');
+
+        const avatarWrap   = convItem.querySelector('.conv-avatar');
+        const avatarImgSrc = avatarWrap ? (avatarWrap.querySelector('img:not([style*="display:none"])')?.src || null) : null;
+        const avatarGrad   = convItem.dataset.userAvatarGradient || 'linear-gradient(135deg,#7c5cfc,#38d9c0)';
+        const nameText     = convItem.querySelector('.conv-name')?.textContent?.trim() || '';
+
+        const avatarEl = dragGhost.querySelector('.cdg-avatar');
+        if (avatarImgSrc) {
+            avatarEl.innerHTML = `<img src="${avatarImgSrc}" alt="">`;
+            avatarEl.style.background = '';
+            avatarEl.textContent = '';
+        } else {
+            avatarEl.innerHTML = '';
+            avatarEl.style.background = avatarGrad;
+            avatarEl.textContent = nameText.charAt(0).toUpperCase();
+        }
+
+        dragGhost.querySelector('.cdg-name').textContent = nameText;
+        updateGhostBadge(targetSection || draggingOrigin);
+        dragGhost.style.display = 'flex';
+    }
+
+    function updateGhostBadge(targetSection) {
+        if (!dragGhost) return;
+        const badge = dragGhost.querySelector('.cdg-badge');
+        if (!badge) return;
+        const isCross = targetSection && targetSection !== draggingOrigin;
+        if (!isCross) { badge.textContent = ''; badge.style.display = 'none'; return; }
+        badge.style.display = 'inline-flex';
+        if (targetSection === 'favorites') {
+            badge.textContent = '★ Add to Favourites';
+            badge.style.background = 'rgba(255,181,71,.18)';
+            badge.style.color = '#ffb547';
+            badge.style.border = '1px solid rgba(255,181,71,.35)';
+        } else {
+            badge.textContent = '✕ Remove from Favourites';
+            badge.style.background = 'rgba(255,95,114,.12)';
+            badge.style.color = '#ff5f72';
+            badge.style.border = '1px solid rgba(255,95,114,.3)';
+        }
+    }
+
+    function hideGhost() { if (dragGhost) dragGhost.style.display = 'none'; }
+
+    /* ── Drop position inside a section ─────────────── */
+    function getDropPosition(section, clientY) {
+        const items = Array.from(section.querySelectorAll('.conv-item[data-conv-id]'))
+            .filter(el => el !== draggingEl);
+        for (const item of items) {
+            const rect = item.getBoundingClientRect();
+            if (clientY < rect.top + rect.height / 2) {
+                return { parent: section, before: item, section: section.dataset.section };
+            }
+        }
+        return { parent: section, before: null, section: section.dataset.section };
+    }
+
+    /* ── Persist ─────────────────────────────────────── */
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            const favIds = getOrderedIds('convSectionFavorites');
+            const regIds = getOrderedIds('convSectionRegular');
+            const $wire  = window._getChatComponent();
+            if ($wire) $wire.call('reorderConversations', favIds, regIds);
+        }, 400);
+    }
+
+    /* ── Item drag handlers ──────────────────────────── */
+    function attachDragHandlers() {
+        document.querySelectorAll('.conv-item[data-conv-id]').forEach(item => {
+            if (item._dragBound) return;
+            item._dragBound = true;
+
+            item.addEventListener('dragstart', e => {
+                draggingEl     = item;
+                draggingOrigin = getSectionName(item);
+                item.classList.add('conv-dragging');
+                document.body.classList.add('conv-reorder-dragging');
+
+                showGhost(item, draggingOrigin);
+
+                if (e.dataTransfer) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', getConvId(item) || '');
+                    try {
+                        const blank = document.createElement('canvas');
+                        blank.width = 1; blank.height = 1;
+                        e.dataTransfer.setDragImage(blank, 0, 0);
+                    } catch (_) {}
+                }
+            });
+
+            item.addEventListener('drag', e => {
+                if (!dragGhost || !e.clientX) return;
+                dragGhost.style.left     = (e.clientX + 14) + 'px';
+                dragGhost.style.top      = (e.clientY - 18) + 'px';
+                dragGhost.style.position = 'fixed';
+
+                // Update badge based on which section the cursor is over
+                if (lastDropTarget) updateGhostBadge(lastDropTarget.section);
+            });
+
+            item.addEventListener('dragend', () => {
+                if (draggingEl) draggingEl.classList.remove('conv-dragging');
+                document.body.classList.remove('conv-reorder-dragging');
+                removeDropLine();
+                hideGhost();
+                document.querySelectorAll('.conv-section-content')
+                    .forEach(s => s.classList.remove('conv-drag-over-section'));
+
+                if (lastDropTarget && draggingEl) {
+                    const { parent, before, section: dropSection } = lastDropTarget;
+                    const wasFav      = draggingOrigin === 'favorites';
+                    const droppedInFav = dropSection   === 'favorites';
+                    const crossSection = wasFav !== droppedInFav;
+
+                    // Move DOM node
+                    parent.insertBefore(draggingEl, before || null);
+
+                    if (crossSection) {
+                        // Tell Livewire to toggle favourite + reorder in one shot
+                        const favIds = getOrderedIds('convSectionFavorites');
+                        const regIds = getOrderedIds('convSectionRegular');
+                        const $wire  = window._getChatComponent();
+                        if ($wire) {
+                            $wire.call('reorderWithFavoriteToggle',
+                                parseInt(getConvId(draggingEl), 10),
+                                droppedInFav,
+                                favIds,
+                                regIds
+                            );
+                        }
+                    } else {
+                        scheduleSave();
+                    }
+                }
+
+                draggingEl     = null;
+                draggingOrigin = null;
+                lastDropTarget = null;
+            });
+        });
+    }
+
+    /* ── Section drag handlers ───────────────────────── */
+    function attachSectionHandlers() {
+        document.querySelectorAll('.conv-section-content').forEach(section => {
+            if (section._sectionDragBound) return;
+            section._sectionDragBound = true;
+
+            section.addEventListener('dragover', e => {
+                if (!draggingEl) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                section.classList.add('conv-drag-over-section');
+
+                const pos = getDropPosition(section, e.clientY);
+                lastDropTarget = pos;
+
+                const currentBefore = dropLine ? dropLine.nextSibling : undefined;
+                if (!dropLine || dropLine.parentNode !== pos.parent || currentBefore !== pos.before) {
+                    insertDropLine(pos.parent, pos.before);
+                }
+            });
+
+            section.addEventListener('dragleave', e => {
+                if (!section.contains(e.relatedTarget)) {
+                    section.classList.remove('conv-drag-over-section');
+                }
+            });
+
+            section.addEventListener('drop', e => {
+                e.preventDefault();
+                section.classList.remove('conv-drag-over-section');
+                removeDropLine();
+            });
+        });
+    }
+
+    /* ── Also allow dropping onto section HEADER area ── */
+    /* (so user can drop onto empty Favourites section)  */
+    function attachHeaderDropHandlers() {
+        document.querySelectorAll('.conv-section-header').forEach(header => {
+            if (header._headerDragBound) return;
+            header._headerDragBound = true;
+
+            header.addEventListener('dragover', e => {
+                if (!draggingEl) return;
+                e.preventDefault();
+                // Find next section content after this header
+                let sibling = header.nextElementSibling;
+                while (sibling && !sibling.classList.contains('conv-section-content')) {
+                    sibling = sibling.nextElementSibling;
+                }
+                if (!sibling) return;
+                lastDropTarget = { parent: sibling, before: sibling.firstElementChild, section: sibling.dataset.section };
+                insertDropLine(sibling, sibling.firstElementChild);
+                sibling.classList.add('conv-drag-over-section');
+            });
+
+            header.addEventListener('dragleave', e => {
+                if (!header.contains(e.relatedTarget)) {
+                    document.querySelectorAll('.conv-section-content')
+                        .forEach(s => s.classList.remove('conv-drag-over-section'));
+                }
+            });
+        });
+    }
+
+    /* ── Init ────────────────────────────────────────── */
+    function init() {
+        attachDragHandlers();
+        attachSectionHandlers();
+        attachHeaderDropHandlers();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    document.addEventListener('livewire:updated', init);
+    document.addEventListener('livewire:navigated', () => {
+        document.querySelectorAll('.conv-item[data-conv-id]').forEach(el => delete el._dragBound);
+        document.querySelectorAll('.conv-section-content').forEach(el => delete el._sectionDragBound);
+        document.querySelectorAll('.conv-section-header').forEach(el => delete el._headerDragBound);
+        init();
+    });
+
 })();

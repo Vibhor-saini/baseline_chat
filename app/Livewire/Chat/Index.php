@@ -231,28 +231,53 @@ class Index extends Component
             ->get()
             ->all();          // <── plain array, never Collection
 
-        // Load favorite conversation IDs for this user into a plain int[]
-        // Stored as a separate property so it survives Livewire dehydration/rehydration
-        // (Eloquent models in arrays are re-hydrated via find() which loses selectRaw columns)
-        $this->favoriteConvIds = DB::table('conversation_user')
+        // Load favorite IDs and sort_order for this user — both as plain scalar arrays
+        // so they survive Livewire dehydration/rehydration without being wiped by find().
+        $pivotRows = DB::table('conversation_user')
             ->where('user_id', $userId)
+            ->get(['conversation_id', 'is_favorite', 'sort_order']);
+
+        $this->favoriteConvIds = $pivotRows
             ->where('is_favorite', true)
             ->pluck('conversation_id')
             ->map(fn ($id) => (int) $id)
             ->values()
             ->all();
 
+        // Build sort_order map: conv_id => sort_order (null if not set)
+        $sortOrderMap = $pivotRows->pluck('sort_order', 'conversation_id')
+            ->map(fn ($v) => $v !== null ? (int) $v : null)
+            ->all();
+
         // Separate favorites and regular chats
         $favorites = [];
-        $regular = [];
+        $regular   = [];
 
         foreach ($allConversations as $conv) {
+            $conv->_sort_order = $sortOrderMap[$conv->id] ?? null;
             if (in_array($conv->id, $this->favoriteConvIds, true)) {
                 $favorites[] = $conv;
             } else {
                 $regular[] = $conv;
             }
         }
+
+        // Sort each section: user-defined sort_order first, then by last_message_at
+        $sortFn = function ($a, $b) {
+            $aSort = $a->_sort_order;
+            $bSort = $b->_sort_order;
+
+            // Both have custom sort → compare numerically
+            if ($aSort !== null && $bSort !== null) return $aSort <=> $bSort;
+            // Only one has custom sort → sorted one goes first
+            if ($aSort !== null) return -1;
+            if ($bSort !== null) return 1;
+            // Neither sorted → keep last_message_at desc (already from query)
+            return 0;
+        };
+
+        usort($favorites, $sortFn);
+        usort($regular,   $sortFn);
 
         $this->favorites = $favorites;
         $this->conversations = $regular;
@@ -1012,6 +1037,122 @@ class Index extends Component
 
         // Close the menu
         $this->dispatch('close-conv-menu', conversationId: $conversationId);
+    }
+
+    /**
+     * Persist a user-defined conversation order.
+     *
+     * Called from JS after drag-and-drop reorder.
+     * $orderedIds: flat array of conversation IDs in the new order,
+     *              covering BOTH favorites and regular (each section ordered independently).
+     * We write a sort_order value (0-based index) per section so the two sections
+     * stay separate while still being individually sortable.
+     *
+     * @param  array<int>  $favIds      Favorite conv IDs in new order
+     * @param  array<int>  $regularIds  Regular conv IDs in new order
+     */
+    public function reorderConversations(array $favIds, array $regularIds): void
+    {
+        $authId = auth()->id();
+
+        // Build [conv_id => sort_order] maps for each section
+        $updates = [];
+
+        foreach ($favIds as $idx => $convId) {
+            $updates[(int) $convId] = $idx;
+        }
+        foreach ($regularIds as $idx => $convId) {
+            $updates[(int) $convId] = $idx;
+        }
+
+        if (empty($updates)) return;
+
+        // Verify all conversations belong to this user (security check)
+        $validIds = DB::table('conversations')
+            ->where('status', 'accepted')
+            ->where(fn ($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->whereIn('id', array_keys($updates))
+            ->pluck('id')
+            ->all();
+
+        foreach ($validIds as $convId) {
+            // UPDATE only — never overwrite is_favorite here (same-section reorder)
+            $affected = DB::table('conversation_user')
+                ->where('conversation_id', $convId)
+                ->where('user_id', $authId)
+                ->update(['sort_order' => $updates[$convId], 'updated_at' => now()]);
+
+            if ($affected === 0) {
+                // Row doesn't exist yet — safe to insert with is_favorite=false
+                // because this path is only reached for same-section reorder
+                DB::table('conversation_user')->insertOrIgnore([
+                    'conversation_id' => $convId,
+                    'user_id'         => $authId,
+                    'sort_order'      => $updates[$convId],
+                    'is_favorite'     => false,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+        }
+
+        // Re-load so $favorites/$conversations reflect new order
+        $this->loadConversations();
+    }
+
+    /**
+     * Called when a conversation is dragged ACROSS sections (regular ↔ favourites).
+     * Sets is_favorite + sort_order for ALL conversations in one DB transaction
+     * so the two values can never get out of sync.
+     */
+    public function reorderWithFavoriteToggle(
+        int   $conversationId,
+        bool  $makeFavorite,
+        array $favIds,
+        array $regularIds
+    ): void {
+        $authId = auth()->id();
+
+        $exists = Conversation::where('id', $conversationId)
+            ->where('status', 'accepted')
+            ->where(fn ($q) => $q->where('user_one_id', $authId)
+                                 ->orWhere('user_two_id', $authId))
+            ->exists();
+
+        if (! $exists) return;
+
+        // Build full update map: conv_id → [sort_order, is_favorite]
+        // This writes BOTH columns together so is_favorite is never left stale.
+        $allUpdates = [];
+        foreach ($favIds as $idx => $convId) {
+            $allUpdates[(int) $convId] = ['sort_order' => $idx, 'is_favorite' => true];
+        }
+        foreach ($regularIds as $idx => $convId) {
+            $allUpdates[(int) $convId] = ['sort_order' => $idx, 'is_favorite' => false];
+        }
+
+        // Security: only update convs this user owns
+        $validIds = DB::table('conversations')
+            ->where('status', 'accepted')
+            ->where(fn ($q) => $q->where('user_one_id', $authId)->orWhere('user_two_id', $authId))
+            ->whereIn('id', array_keys($allUpdates))
+            ->pluck('id')
+            ->all();
+
+        DB::transaction(function () use ($validIds, $allUpdates, $authId) {
+            foreach ($validIds as $convId) {
+                DB::table('conversation_user')->updateOrInsert(
+                    ['conversation_id' => $convId, 'user_id' => $authId],
+                    [
+                        'sort_order'  => $allUpdates[$convId]['sort_order'],
+                        'is_favorite' => $allUpdates[$convId]['is_favorite'],
+                        'updated_at'  => now(),
+                    ]
+                );
+            }
+        });
+
+        $this->loadConversations();
     }
 
     /**

@@ -188,7 +188,17 @@
           <button type="button" wire:click="openRequest({{ $request->id }})"
                   class="request-toggle {{ ($activeScreen === 'request-preview' && $selectedRequest?->id === $request->id) ? 'request-toggle-active' : '' }}">
             <div class="request-user">
-              <div class="request-avatar">{{ strtoupper(substr($request->userOne->name,0,1)) }}</div>
+              <div class="request-avatar">
+                @if($request->userOne->profile_image)
+                  <img src="{{ Storage::url($request->userOne->profile_image) }}"
+                       alt="{{ $request->userOne->name }}"
+                       style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;"
+                       onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                  <span style="display:none;width:100%;height:100%;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:#fff;">{{ strtoupper(substr($request->userOne->name,0,1)) }}</span>
+                @else
+                  {{ strtoupper(substr($request->userOne->name,0,1)) }}
+                @endif
+              </div>
               <div class="request-user-info">
                 <div class="request-user-name">{{ $request->userOne->name }}</div>
                 <div class="request-user-text">Wants to connect</div>
@@ -250,7 +260,7 @@
         </button>
         
         @if($showFavorites)
-        <div class="conv-section-content">
+        <div class="conv-section-content" data-section="favorites" id="convSectionFavorites">
           @foreach($favorites as $conversation)
             @php
               $other        = $conversation->otherUser();
@@ -282,6 +292,7 @@
       @endif
 
       @if($showChats)
+        <div class="conv-section-content" data-section="regular" id="convSectionRegular">
         @forelse($conversations as $conversation)
           @php
             $other        = $conversation->otherUser();
@@ -305,6 +316,7 @@
           </div>
           @endif
         @endforelse
+        </div>{{-- /conv-section-content regular --}}
       @endif
     </div>
 
@@ -599,7 +611,18 @@
                   <div class="fwd-chat-card">
                     <div class="fwd-chat-card-header">
                       <svg class="fwd-chat-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 9l4-4 4 4"/><path d="M9 5v10a5 5 0 0 0 5 5h5"/></svg>
-                      <div class="fwd-chat-avatar">{{ strtoupper(substr($message->forwardedFrom->sender?->name ?? '?', 0, 1)) }}</div>
+                      <div class="fwd-chat-avatar">
+                        @php $fwdSender = $message->forwardedFrom->sender; @endphp
+                        @if($fwdSender?->profile_image)
+                          <img src="{{ Storage::url($fwdSender->profile_image) }}"
+                               alt="{{ $fwdSender->name }}"
+                               style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;"
+                               onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                          <span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;color:#fff;">{{ strtoupper(substr($fwdSender->name,0,1)) }}</span>
+                        @else
+                          {{ strtoupper(substr($fwdSender?->name ?? '?', 0, 1)) }}
+                        @endif
+                      </div>
                       <span class="fwd-chat-sender">{{ $message->forwardedFrom->sender?->name ?? 'Unknown' }}</span>
                       <span class="fwd-chat-time">{{ $message->forwardedFrom->created_at->format('n/j/Y g:i A') }}</span>
                     </div>
@@ -642,7 +665,16 @@
                           </a>
                         @endif
                       @else
-                        {{ \Illuminate\Support\Str::limit($message->forwardedFrom->body, 300) }}
+                        @php $fwdBody = $message->forwardedFrom->body ?? ''; $fwdIsLong = mb_strlen($fwdBody) > 180 || substr_count($fwdBody, "\n") >= 3; @endphp
+                        @if($fwdIsLong)
+                          <div class="msg-text-wrap" id="msg-wrap-fwd-{{ $message->id }}">
+                            <span class="msg-text">{!! e($fwdBody) !!}</span>
+                            <button type="button" class="msg-read-more" aria-expanded="false"
+                                    onclick="window._toggleReadMore(this)" aria-label="Read more">Read more</button>
+                          </div>
+                        @else
+                          {{ $fwdBody }}
+                        @endif
                       @endif
                     </div>
                   </div>
@@ -731,11 +763,26 @@
                         </div>
                       </div>
                     @else
+                      @php $isLong = mb_strlen($message->body) > 180 || substr_count($message->body, "\n") >= 3; @endphp
+                      @if($isLong)
+                      <div class="msg-text-wrap" id="msg-wrap-{{ $message->id }}">
+                        <span class="msg-text" id="msg-text-{{ $message->id }}">{!! preg_replace_callback(
+                            '/https?:\/\/[^\s<>"\']+/i',
+                            fn($m) => '<a class="msg-link" href="' . e($m[0]) . '" data-href="' . e($m[0]) . '" onclick="window._openLinkMenu(event, this)" aria-label="Link: ' . e($m[0]) . '">' . e($m[0]) . '</a>',
+                            e($message->body)
+                        ) !!}</span>
+                        <button type="button" class="msg-read-more" aria-expanded="false"
+                                onclick="window._toggleReadMore(this)" aria-label="Read more">
+                          Read more
+                        </button>
+                      </div>
+                      @else
                       <span class="msg-text" id="msg-text-{{ $message->id }}">{!! preg_replace_callback(
                           '/https?:\/\/[^\s<>"\']+/i',
                           fn($m) => '<a class="msg-link" href="' . e($m[0]) . '" data-href="' . e($m[0]) . '" onclick="window._openLinkMenu(event, this)" aria-label="Link: ' . e($m[0]) . '">' . e($m[0]) . '</a>',
                           e($message->body)
                       ) !!}</span>
+                      @endif
                     @endif
                   @endif
                 @endif
@@ -1234,18 +1281,47 @@
     @elseif($activeScreen === 'request-preview' && $selectedRequest)
       <div class="request-preview-screen">
         <div class="request-preview-card">
-          <div class="request-preview-avatar">{{ strtoupper(substr($selectedRequest->userOne->name,0,1)) }}</div>
-          <h2 class="request-preview-title">{{ $selectedRequest->userOne->name }} wants to connect</h2>
-          <p class="request-preview-message">Accept to start chatting.</p>
-          <div class="request-preview-actions">
-            <button wire:click="acceptRequest({{ $selectedRequest->id }})" class="request-accept" wire:loading.attr="disabled">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>Accept</span>
-              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">…</span>
+
+          {{-- Glow ring + avatar --}}
+          <div class="rpc-avatar-ring">
+            <div class="rpc-avatar">
+              @if($selectedRequest->userOne->profile_image)
+                <img src="{{ Storage::url($selectedRequest->userOne->profile_image) }}"
+                     alt="{{ $selectedRequest->userOne->name }}"
+                     class="rpc-avatar-img"
+                     onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <span class="rpc-avatar-initials"
+                      style="display:none;background:{{ \App\Helpers\AvatarColor::gradient($selectedRequest->userOne->id) }};">
+                  {{ strtoupper(substr($selectedRequest->userOne->name,0,1)) }}
+                </span>
+              @else
+                <span class="rpc-avatar-initials"
+                      style="background:{{ \App\Helpers\AvatarColor::gradient($selectedRequest->userOne->id) }};">
+                  {{ strtoupper(substr($selectedRequest->userOne->name,0,1)) }}
+                </span>
+              @endif
+            </div>
+          </div>
+
+          {{-- Name + subtitle --}}
+          <h2 class="rpc-title">{{ $selectedRequest->userOne->name }}</h2>
+          <p class="rpc-subtitle">wants to connect with you</p>
+          <p class="rpc-hint">Accept to start chatting.</p>
+
+          {{-- Actions --}}
+          <div class="rpc-actions">
+            <button wire:click="acceptRequest({{ $selectedRequest->id }})"
+                    class="rpc-btn rpc-btn--accept"
+                    wire:loading.attr="disabled">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span wire:loading.remove wire:target="acceptRequest({{ $selectedRequest->id }})">Accept</span>
+              <span wire:loading wire:target="acceptRequest({{ $selectedRequest->id }})">Accepting…</span>
             </button>
-            <button wire:click="rejectRequest({{ $selectedRequest->id }})" class="request-reject" wire:loading.attr="disabled">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span>Decline</span>
+            <button wire:click="rejectRequest({{ $selectedRequest->id }})"
+                    class="rpc-btn rpc-btn--decline"
+                    wire:loading.attr="disabled">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Decline
             </button>
           </div>
         </div>
@@ -1262,7 +1338,17 @@
           @forelse($sentRequests as $request)
           <div class="pending-card" wire:key="sent-{{ $request->id }}">
             <div class="pending-card-left">
-              <div class="pending-avatar">{{ strtoupper(substr($request->userTwo->name,0,1)) }}</div>
+              <div class="pending-avatar">
+                @if($request->userTwo->profile_image)
+                  <img src="{{ Storage::url($request->userTwo->profile_image) }}"
+                       alt="{{ $request->userTwo->name }}"
+                       style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;"
+                       onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">
+                  <span style="display:none;width:100%;height:100%;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:.88rem;color:#fff;">{{ strtoupper(substr($request->userTwo->name,0,1)) }}</span>
+                @else
+                  {{ strtoupper(substr($request->userTwo->name,0,1)) }}
+                @endif
+              </div>
               <div class="pending-user-meta">
                 <div class="pending-user-name">{{ $request->userTwo->name }}</div>
                 <div class="pending-user-email">{{ $request->userTwo->email }}</div>
@@ -1663,6 +1749,7 @@
 ══════════════════════════════════════════════════════ --}}
 <div id="msgEmojiPicker"
      class="msg-emoji-picker"
+     wire:ignore
      role="dialog"
      aria-label="Emoji picker"
      aria-hidden="true">
